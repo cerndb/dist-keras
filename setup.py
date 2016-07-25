@@ -28,7 +28,8 @@ setup(name='dist-keras',
           # Python versions
           'Programming Language :: Python :: 2.7',
       ],
-      packages=['distkeras']
+      packages=['distkeras'],
+      package_data={'distkeras': ['distkeras/*.py']},
       # Keywords related to the project.
       keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
       # Package requirements.
