@@ -11,7 +11,6 @@ from setuptools import setup
 from setuptools import find_packages
 
 setup(name='distkeras',
-      version='0.1',
       description='Deep learning on Apache Spark with Keras.',
       url='https://github.com/JoeriHermans/DistKeras',
       author='Joeri Hermans',
