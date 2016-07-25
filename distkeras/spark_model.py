@@ -4,7 +4,7 @@ on Apache Spark.
 
 ## BEGIN Imports. ##############################################################
 
-import .util.networking
+import distkeras.networking
 
 ## END Imports. ################################################################
 
