@@ -4,8 +4,6 @@ on Apache Spark.
 
 ## BEGIN Imports. ##############################################################
 
-from __future__ import absolute_import
-
 import .util.networking
 
 ## END Imports. ################################################################
