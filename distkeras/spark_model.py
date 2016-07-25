@@ -5,7 +5,7 @@ on Apache Spark.
 ## BEGIN Imports. ##############################################################
 
 import distkeras
-import distkeras.networking
+import distkeras.util.networking
 
 ## END Imports. ################################################################
 
