@@ -4,6 +4,8 @@ regard to networking.
 
 ## BEGIN Imports. ##############################################################
 
+from __future__ import absolute_import
+
 import socket
 
 ## END Imports. ################################################################
