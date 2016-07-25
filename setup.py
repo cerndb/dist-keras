@@ -10,7 +10,7 @@ http://joerihermans.com/
 from setuptools import setup
 from setuptoold import find_packages
 
-setup(name='dist_keras',
+setup(name='dist-keras',
       version='0.1',
       description='Deep learning on Apache Spark with Keras.',
       url='https://github.com/JoeriHermans/DistKeras',
@@ -32,6 +32,6 @@ setup(name='dist_keras',
       # Keywords related to the project.
       keyword='deep machine learning keras apache spark distributed',
       # Package requirements.
-      install_requires=['DistKeras'],
-      dependency_links=['git+ssh://git@github.com/JoeriHermans/DistKeras.git']
+      install_requires=['dist-keras'],
+      dependency_links=['git+ssh://git@github.com/JoeriHermans/dist-keras/tarball/master']
 )

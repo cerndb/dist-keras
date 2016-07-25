@@ -1,1 +1,1 @@
-# DistKeras
+# dist-keras
