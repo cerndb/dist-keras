@@ -10,7 +10,7 @@ http://joerihermans.com/
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='distkeras',
+setup(name='dist-keras',
       description='Deep learning on Apache Spark with Keras.',
       url='https://github.com/JoeriHermans/DistKeras',
       author='Joeri Hermans',
@@ -28,8 +28,9 @@ setup(name='distkeras',
           # Python versions
           'Programming Language :: Python :: 2.7',
       ],
+      packages=['distkeras']
       # Keywords related to the project.
-      keyword='deep machine learning keras apache spark distributed',
+      keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
       # Package requirements.
       install_requires=['keras'],
 )
