@@ -33,5 +33,5 @@ setup(name='dist-keras',
       # Keywords related to the project.
       keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
       # Package requirements.
-      install_requires=['keras','flask', 'pickle'],
+      install_requires=['keras','flask'],
 )
