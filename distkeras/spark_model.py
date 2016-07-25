@@ -1,7 +1,5 @@
-"""A class which describes the properties and actions of an Apache Spark
-Keras model. This model will set up the required properties and execute
-the actions which are needed to distribute the learning process, given
-the specified arguments.
+"""Module which describes the properties and actions of training a Keras model
+on Apache Spark.
 """
 
 ## BEGIN Imports. ##############################################################
