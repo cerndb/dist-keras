@@ -31,6 +31,5 @@ setup(name='distkeras',
       # Keywords related to the project.
       keyword='deep machine learning keras apache spark distributed',
       # Package requirements.
-      install_requires=['dist-keras'],
-      dependency_links=['git+ssh://git@github.com/JoeriHermans/dist-keras/tarball/master']
+      install_requires=['keras'],
 )
