@@ -1,4 +1,4 @@
-""" Setup-module for DistKeras.
+"""Setup-module for DistKeras.
 
 This software enables distributed Deep Learning on Apache Spark.
 
@@ -8,9 +8,9 @@ http://joerihermans.com/
 """
 
 from setuptools import setup
-from setuptoold import find_packages
+from setuptools import find_packages
 
-setup(name='dist-keras',
+setup(name='distkeras',
       version='0.1',
       description='Deep learning on Apache Spark with Keras.',
       url='https://github.com/JoeriHermans/DistKeras',
