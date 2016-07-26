@@ -82,7 +82,7 @@ class DistributedModel(object):
         @app.route('/parameters', methods=['GET'])
         def route_parameters():
             with self.mutex:
-                pickled_weights = picle.dumps(self.master_model.get_weights(), -1)
+                pickled_weights = pickle.dumps(self.master_model.get_weights(), -1)
 
             return pickled_weights
 
