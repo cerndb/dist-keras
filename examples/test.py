@@ -11,7 +11,7 @@ from pyspark import SparkContext, SparkConf
 
 batch_size = 64
 nb_classes = 10
-nb_epoch = 3
+nb_epoch = 100
 
 conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
 sc = SparkContext(conf=conf)
@@ -51,6 +51,7 @@ parameters = {}
 parameters['nb_epoch'] = nb_epoch
 parameters['batch_size'] = batch_size
 sparkModel.train(parameters)
+sparkModel.stop_server()
 
 score = sparkModel.master_model.evaluate(x_test, y_test, batch_size=64, verbose=1)
 print(sparkModel.master_model.metrics_names)
