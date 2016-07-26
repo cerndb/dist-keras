@@ -201,6 +201,7 @@ class SparkWorker(object):
 
         return
         if( self.frequency == 'epoch' ):
+            print("Training in epoch mode")
             for epoch in range(nb_epoch):
                 print("\n\n\n\n\n" + `epoch` + "\n\n\n\n\n\n")
                 if( x_train.shape[0] > batch_size ):
