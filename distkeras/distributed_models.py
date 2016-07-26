@@ -173,8 +173,9 @@ class SparkWorker(object):
         self.json_model = json_model
         self.optimizer = optimizer
         self.loss = loss
-        self.train_config = frequency
+        self.train_config = train_config
         self.master_url = master_url
+        self.frequency = frequency
         self.nb_epoch = train_config['nb_epoch']
         self.batch_size = train_config['batch_size']
 
