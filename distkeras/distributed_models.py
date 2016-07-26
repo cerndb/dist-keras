@@ -30,7 +30,7 @@ def to_simple_rdd(sc, features, labels):
 
 ## END Utility functions. ######################################################
 
-class DistributedModel:
+class DistributedModel(object):
 
     def __init__(self, keras_model, optimizer, master_port=5000):
         self.master_model = keras_model

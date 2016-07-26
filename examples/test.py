@@ -13,7 +13,7 @@ batch_size = 64
 nb_classes = 10
 nb_epoch = 3
 
-conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('yarn')
+conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
 sc = SparkContext(conf=conf)
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
