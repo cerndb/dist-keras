@@ -21,6 +21,8 @@ from itertools import tee
 
 import numpy as np
 
+import urllib2
+
 ## END Imports. ################################################################
 
 ## BEGIN Utility functions. ####################################################
@@ -29,6 +31,33 @@ def to_simple_rdd(sc, features, labels):
     pairs = [(x, y) for x, y in zip(features, labels)]
 
     return sc.parallelize(pairs)
+
+def get_master_weights(url):
+    request = urllib2.Request("http://{0}/parameters".format(url),
+                              headers={'Content-Type': 'application/dist-keras'})
+
+    return pickle.loads(urllib2.urlopen(request).read())
+
+def send_master_deltas(url, deltas):
+    request = urllib2.Request("http://{0}/update".format(url),
+                              pickle.dumps(deltas, -1),
+                              headers={'Content-Type': 'application/dist-keras'})
+
+    return urllib2.urlopen(request).read()
+
+def subtract_params(p1, p2):
+    result = []
+    for x, y in zip(p1, p2):
+        result.append(x - y)
+
+    return result
+
+def add_params(p1, p2):
+    result = []
+    for x, y in zip(p1, p2):
+        result.append(x + y)
+
+    return result
 
 ## END Utility functions. ######################################################
 
@@ -53,7 +82,7 @@ class DistributedModel(object):
         @app.route('/parameters', methods=['GET'])
         def route_parameters():
             with self.mutex:
-                pickled_weights = picle.dumps(self.master_model.get_weights())
+                pickled_weights = picle.dumps(self.master_model.get_weights(), -1)
 
             return pickled_weights
 
@@ -191,7 +220,7 @@ class SparkWorker(object):
                         else:
                             deltas = weights_after
                         # Send the deltas to the master model.
-                        send_master_model_deltas(deltas, self.master_url)
+                        send_master_deltas(self.master_url, deltas)
         else:
             print("\n\n\nUnknown frequency method.")
 
