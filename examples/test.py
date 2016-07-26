@@ -53,5 +53,4 @@ parameters['batch_size'] = batch_size
 sparkModel.train(parameters)
 
 score = sparkModel.master_model.evaluate(x_test, y_test, show_accuracy=True, verbose=2)
-print("Test accuracy: " + `score[0]`)
-print("Test accuracy: " + `score[1]`)
+print(score)
