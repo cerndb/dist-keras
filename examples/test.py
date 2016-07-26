@@ -42,7 +42,7 @@ model.add(Dense(10))
 model.add(Activation('softmax'))
 sgd = SGD(lr=0.1)
 loss='categorical_crossentropy'
-model.compile(loss=loss, optimizer=sgd)
+model.compile(loss=loss, optimizer=sgd, metrics=['accuracy'])
 rdd = to_simple_rdd(sc, x_train, y_train)
 sgd = distkeras_optimizers.SGD()
 sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=sgd, loss=loss)
