@@ -196,14 +196,8 @@ class SparkWorker(object):
         np_batch = int(np.ceil(nb_train_sample / float(batch_size)))
         index_array = np.arange(nb_train_sample)
         batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, batch_size)]
-
-        yield []
-
-        return
         if( self.frequency == 'epoch' ):
-            print("Training in epoch mode")
             for epoch in range(nb_epoch):
-                print("\n\n\n\n\n" + `epoch` + "\n\n\n\n\n\n")
                 if( x_train.shape[0] > batch_size ):
                     for (batch_start, batch_end) in batches:
                         # Fetch the weights before the training.
