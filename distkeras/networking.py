@@ -1,4 +1,5 @@
-"""DistKeras module which provides some utility functions with
+"""
+DistKeras module which provides some utility functions with
 regard to networking.
 """
 
