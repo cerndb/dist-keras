@@ -202,7 +202,7 @@ class SparkWorker(object):
         return
         if( self.frequency == 'epoch' ):
             for epoch in range(nb_epoch):
-                print(epoch)
+                print("\n\n\n\n\n" + `epoch` + "\n\n\n\n\n\n")
                 if( x_train.shape[0] > batch_size ):
                     for (batch_start, batch_end) in batches:
                         # Fetch the weights before the training.
