@@ -105,13 +105,14 @@ class SparkModel(DistributedModel):
     def __init__(self, sc, rdd, keras_model, optimizer,
                  num_workers=4, master_port=5000):
         # Initialize the super class
-        super(SparkModel, self).__init__(keras_model, data,
-                                         optimizer, master_port)
+        super(SparkModel, self).__init__(keras_model, optimizer, master_port)
         self.spark_context = sc
         self.dataset_rdd = rdd
         self.num_workers = num_workers
 
     def train(self, parameters):
+        # Start the weights service
+        self.start_server()
         self.dataset_rdd = repartition(self.num_workers)
         self._train(self.dataset_rdd, parameters)
 
