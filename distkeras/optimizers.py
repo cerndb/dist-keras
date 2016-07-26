@@ -9,7 +9,7 @@ storing them.
 from keras import backend as K
 from keras.utils.generic_utils import get_from_module
 
-from siz.moves import zip
+from six.moves import zip
 
 import numpy as np
 
