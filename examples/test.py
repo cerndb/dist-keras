@@ -52,5 +52,6 @@ parameters['nb_epoch'] = nb_epoch
 parameters['batch_size'] = batch_size
 sparkModel.train(parameters)
 
-score = sparkModel.master_model.evaluate(x_test, y_test, show_accuracy=True, verbose=2)
+score = sparkModel.master_model.evaluate(x_test, y_test, batch_size=64, verbose=1)
+print(sparkModel.master_model.metrics_names)
 print(score)
