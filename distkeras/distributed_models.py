@@ -157,7 +157,7 @@ class SparkWorker(object):
 
         # Construct a Keras model from the specified JSON string.
         model = model_from_json(self.json_model)
-        model.compile(optimizer=solf.optimizer, loss=self.loss)
+        model.compile(optimizer=self.optimizer, loss=self.loss)
         # Fetch the training parameters from the configuration.
         nb_epoch = self.train_config['nb_epoch']
         batch_size = self.train_config['batch_size']
