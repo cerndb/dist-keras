@@ -113,7 +113,7 @@ class SparkModel(DistributedModel):
     def train(self, parameters):
         # Start the weights service
         self.start_server()
-        self.dataset_rdd = repartition(self.num_workers)
+        self.dataset_rdd = self.dataset_rdd.repartition(self.num_workers)
         self._train(self.dataset_rdd, parameters)
 
     def _train(self, parameters):
