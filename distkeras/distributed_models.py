@@ -146,6 +146,8 @@ class SparkWorker(object):
         self.loss = loss
         self.train_config = frequency
         self.master_url = master_url
+        self.nb_epoch = train_config['nb_epoch']
+        self.batch_size = train_config['batch_size']
 
     def train(self, data_iterator):
         feature_iterator, label_iterator = tee(data_iterator, 2)
@@ -159,8 +161,8 @@ class SparkWorker(object):
         model = model_from_json(self.json_model)
         model.compile(optimizer=self.optimizer, loss=self.loss)
         # Fetch the training parameters from the configuration.
-        nb_epoch = self.train_config['nb_epoch']
-        batch_size = self.train_config['batch_size']
+        nb_epoch = self.nb_epoch
+        batch_size = self.batch_size
         nb_train_sample = len(x_train[0])
         np_batch = int(np.ceil(nb_train_sample / float(batch_size)))
         index_array = np.arange(nb_train_sample)
