@@ -96,7 +96,7 @@ class DistributedModel(object):
         raise NotImplementedError
 
     def get_master_url(self):
-        return self.master_address + ":" + self.master_port
+        return self.master_address + ":" + `self.master_port`
 
 
 
