@@ -114,7 +114,7 @@ class SparkModel(DistributedModel):
         # Start the weights service
         self.start_server()
         self.dataset_rdd = self.dataset_rdd.repartition(self.num_workers)
-        self._train(self.dataset_rdd, parameters)
+        self._train(parameters)
 
     def _train(self, parameters):
         json_model = self.master_model.to_json()
