@@ -20,8 +20,6 @@ import numpy as np
 
 ## BEGIN Utility functions. ####################################################
 
-
-
 ## END Utility functions. ######################################################
 
 class DistributedModel:
@@ -108,13 +106,20 @@ class SparkModel(DistributedModel):
 
     def train(self, parameters):
         self.dataset_rdd = repartition(self.num_workers)
-        # Fetch the required paramaters.
-        nb_epoch          = parameters['nb_epoch']
-        batch_size        = parameters['batch_size']
-        verbose           = parameters['verbose']
-        validation_split  = parameters['validation_split']
-        self._train(self.dataset_rdd, nb_epoch, batch_size, verbose, validation_split)
+        self._train(self.dataset_rdd, parameters)
 
-    def _train(self, rdd, nb_epoch, batch_size, verbose, validation_split):
-        yaml = self.master_model.to_yaml()
-        # TODO Implement.
+    def _train(self, parameters):
+        json_model = self.master_model.to_json()
+        master_url = self.get_master_url()
+        worker = SparkWorker(json_model=json_model,
+                             optimizer=self.optimizer,
+                             loss=self.loss,
+                             train_config=parameters,
+                             frequency=self.frequency,
+                             master_url=master_url)
+        self.dataset_rdd.mapPartitions(worker.train).collect()
+        new_weights = get_master_weights(master_url)
+        # Check if valid parameters have been received.
+        if( len(new_weights) != 0):
+            self.master_model.set_weights(new_weights)
+        self.stop_server()
