@@ -23,17 +23,21 @@ import numpy as np
 
 ## BEGIN Utility functions. ####################################################
 
+def to_simple_rdd(sc, features, labels):
+    pairs = [(x, y) for x, y in zip(features, labels)]
+
+    return sc.parallelize(pairs)
+
 ## END Utility functions. ######################################################
 
 class DistributedModel:
 
-    def __init__(self, keras_model, data, optimizer, master_port=5000):
+    def __init__(self, keras_model, optimizer, master_port=5000):
         self.master_model = keras_model
         self.weights = self.master_model.get_weights()
         self.master_address = determine_host_address()
         self.master_port = master_port
         self.optimizer = optimizer
-        self.data = data
         self.mutex = Lock()
 
     ## BEGIN Flask application. ################################################
@@ -98,7 +102,7 @@ class DistributedModel:
 
 class SparkModel(DistributedModel):
 
-    def __init__(self, sc, rdd, keras_model, data, optimizer,
+    def __init__(self, sc, rdd, keras_model, optimizer,
                  num_workers=4, master_port=5000):
         # Initialize the super class
         super(SparkModel, self).__init__(keras_model, data,
