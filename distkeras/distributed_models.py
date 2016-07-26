@@ -109,6 +109,7 @@ class SparkModel(DistributedModel):
         self.spark_context = sc
         self.dataset_rdd = rdd
         self.loss = loss
+        self.frequency = 'epoch'
         self.num_workers = num_workers
 
     def train(self, parameters):
