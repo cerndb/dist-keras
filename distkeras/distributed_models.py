@@ -44,7 +44,7 @@ class DistributedModel(object):
 
     def service(self):
         app = Flask(__name__)
-        self.app = all
+        self.app = app
 
         ## BEGIN Application routes. ###########################################
 
