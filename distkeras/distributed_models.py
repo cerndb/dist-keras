@@ -166,7 +166,7 @@ class SparkWorker(object):
         nb_train_sample = len(x_train[0])
         np_batch = int(np.ceil(nb_train_sample / float(batch_size)))
         index_array = np.arange(nb_train_sample)
-        batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, nb_batch)]
+        batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, batch_size)]
 
         yield []
 
