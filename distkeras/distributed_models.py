@@ -8,6 +8,9 @@ on Apache Spark.
 from distkeras.networking import *
 from distkeras.optimizers import *
 
+from keras.models import model_from_json
+from keras.engine.training import slice_X
+
 from flask import Flask, request
 
 from multiprocessing import Process, Lock
@@ -123,3 +126,58 @@ class SparkModel(DistributedModel):
         if( len(new_weights) != 0):
             self.master_model.set_weights(new_weights)
         self.stop_server()
+
+
+class SparkWorker(object):
+
+    def __init__(self, json_model, optimizer, loss, train_config, frequency,
+                 master_url):
+        self.json_model = json_model
+        self.optimizer = optimizer
+        self.loss = loss
+        self.train_config = frequency
+        self.master_url = master_url
+
+    def train(self, data_iterator):
+        feature_iterator, label_iterator = tee(data_iterator, 2)
+        x_train = np.asarray([x for x, y in feature_iterator])
+        y_train = np.asarray([y for x, y in label_iterator])
+        # Check if a valid number of features have been provided.
+        if( x_train.size == 0 ):
+            return
+
+        # Construct a Keras model from the specified JSON string.
+        model = model_from_json(json_model)
+        model.compile(optimizer=solf.optimizer, loss=self.loss)
+        # Fetch the training parameters from the configuration.
+        nb_epoch = self.train_config['nb_epoch']
+        batch_size = self.train_config['batch_size']
+        nb_train_sample = len(x_train[0])
+        np_batch = int(np.ceil(nb_train_sample / float(batch_size)))
+        index_array = np.arange(nb_train_sample)
+        batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, nb_batch)]
+        if( self.frequency == 'epoch' ):
+            for epoch in range(nb_epoch):
+                if( x_train.shape[0] > batch_size ):
+                    for (batch_start, batch_end) in batches:
+                        # Fetch the weights before the training.
+                        weights_before = get_master_weights(self.master_url)
+                        # Check if we retrieved valid weights.
+                        if( len(weights_before) > 0):
+                            model.set_weights(weights_before)
+
+                        batch_ids = index_array[batch_start:batch_end]
+                        X = slice_X(x_train, batch_ids)
+                        y = slice_X(y_train, batch_ids)
+                        model.train_on_batch(X, y)
+                        weights_after = model.get_weights()
+                        if( len(weights_before) == len(weights_after) ):
+                            deltas = subtract_params(weights_before, weights_after)
+                        else:
+                            deltas = weights_after
+                        # Send the deltas to the master model.
+                        send_master_model_deltas(deltas, self.master_url)
+        else:
+            print("\n\n\nUnknown frequency method.")
+
+        yield []
