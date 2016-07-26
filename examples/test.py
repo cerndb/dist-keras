@@ -11,7 +11,7 @@ from pyspark import SparkContext, SparkConf
 
 batch_size = 64
 nb_classes = 10
-nb_epoch = 100
+nb_epoch = 10000
 
 conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
 sc = SparkContext(conf=conf)
