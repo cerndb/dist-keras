@@ -57,7 +57,7 @@ class SGD(Optimizer):
         new_weights = []
 
 
-        shapes = [x.shape for x in K.batch_get_value(params)]
+        shapes = [x.shape for x in K.batch_get_value(weights)]
         moments = [K.zeros(shape) for shape in shapes]
         for w, g, m in zip(weights, grads, moments):
             v = self.momentum * m - lr * g
