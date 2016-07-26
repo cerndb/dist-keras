@@ -56,17 +56,20 @@ class SGD(Optimizer):
         self.iterations += 1
         new_weights = []
 
-        print(weights)
-        print(grads)
-        print(constraints)
-        for w, g, c in zip(weights, grads, constraints):
-            m = np.zeros_like(w)
+
+        shapes = [x.shape for x in K.batch_get_value(params)]
+        moments = [K.zeros(shape) for shape in shapes]
+        for w, g, m in zip(weights, grads, moments):
             v = self.momentum * m - lr * g
             if self.nesterov:
                 new_w = w + self.momentum * v - lr * g
             else:
-                new_w = w + v
-            new_weights.append(c(new_w))
+                new_w = p +v
+            # Apply constraints
+            if w in constraints:
+                c = constraints[w]
+                new_w = c(new_w)
+            new_weights.append(new_w)
 
         return new_weights
 
