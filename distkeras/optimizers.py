@@ -51,19 +51,22 @@ class SGD(Optimizer):
         self.momentum = momentum
         self.decay = decay
 
-    def get_updates(self, params, constraints, grads):
+    def get_updates(self, weights, constraints, grads):
         lr = self.lr * (1.0 / (1.0 + self.decay * self.iterations))
         self.iterations += 1
         new_weights = []
 
-        for p, g, c in zip(params, grads, constraints):
-            m = np.zeros_like(p)
+        print(weights)
+        print(grads)
+        print(constraints)
+        for w, g, c in zip(weights, grads, constraints):
+            m = np.zeros_like(w)
             v = self.momentum * m - lr * g
             if self.nesterov:
-                new_p = p + self.momentum * v - lr * g
+                new_w = w + self.momentum * v - lr * g
             else:
-                new_p = p + v
-            new_weights.append(c(new_p))
+                new_w = w + v
+            new_weights.append(c(new_w))
 
         return new_weights
 
