@@ -212,6 +212,8 @@ class SparkWorker(object):
                         batch_ids = index_array[batch_start:batch_end]
                         X = slice_X(x_train, batch_ids)
                         y = slice_X(y_train, batch_ids)
+                        print(X)
+                        print(y)
                         model.train_on_batch(X, y)
                         weights_after = model.get_weights()
                         if( len(weights_before) == len(weights_after) ):
