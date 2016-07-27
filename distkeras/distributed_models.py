@@ -200,6 +200,17 @@ class SparkWorker(object):
         index_array = np.arange(nb_train_sample)
         batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, batch_size)]
         if( self.frequency == 'epoch' ):
+            self.train_config['nb_epoch'] = 1
+            for epoch in range(nb_epoch):
+                # Fetch the weights before the traiing
+                weights_before = get_master_weights(self.master_url)
+                if( len(weights_before) > 0):
+                    model.set_weights(weights_before)
+                model.fit(x_train, y_train, show_accuracy=True, **self.train_config)
+                weights_after = model.get_weights()
+                deltas = subtract_params(weights_before, weights_after)
+                send_master_deltas(self.master_url, deltas)
+        elif( self.frequency == 'batch' ):
             for epoch in range(nb_epoch):
                 if( x_train.shape[0] > batch_size ):
                     for (batch_start, batch_end) in batches:
@@ -212,8 +223,6 @@ class SparkWorker(object):
                         batch_ids = index_array[batch_start:batch_end]
                         X = slice_X(x_train, batch_ids)
                         y = slice_X(y_train, batch_ids)
-                        print(X)
-                        print(y)
                         model.train_on_batch(X, y)
                         weights_after = model.get_weights()
                         if( len(weights_before) == len(weights_after) ):
@@ -222,7 +231,5 @@ class SparkWorker(object):
                             deltas = weights_after
                         # Send the deltas to the master model.
                         send_master_deltas(self.master_url, deltas)
-        else:
-            print("\n\n\nUnknown frequency method.")
 
         yield []
