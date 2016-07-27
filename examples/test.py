@@ -50,8 +50,8 @@ model.compile(loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 # Prepare Apache Spark
-conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
-sc = SparkContext(conf=conf)
+spark_conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
+spark_context = SparkContext(conf=spark_config)
 # sgd = distkeras_optimizers.SGD()
 # rdd = to_simple_rdd(X_train, Y_train)
 #sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=sgd, loss=loss)
