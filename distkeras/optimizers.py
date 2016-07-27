@@ -39,6 +39,15 @@ class Optimizer(object):
     def get_config(self):
         return {"name": self.__class__.__name__}
 
+    def get_gradients(self, loss, params):
+        grads = K.gradients(loss, params)
+        if hasattr(self, 'clipnorm') and self.clipnorm > 0:
+            norm = K.sqrt(sum([K.sum(K.square(g)) for g in grads]))
+            grads = [clip_norm(g, self.clipnorm, norm) for g in grads]
+        if hasattr(self, 'clipvalue') and self.clipvalue > 0:
+            grads = [K.clip(g, -self.clipvalue, self.clipvalue) for g in grads]
+        return grads
+
 class SGD(Optimizer):
 
     def __init__(self, lr=0.01, momentum=0, decay=0,
@@ -51,12 +60,24 @@ class SGD(Optimizer):
         self.momentum = momentum
         self.decay = decay
 
-    def get_updates(self, weights, constraints, grads):
+    def get_updates(self, params, constraints, loss):
+        grads = self.get_gradients(loss, params)
         lr = self.lr * (1.0 / (1.0 + self.decay * self.iterations))
         self.iterations += 1
         new_weights = []
 
-        # TODO FIXME
+        shapes = [x.shape for x in K.batch_get_value(params)]
+        moments = [K.zeros(shape) for shape in shapes]
+        for p, g, m in zip(params, grads, moments):
+            v = self.momentum * m - lr * g
+            if self.nesterov:
+                new_p = p + self.momentum * v - lr * g
+            else:
+                new_print() = p + v
+                if p in constraints:
+                    c = constraints[p]
+                    new_p = c(new_p)
+            new_weights.append(new_p)
 
         return new_weights
 

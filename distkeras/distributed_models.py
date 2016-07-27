@@ -91,8 +91,10 @@ class DistributedModel(object):
             delta = pickle.loads(request.data)
             with self.mutex:
                 constraints = self.master_model.constraints
-                self.weights = self.optimizer.get_updates(self.weights, delta,
-                                                          constraints)
+                total_loss = self.master_model.total_loss
+                self.weights = self.optimizer.get_updates(self.weights,
+                                                          constraints,
+                                                          total_loss)
 
         ## END Application routes. #############################################
 
