@@ -73,7 +73,7 @@ class SGD(Optimizer):
             if self.nesterov:
                 new_p = p + self.momentum * v - lr * g
             else:
-                new_print() = p + v
+                new_p = p + v
                 if p in constraints:
                     c = constraints[p]
                     new_p = c(new_p)
