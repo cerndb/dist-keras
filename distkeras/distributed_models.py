@@ -210,26 +210,5 @@ class SparkWorker(object):
                 weights_after = model.get_weights()
                 deltas = subtract_params(weights_before, weights_after)
                 send_master_deltas(self.master_url, deltas)
-        elif( self.frequency == 'batch' ):
-            for epoch in range(nb_epoch):
-                if( x_train.shape[0] > batch_size ):
-                    for (batch_start, batch_end) in batches:
-                        # Fetch the weights before the training.
-                        weights_before = get_master_weights(self.master_url)
-                        # Check if we retrieved valid weights.
-                        if( len(weights_before) > 0):
-                            model.set_weights(weights_before)
-
-                        batch_ids = index_array[batch_start:batch_end]
-                        X = slice_X(x_train, batch_ids)
-                        y = slice_X(y_train, batch_ids)
-                        model.train_on_batch(X, y)
-                        weights_after = model.get_weights()
-                        if( len(weights_before) == len(weights_after) ):
-                            deltas = subtract_params(weights_before, weights_after)
-                        else:
-                            deltas = weights_after
-                        # Send the deltas to the master model.
-                        send_master_deltas(self.master_url, deltas)
 
         yield []
