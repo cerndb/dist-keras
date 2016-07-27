@@ -1,7 +1,10 @@
+import numpy as np
+np.random.seed(1337)  # for reproducibility
+
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam, RMSprop
 from keras.utils import np_utils
 
 from distkeras.distributed_models import *
@@ -9,12 +12,10 @@ from distkeras import optimizers as distkeras_optimizers
 
 from pyspark import SparkContext, SparkConf
 
+
 batch_size = 128
 nb_classes = 10
 nb_epoch = 20
-
-conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
-sc = SparkContext(conf=conf)
 
 # the data, shuffled and split between train and test sets
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
@@ -44,20 +45,25 @@ model.add(Activation('softmax'))
 
 model.summary()
 
-sgd = SGD()
-loss='categorical_crossentropy'
-model.compile(loss=loss, optimizer=sgd, metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',
+              optimizer=SGD(),
+              metrics=['accuracy'])
 
-rdd = to_simple_rdd(sc, x_train, y_train)
-sgd = distkeras_optimizers.SGD()
-sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=sgd, loss=loss)
+# Prepare Apache Spark
+conf = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
+sc = SparkContext(conf=conf)
+# sgd = distkeras_optimizers.SGD()
+# rdd = to_simple_rdd(X_train, Y_train)
+#sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=sgd, loss=loss)
 
-parameters = {}
-parameters['nb_epoch'] = nb_epoch
-parameters['batch_size'] = batch_size
-sparkModel.train(parameters)
-sparkModel.stop_server()
+#parameters = {}
+#parameters['nb_epoch'] = nb_epoch
+#parameters['batch_size'] = batch_size
+#sparkModel.train(parameters)
+#sparkModel.stop_server()
 
-score = sparkModel.master_model.evaluate(x_test, y_test, batch_size=64, verbose=1)
-print(sparkModel.master_model.metrics_names)
-print(score)
+history = model.fit(X_train, Y_train,
+                    batch_size=batch_size, nb_epoch=nb_epoch)
+score = model.evaluate(X_test, Y_test, verbose=0)
+print('Test score:', score[0])
+print('Test accuracy:', score[1])
