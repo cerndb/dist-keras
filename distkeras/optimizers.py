@@ -74,9 +74,9 @@ class SGD(Optimizer):
                 new_p = p + self.momentum * v - lr * g
             else:
                 new_p = p + v
-                if p in constraints:
-                    c = constraints[p]
-                    new_p = c(new_p)
+            if p in constraints:
+                c = constraints[p]
+                new_p = c(new_p)
             new_weights.append(new_p)
 
         return new_weights
