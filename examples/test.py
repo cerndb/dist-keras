@@ -54,7 +54,7 @@ spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]'
 spark_context = SparkContext(conf=spark_config)
 
 rdd = to_simple_rdd(spark_context, X_train, Y_train)
-sparkModel = SparkModel(spark_context, rdd, keras_model=model, optimizer=DistSGD(), loss='categorical_crossentropy')
+sparkModel = SparkModel(spark_context, rdd, keras_model=model, optimizer=SGD(), loss='categorical_crossentropy')
 
 parameters = {}
 parameters['nb_epoch'] = nb_epoch
