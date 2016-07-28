@@ -90,13 +90,11 @@ class DistributedModel(object):
 
         @app.route('/update', methods=['POST'])
         def update_parameters():
-            delta = pickle.loads(request.data)
+            deltas = pickle.loads(request.data)
             with self.mutex:
-                constraints = self.master_model.constraints
-                total_loss = self.master_model.total_loss
-                self.weights = self.optimizer.get_updates(self.weights,
-                                                          constraints,
-                                                          total_loss)
+                weights = self.master_model.get_weights()
+                weights += deltas
+                self.master_model.set_weights(weights)
 
         ## END Application routes. #############################################
 
@@ -203,7 +201,7 @@ class SparkWorker(object):
         batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, batch_size)]
         if( self.frequency == 'epoch' ):
             for epoch in range(nb_epoch):
-                nb_epoch = self.train_config['nb_epoch']
+                nb_epoch = 1
                 batch_size = self.train_config['batch_size']
                 # Fetch the weights before the traiing
                 weights_before = get_master_weights(self.master_url)
