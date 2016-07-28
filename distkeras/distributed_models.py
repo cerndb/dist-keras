@@ -138,7 +138,7 @@ class DistributedModel(object):
 class SparkModel(DistributedModel):
 
     def __init__(self, sc, rdd, keras_model, optimizer, loss,
-                 num_workers=2, master_port=5000):
+                 num_workers=1, master_port=5000):
         # Initialize the super class
         super(SparkModel, self).__init__(keras_model, optimizer, master_port)
         self.spark_context = sc
