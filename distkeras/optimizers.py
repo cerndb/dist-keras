@@ -57,7 +57,7 @@ class DistSGD(DistKerasOptimizer):
 
     def __init__(self, lr=0.01, momentum=0, decay=0,
                  nesterov=False, *args, **kwargs):
-        super(SGD, self).__init__(**kwargs)
+        super(DistSGD, self).__init__(**kwargs)
         self.__dict__.update(locals())
         self.iterations = 0
         self.lr = 0
