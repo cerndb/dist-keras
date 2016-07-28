@@ -7,8 +7,8 @@ from keras.layers.core import Dense, Dropout, Activation
 from keras.optimizers import SGD, Adam, RMSprop
 from keras.utils import np_utils
 
-from distkeras.distributed_models import *
-from distkeras import optimizers as distkeras_optimizers
+#from distkeras.distributed_models import *
+#from distkeras import optimizers as distkeras_optimizers
 
 from pyspark import SparkContext, SparkConf
 

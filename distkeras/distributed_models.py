@@ -5,6 +5,8 @@ on Apache Spark.
 
 ## BEGIN Imports. ##############################################################
 
+from __future__ import absolute_import
+
 from distkeras.networking import *
 from distkeras.optimizers import *
 
