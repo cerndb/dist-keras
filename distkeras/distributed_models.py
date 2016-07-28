@@ -92,11 +92,11 @@ class DistributedModel(object):
             deltas = pickle.loads(request.data)
             with self.mutex:
                 weights = self.master_model.get_weights()
-                print(weights)
-                weights += deltas
-                print("\n\n---------------\n\n")
-                print(weights)
-                self.master_model.set_weights(weights)
+                total_loss = self.master_model.total_loss
+                constraints = self.master_model.constraints
+                updates = self.master_model.optimizer.get_updates(weights, constraints, total_loss)
+                updates += weights
+                self.master_model.set_weights(updates)
             return "OK"
 
         ## END Application routes. #############################################
