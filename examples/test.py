@@ -49,7 +49,8 @@ model.compile(loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 # Prepare Apache Spark
-spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
+spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster('yarn-client')
+#spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster("local[*]")
 spark_context = SparkContext(conf=spark_config)
 
 rdd = to_simple_rdd(spark_context, X_train, Y_train)
