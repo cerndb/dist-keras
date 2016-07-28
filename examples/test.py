@@ -4,11 +4,11 @@ np.random.seed(1337)  # for reproducibility
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
-from keras.optimizers import SGD, Adam, RMSprop
+from keras.optimizers import SGD
 from keras.utils import np_utils
 
-#from distkeras.distributed_models import *
-#from distkeras import optimizers as distkeras_optimizers
+from distkeras.distributed_models import *
+from distkeras.optimizers import *
 
 from pyspark import SparkContext, SparkConf
 
@@ -52,18 +52,16 @@ model.compile(loss='categorical_crossentropy',
 # Prepare Apache Spark
 spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster('local[*]')
 spark_context = SparkContext(conf=spark_config)
-# sgd = distkeras_optimizers.SGD()
-# rdd = to_simple_rdd(X_train, Y_train)
-#sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=sgd, loss=loss)
 
-#parameters = {}
-#parameters['nb_epoch'] = nb_epoch
-#parameters['batch_size'] = batch_size
-#sparkModel.train(parameters)
-#sparkModel.stop_server()
+rdd = to_simple_rdd(X_train, Y_train)
+sparkModel = SparkModel(sc, rdd, keras_model=model, optimizer=DistSGD(), loss='categorical_crossentropy')
 
-history = model.fit(X_train, Y_train,
-                    batch_size=batch_size, nb_epoch=nb_epoch)
+parameters = {}
+parameters['nb_epoch'] = nb_epoch
+parameters['batch_size'] = batch_size
+sparkModel.train(parameters)
+sparkModel.stop_server()
+
 score = model.evaluate(X_test, Y_test, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])

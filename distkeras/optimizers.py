@@ -28,9 +28,14 @@ def kl_divergence(p, p_hat):
 
 ## END Utility functions. ######################################################
 
-class Optimizer(object):
+class DistKerasOptimizer(object):
 
     def __init__(self, **kwargs):
+        allowed_kwargs = {'clipnorm', 'clipvalue'}
+        for k in kwargs:
+            if k not in allowed_kwargs:
+                raise Exception('Unexpected keyword argument '
+                                'passed to optimizer: ' + str(k))
         self.__dict__.update(kwargs)
 
     def get_updates(self, params, constraints, grads):
@@ -48,7 +53,7 @@ class Optimizer(object):
             grads = [K.clip(g, -self.clipvalue, self.clipvalue) for g in grads]
         return grads
 
-class SGD(Optimizer):
+class DistSGD(DistKerasOptimizer):
 
     def __init__(self, lr=0.01, momentum=0, decay=0,
                  nesterov=False, *args, **kwargs):
