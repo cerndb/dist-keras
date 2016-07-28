@@ -193,7 +193,7 @@ class SparkWorker(object):
 
         # Construct a Keras model from the specified JSON string.
         model = model_from_json(self.json_model)
-        model.compile(optimizer=self.optimizer, loss=self.loss)
+        model.compile(optimizer=self.optimizer, loss=self.loss, metrics=['accuracy'])
         # Fetch the training parameters from the configuration.
         nb_epoch = self.nb_epoch
         batch_size = self.batch_size
@@ -202,13 +202,14 @@ class SparkWorker(object):
         index_array = np.arange(nb_train_sample)
         batches = [(i * batch_size, min(nb_train_sample, (i + 1) * batch_size)) for i in range(0, batch_size)]
         if( self.frequency == 'epoch' ):
-            self.train_config['nb_epoch'] = 1
             for epoch in range(nb_epoch):
+                nb_epoch = self.train_config['nb_epoch']
+                batch_size = self.train_config['batch_size']
                 # Fetch the weights before the traiing
                 weights_before = get_master_weights(self.master_url)
                 if( len(weights_before) > 0):
                     model.set_weights(weights_before)
-                model.fit(x_train, y_train, show_accuracy=True, **self.train_config)
+                model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch)
                 weights_after = model.get_weights()
                 deltas = subtract_params(weights_before, weights_after)
                 send_master_deltas(self.master_url, deltas)
