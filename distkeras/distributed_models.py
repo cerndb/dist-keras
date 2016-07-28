@@ -92,8 +92,10 @@ class DistributedModel(object):
             deltas = pickle.loads(request.data)
             with self.mutex:
                 weights = self.master_model.get_weights()
-                print(deltas)
+                print(weights)
                 weights += deltas
+                print("\n\n---------------\n\n")
+                print(weights)
                 self.master_model.set_weights(weights)
             return "OK"
 
