@@ -91,12 +91,8 @@ class DistributedModel(object):
         def update_parameters():
             deltas = pickle.loads(request.data)
             with self.mutex:
-                weights = self.master_model.get_weights()
-                total_loss = self.master_model.total_loss
-                constraints = self.master_model.constraints
-                updates = self.master_model.optimizer.get_updates(weights, constraints, total_loss)
-                updates += weights
-                self.master_model.set_weights(updates)
+                # TODO Implement.
+                print("TODO IMPLEMENT")
             return "OK"
 
         ## END Application routes. #############################################
