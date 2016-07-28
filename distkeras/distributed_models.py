@@ -90,13 +90,15 @@ class DistributedModel(object):
         @app.route('/update', methods=['POST'])
         def update_parameters():
             delta = pickle.loads(request.data)
-            c = self.master_model.constraints
             weights = self.master_model.get_weights()
+            original_weights = np.copy(weights)
+            weights += delta
             with self.mutex:
-                # TODO Implement.
-                print("Printing data")
-                print(delta)
-                print("TODO IMPLEMENT")
+                self.master_model.set_weights(weights)
+                if original_weights == weights:
+                    print("It is identical wtf")
+                else:
+                    print("Not identical, even weirder")
             return "OK"
 
         ## END Application routes. #############################################
@@ -211,9 +213,8 @@ class SparkWorker(object):
                 if( len(weights_before) > 0):
                     model.set_weights(weights_before)
                 model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch)
-                send_master_deltas(self.master_url, model.total_loss)
                 weights_after = model.get_weights()
                 deltas = subtract_params(weights_before, weights_after)
-                #send_master_deltas(self.master_url, deltas)
+                send_master_deltas(self.master_url, deltas)
 
         yield []
