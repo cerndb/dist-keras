@@ -94,6 +94,7 @@ class DistributedModel(object):
             weights = self.master_model.get_weights()
             with self.mutex:
                 # TODO Implement.
+                print("Printing data")
                 print(delta)
                 print("TODO IMPLEMENT")
             return "OK"
