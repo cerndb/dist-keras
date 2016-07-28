@@ -95,6 +95,7 @@ class DistributedModel(object):
                 weights = self.master_model.get_weights()
                 weights += deltas
                 self.master_model.set_weights(weights)
+            return "OK"
 
         ## END Application routes. #############################################
 
