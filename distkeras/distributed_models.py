@@ -92,7 +92,7 @@ class DistributedModel(object):
             delta = pickle.loads(request.data)
             weights = self.master_model.get_weights()
             original_weights = np.copy(weights)
-            weights += delta
+            weights = np.add(weights, delta)
             with self.mutex:
                 self.master_model.set_weights(weights)
                 if original_weights == weights:
