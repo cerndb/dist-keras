@@ -8,7 +8,6 @@ on Apache Spark.
 from __future__ import absolute_import
 
 from distkeras.networking import *
-from distkeras.optimizers import *
 
 from keras.models import model_from_json
 from keras.engine.training import slice_X
