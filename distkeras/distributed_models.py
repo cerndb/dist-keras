@@ -95,10 +95,7 @@ class DistributedModel(object):
             weights = np.add(weights, delta)
             with self.mutex:
                 self.master_model.set_weights(weights)
-                if original_weights == weights:
-                    print("It is identical wtf")
-                else:
-                    print("Not identical, even weirder")
+
             return "OK"
 
         ## END Application routes. #############################################
