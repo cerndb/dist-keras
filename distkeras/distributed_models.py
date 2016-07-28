@@ -89,7 +89,9 @@ class DistributedModel(object):
 
         @app.route('/update', methods=['POST'])
         def update_parameters():
-            deltas = pickle.loads(request.data)
+            delta = pickle.loads(request.data)
+            c = self.master_model.constraints
+            weights = self.master_model.get_weights()
             with self.mutex:
                 # TODO Implement.
                 print("TODO IMPLEMENT")
@@ -207,6 +209,7 @@ class SparkWorker(object):
                 if( len(weights_before) > 0):
                     model.set_weights(weights_before)
                 model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch)
+                print(model.total_loss)
                 weights_after = model.get_weights()
                 deltas = subtract_params(weights_before, weights_after)
                 send_master_deltas(self.master_url, deltas)
