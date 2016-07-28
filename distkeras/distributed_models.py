@@ -91,8 +91,8 @@ class DistributedModel(object):
         def update_parameters():
             deltas = pickle.loads(request.data)
             with self.mutex:
-                print("\n\n\n\nUpdating weights\n\n\n\n\n")
                 weights = self.master_model.get_weights()
+                print(deltas)
                 weights += deltas
                 self.master_model.set_weights(weights)
             return "OK"
