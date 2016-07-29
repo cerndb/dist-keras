@@ -67,8 +67,6 @@ class DistributedModel(object):
     def __init__(self, master_method, slave_method):
         self.master_method = master_method
         self.slave_method = slave_method
-        self.master_thread = None
-        self.slave_thread = None
 
     def train(self):
         raise NotImplementedError
