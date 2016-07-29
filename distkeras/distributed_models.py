@@ -64,9 +64,29 @@ def add_params(p1, p2):
 
 class DistributedModel(object):
 
-    def __init__(self, master_method, slave_method):
-        self.master_method = master_method
-        self.slave_method = slave_method
+    def __init__(self, distributed_method):
+        self.distributed_method = distributed_method
+        self.model_setup = False
 
-    def train(self):
+    def setup(self):
+        self.distributed_method.setup()
+        self.model_setup = True
+
+    def train(self, parameter):
         raise NotImplementedError
+
+    def is_setup(self):
+        return self.model_setup
+
+class SparkModel(DistributedModel):
+
+    def __init__(self, distributed_method, sc, num_workers):
+        super(SparkModel, self).__init__(distributed_method)
+        self.spark_context = sc
+        self.num_workers
+
+    def train(self, parameters):
+        # Check if the model was setup.
+        if not self.is_setup:
+            raise ValueError
+        # TODO Implement

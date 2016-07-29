@@ -25,14 +25,22 @@ def rest_send_to_master(url, data):
 
 ## END Utility functions. ######################################################
 
+class DistributedMethod(object):
+
+    def setup(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
 class MasterMethod(object):
 
-    def run():
+    def run(self):
         raise NotImplementedError
 
 class SlaveMethod(object):
 
-    def run():
+    def run(self):
         raise NotImplementedError
 
 class NetworkMasterMethod(MasterMethod):
@@ -40,7 +48,7 @@ class NetworkMasterMethod(MasterMethod):
     def __init__(self, network_port):
         self.network_port = port
 
-    def run():
+    def run(self):
         raise NotImplementedError
 
 class NetworkSlaveMethod(SlaveMethod):
