@@ -72,7 +72,7 @@ class DistributedModel(object):
         self.distributed_method.setup()
         self.model_setup = True
 
-    def train(self, parameter):
+    def train(self):
         raise NotImplementedError
 
     def is_setup(self):
@@ -85,8 +85,9 @@ class SparkModel(DistributedModel):
         self.spark_context = sc
         self.num_workers
 
-    def train(self, parameters):
+    def train(self):
         # Check if the model was setup.
         if not self.is_setup:
             raise ValueError
-        # TODO Implement
+        # Run the distributed method
+        self.distributed_method.run()
