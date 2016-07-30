@@ -70,10 +70,12 @@ class NetworkSlaveMethod(SlaveMethod):
 
 class SynchronousEASGDMethod(DistributedMethod):
 
-    def __init__(self, learning_rate, num_workers, rho):
+    def __init__(self, network_port, learning_rate, num_workers, rho, num_epoch):
         self.learning_rate = learning_rate
+        self.network_port = network_port
         self.num_workers = num_workers
         self.rho = rho
+        self.num_epoch = num_epoch
 
     def setup(self):
         # Initialize the master and slave method.
@@ -86,12 +88,30 @@ class SynchronousEASGDMethod(DistributedMethod):
 
 class SynchronousEASGDMasterMethod(NetworkMasterMethod):
 
-    def __init__(self, network_port, num_workers, rho, num_epoch):
+    def __init__(self, network_port, num_workers, learning_rate, rho, num_epoch, model):
         super(SynchronousEASGDMasterMethod, self).__init__(network_port)
         self.num_workers = num_workers
         self.rho = rho
         self.initialize_server()
-        self.num_epoch
+        self.num_epoch = num_epoch
+        self.current_epoch = 0
+        self.learning_rate = learning_rate
+        self.master_mutex = Lock()
+        self.master_model = model
+        self.epoch_done = True
+        self.epoch_weights = {}
+
+    def update_center_variable(self):
+        # Fetch the current center variable.
+        center_variable = self.master_model.get_weights()
+        for x in self.epoch_weights:
+            delta += self.rho * (x - center_variable)
+        delta *= self.learning_rate
+        center_variable += delta
+        self.master_model.set_weights(center_variable)
+        # Update the variables for the next epoch.
+        self.epoch_done = True
+        self.current_epoch += 1
 
     def synchronous_easgd_service(self):
         # Define the master functionality.
@@ -100,7 +120,43 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
         ## BEGIN REST routes. ##################################################
 
         @app.route("/center_variable", methods=['GET'])
-        def get_variable
+        def get_variable():
+            with self.master_mutex:
+                center_variable = self.master_model.get_weights().copy()
+                data = {}
+                data['current_epoch'] = self.current_epoch
+                data['serialized'] = center_variable
+
+            return pickle.dump(data, -1)
+
+        @app.route("/ready", methods=['GET'])
+        def epoch_done():
+            with self.master_mutex:
+                data = pickle.load(request.data)
+                epoch = data['epoch']
+                if epoch < self.current_epoch:
+                    result = "1"
+                elif self.epoch_done:
+                    result = "1"
+                else:
+                    result = "0"
+
+            return result
+
+        @app.route("/weights", methods=['POST'])
+        def weights():
+            data = pickle.load(request.data)
+            weights = data['weights']
+            epoch = data['epoch']
+            worker_id = data['worker_id']
+            if epoch == current_epoch:
+                with self.master_mutex:
+                    self.epoch_done = False
+                    self.epoch_weights[worker_id] = weights
+                    # Check if all workers send their weights
+                    if self.epoch_weights.size() == self.num_workers:
+                        self.update_center_variable()
+
 
         ## END REST routes. ####################################################
 
