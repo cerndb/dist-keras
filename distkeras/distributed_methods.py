@@ -179,4 +179,28 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
     def run(self):
         service.join()
 
+
+class SynchronousEASGDSlaveMethod(NetworkSlaveMethod):
+
+    def __init__(self, master_address, master_port, learning_rate, rho, num_epoch, json_model):
+        super(SynchronousEASGDSlaveMethod, self).__init__(master_address, master_port)
+        self.learning_rate = learning_rate
+        self.rho = rho
+        self.num_epoch = num_epoch
+        self.json_model = json_model
+        self.model = None
+
+    def prepare_model(self):
+        # TODO Implement.
+        raise NotImplementedError
+
+    def process_epoch(self, e):
+        # TODO Implement.
+        raise NotImplementedError
+
+    def run(self):
+        self.prepare_model()
+        for e in range(0, self.num_epoch):
+            self.process_epoch(e)
+
 ## END Synchronous EASGD. ######################################################
