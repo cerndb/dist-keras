@@ -109,6 +109,8 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
         delta *= self.learning_rate
         center_variable += delta
         self.master_model.set_weights(center_variable)
+        # Clear the epoch weights dictionary.
+        self.epoch_weights.clear()
         # Update the variables for the next epoch.
         self.epoch_done = True
         self.current_epoch += 1
@@ -144,7 +146,7 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
             return result
 
         @app.route("/weights", methods=['POST'])
-        def weights():
+        def post_weights():
             data = pickle.load(request.data)
             weights = data['weights']
             epoch = data['epoch']
@@ -156,6 +158,14 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
                     # Check if all workers send their weights
                     if self.epoch_weights.size() == self.num_workers:
                         self.update_center_variable()
+
+        @app.route("/weights", method=['POST'])
+        def get_weights():
+            with self.master_mutex:
+                weights = self.master_model.get_weights()
+                serialized = pickle.dump(weights, -1)
+
+            return serialized
 
 
         ## END REST routes. ####################################################
