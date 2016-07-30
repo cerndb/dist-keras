@@ -95,12 +95,16 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
 
     def synchronous_easgd_service(self):
         # Define the master functionality.
-        app = Flask()
+        app = Flask(__name__)
 
         ## BEGIN REST routes. ##################################################
+
+        @app.route("/center_variable", methods=['GET'])
+        def get_variable
+
         ## END REST routes. ####################################################
 
-        app.run(host='0.0.0.0', port=self.network_port)
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
     def initialize_server(self):
         service = Process(target=self.synchronous_easgd_service)
