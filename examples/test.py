@@ -8,6 +8,7 @@ from keras.optimizers import SGD
 from keras.utils import np_utils
 
 from distkeras.distributed_models import *
+from distkeras.distributed_methods import *
 
 from pyspark import SparkContext, SparkConf
 
@@ -54,13 +55,13 @@ spark_config = SparkConf().setAppName("Dist-Keras Testing").setMaster('yarn-clie
 spark_context = SparkContext(conf=spark_config)
 
 rdd = to_simple_rdd(spark_context, X_train, Y_train)
-sparkModel = SparkModel(spark_context, rdd, keras_model=model, optimizer=SGD(), loss='categorical_crossentropy', num_workers=4)
 
-parameters = {}
-parameters['nb_epoch'] = nb_epoch
-parameters['batch_size'] = batch_size
-sparkModel.train(parameters)
-sparkModel.stop_server()
+# Set-up the distributed method.
+method = SynchronousEASGDMethod(network_port=5000, learning_rate=0.01, num_workers=1, rho=0.1, num_epoch=10)
+# Set-up the distributed model.
+model = SparkModel(method, spark_context, 1, rdd)
+model.setup()
+model.train()
 
 score = sparkModel.master_model.evaluate(X_test, Y_test, verbose=0)
 print('Test score:', score[0])
