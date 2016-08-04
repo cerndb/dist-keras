@@ -80,14 +80,17 @@ class DistributedModel(object):
 
 class SparkModel(DistributedModel):
 
-    def __init__(self, distributed_method, sc, num_workers):
+    def __init__(self, distributed_method, sc, num_workers, rdd):
         super(SparkModel, self).__init__(distributed_method)
         self.spark_context = sc
-        self.num_workers
+        self.num_workers = num_workers
+        self.dataset_rdd = rdd
 
     def train(self):
-        # Check if the model was setup.
         if not self.is_setup:
             raise ValueError
-        # Run the distributed method
+        self.dataset_rdd.repartition(self.num_workers)
+        self.dataset_rdd.mapPartitions(
+            self.distributed_method.slave_method.run).collect()
         self.distributed_method.run()
+        self.distributed_method.stop()

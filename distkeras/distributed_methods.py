@@ -4,6 +4,8 @@ Distributed learning methods.
 
 ## BEGIN Imports. ##############################################################
 
+from keras.models import model_from_json
+
 from flask import Flask, request
 
 from multiprocessing import Process, Lock
@@ -76,12 +78,15 @@ class SynchronousEASGDMethod(DistributedMethod):
         self.num_workers = num_workers
         self.rho = rho
         self.num_epoch = num_epoch
+        self.model = None
+
+    def set_master_model(model):
+        self.model = model
 
     def setup(self):
         # Initialize the master and slave method.
-        # TODO Implement.
-        self.master_method = None
-        self.slave_method = None
+        self.master_method = SynchronousEASGDMasterMethod(self.network_port, self.num_workers, self.learning_rate, self.rho, self.num_epoch, self.model)
+        self.slave_method = SynchronousEASGDSlaveMethod(self.network_port, self.num_workers, self.learning_rate, self.rho, self.num_epoch. self.model.to_json())
 
     def run(self):
         self.master_method.run()
@@ -182,25 +187,30 @@ class SynchronousEASGDMasterMethod(NetworkMasterMethod):
 
 class SynchronousEASGDSlaveMethod(NetworkSlaveMethod):
 
-    def __init__(self, master_address, master_port, learning_rate, rho, num_epoch, json_model):
+    def __init__(self, master_address, master_port, learning_rate, rho, num_epoch, json_model, batch_size):
         super(SynchronousEASGDSlaveMethod, self).__init__(master_address, master_port)
         self.learning_rate = learning_rate
         self.rho = rho
         self.num_epoch = num_epoch
         self.json_model = json_model
+        self.batch_size = batch_size
         self.model = None
 
     def prepare_model(self):
-        # TODO Implement.
-        raise NotImplementedError
+        self.model = model_from_json(self.json_model)
+        self.model.compile()
 
-    def process_epoch(self, e):
-        # TODO Implement.
-        raise NotImplementedError
+    def process_epoch(self, e, x_train, y_train):
+        weights_before = self.model.get_weights()
+        model.fit(x_train, y_train, batch_size=self.batch_size, nb_epoch=1)
+        weights_after = self.model.get_weights()
 
-    def run(self):
+    def run(self, data_iterator):
         self.prepare_model()
+        feature_iterator, label_iterator = tee(data_iterator, 2)
+        x_train = np.asarray([x for x, y in feature_iterator])
+        y_train = np.asarray([y for x, y in label_iterator])
         for e in range(0, self.num_epoch):
-            self.process_epoch(e)
+            self.process_epoch(e, x_train, y_train)
 
 ## END Synchronous EASGD. ######################################################
