@@ -20,6 +20,13 @@ import numpy as np
 ## END Imports. ################################################################
 
 ## BEGIN Utility functions. ####################################################
+
+def to_vector(x):
+    vector = np.zeros(2)
+    vector[x] = 1
+
+    return vector
+
 ## END Utility functions. ######################################################
 
 class Trainer(object):
@@ -59,10 +66,18 @@ class EnsembleTrainerWorker(object):
     def train(self, iterator):
         # Deserialize the Keras model.
         model = model_from_json(self.model)
-        # Construct the label feature and label vectors.
-        feature_iterator, label_iterator = tee(iterator, 2)
-        X = np.asarray([row[self.features_column] for row in feature_iterator])
-        Y = np.asarray([row[self.label_column] for row in label_iterator])
+        # Initialize empty feature and label lists.
+        X = []
+        Y = []
+        # Construct the feature and label vectors
+        try:
+            for row in iterator:
+                X.append(row[self.features_column])
+                Y.append(to_vector(row[self.label_column]))
+            X = np.asarray(X)
+            Y = np.asarray(Y)
+        except TypeError:
+            pass
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
