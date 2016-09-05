@@ -17,7 +17,6 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.feature import StringIndexer
 
 from distkeras.distributed import EnsembleTrainer
-from distkeras.distributed import to_vector
 
 import os
 
@@ -51,6 +50,12 @@ dataset = standardScalerModel.transform(dataset)
 nb_features = len(features)
 nb_classes = 2
 
+# Define the label transformer.
+def to_vector(x):
+    vector = np.zeros(2)
+    vector[x] = 1.0
+    return vector
+
 # Define the Keras model.
 model = Sequential()
 model.add(Dense(600, input_shape=(nb_features,)))
@@ -69,7 +74,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
+ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", label_transformer=to_vector)
 models = ensembleTrainer.train(dataset)
 
 print(models)
