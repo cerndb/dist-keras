@@ -102,7 +102,9 @@ class EnsembleTrainerWorker(object):
                     X.append(row[self.features_column])
                     Y.append(row[self.label_column])
             X = np.array(X)
+            print(X[0])
             Y = np.array(Y)
+            print(Y[0])
         except TypeError:
             pass
         # TODO Add compilation parameters.
