@@ -114,7 +114,7 @@ class EnsembleTrainerWorker(object):
         try:
             for row in iterator:
                 print(row)
-                X.append(row['features_normalized'])
+                X.append(row.features_normalized)
                 Y.append(row[self.label_column])
             X = np.asarray(X)
             Y = np.asarray(Y)
