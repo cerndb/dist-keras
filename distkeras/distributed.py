@@ -55,8 +55,7 @@ class Trainer(object):
 
 class EnsembleTrainer(Trainer):
 
-    def __init__(self, keras_model, num_models=2, features_col="features",
-                 label_col="label", label_transformer=None):
+    def __init__(self, keras_model, num_models=2, features_col="features",label_col="label"):
         super(EnsembleTrainer, self).__init__(keras_model)
         self.num_models = num_models
         self.features_column = features_col
@@ -69,8 +68,7 @@ class EnsembleTrainer(Trainer):
         # Allocate an ensemble worker.
         worker = EnsembleTrainerWorker(keras_model=self.master_model,
                                        features_col=self.features_column,
-                                       label_col=self.label_column,
-                                       label_transformer=self.label_transformer)
+                                       label_col=self.label_column)
         # Train the models, and collect them as a list.
         models = data.mapPartitions(worker.train).collect()
 
@@ -78,35 +76,17 @@ class EnsembleTrainer(Trainer):
 
 class EnsembleTrainerWorker(object):
 
-    def __init__(self, keras_model, features_col, label_col, label_transformer):
+    def __init__(self, keras_model, features_col, label_col):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
-        self.label_transformer = label_transformer
 
     def train(self, iterator):
         # Deserialize the Keras model.
         model = model_from_json(self.model)
-        # Initialize empty feature and label lists.
-        X = []
-        Y = []
-        # Construct the feature and label vectors
-        try:
-            # Check if a label transformer is available.
-            if not self.label_transformer == None:
-                for row in iterator:
-                    X.append(row[self.features_column])
-                    Y.append(self.label_transformer(row[self.label_column]))
-            else:
-                for row in iterator:
-                    X.append(row[self.features_column])
-                    Y.append(row[self.label_column])
-            X = np.array(X)
-            print(X[0])
-            Y = np.array(Y)
-            print(Y[0])
-        except TypeError:
-            pass
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([to_vector(x[self.label_column]) for x in label_iterator])
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
