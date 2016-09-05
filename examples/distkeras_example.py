@@ -40,7 +40,7 @@ features.remove('Label')
 assembler = VectorAssembler(inputCols=features, outputCol="features")
 dataset = assembler.transform(dataset)
 # Since the output layer will not be able to read the string label, convert it to an double.
-labelIndexer = StringIndexer(inputCol="Label", outputCol="label").fit(dataset)
+labelIndexer = StringIndexer(inputCol="Label", outputCol="label_index").fit(dataset)
 dataset = labelIndexer.transform(dataset)
 # Feature normalization.
 standardScaler = StandardScaler(inputCol="features", outputCol="features_normalized", withStd=True, withMean=True)
@@ -70,7 +70,7 @@ model.summary()
 
 # Transform the label indices to vectors.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
-#dataset = labelVectorTransformer.transform(dataset)
+dataset = labelVectorTransformer.transform(dataset).toDF()
 # Create the distributed Ensemble trainer.
 ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
 models = ensembleTrainer.train(dataset)
