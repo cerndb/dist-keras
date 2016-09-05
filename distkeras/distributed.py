@@ -35,30 +35,6 @@ class Transformer(object):
         raise NotImplementedError
 
 
-class LabelVectorTransformer(Transformer):
-
-    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
-        self.input_column = input_col
-        self.output_column = output_col
-        self.output_dim = output_dim
-
-    def _transform(self, iterator):
-        rows = []
-        try:
-            for row in iterator:
-                label = row[self.input_column]
-                transformed = DenseVector(to_vector(label, self.output_dim).tolist())
-                new_row = Row(row.__fields__ + [self.output_column])(row + (transformed,))
-                rows.append(new_row)
-        except TypeError:
-            pass
-
-        return iter(rows)
-
-    def transform(self, data):
-        return data.mapPartitions(self._transform)
-
-
 class Predictor(Transformer):
 
     def __init__(self, keras_model):
@@ -79,11 +55,13 @@ class Trainer(object):
 
 class EnsembleTrainer(Trainer):
 
-    def __init__(self, keras_model, num_models=2, features_col="features", label_col="label"):
+    def __init__(self, keras_model, num_models=2, features_col="features",
+                 label_col="label", label_transformer=None):
         super(EnsembleTrainer, self).__init__(keras_model)
         self.num_models = num_models
         self.features_column = features_col
         self.label_column = label_col
+        self.label_transformer = label_transformer
 
     def train(self, data):
         # Repartition the data to fit the number of models.
@@ -91,7 +69,8 @@ class EnsembleTrainer(Trainer):
         # Allocate an ensemble worker.
         worker = EnsembleTrainerWorker(keras_model=self.master_model,
                                        features_col=self.features_column,
-                                       label_col=self.label_column)
+                                       label_col=self.label_column,
+                                       label_transformer=self.label_transformer)
         # Train the models, and collect them as a list.
         models = data.mapPartitions(worker.train).collect()
 
@@ -99,10 +78,11 @@ class EnsembleTrainer(Trainer):
 
 class EnsembleTrainerWorker(object):
 
-    def __init__(self, keras_model, features_col, label_col):
+    def __init__(self, keras_model, features_col, label_col, label_transformer):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
+        self.label_transformer = label_transformer
 
     def train(self, iterator):
         # Deserialize the Keras model.
@@ -112,10 +92,15 @@ class EnsembleTrainerWorker(object):
         Y = []
         # Construct the feature and label vectors
         try:
-            for row in iterator:
-                print(row)
-                X.append(row.features_normalized)
-                Y.append(row[self.label_column])
+            # Check if a label transformer is available.
+            if not self.label_transformer == None:
+                for row in iterator:
+                    X.append(row[self.features_column])
+                    Y.append(self.label_transformer(row[self.label_column]))
+            else:
+                for row in iterator:
+                    X.append(row[self.features_column])
+                    Y.append(row[self.label_column])
             X = np.asarray(X)
             Y = np.asarray(Y)
         except TypeError:

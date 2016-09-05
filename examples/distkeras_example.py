@@ -17,7 +17,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.feature import StringIndexer
 
 from distkeras.distributed import EnsembleTrainer
-from distkeras.distributed import LabelVectorTransformer
+from distkeras.distributed import to_vector
 
 import os
 
@@ -68,11 +68,8 @@ model.add(Activation('softmax'))
 # Print a summary of the model structure.
 model.summary()
 
-# Transform the label indices to vectors.
-labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
-dataset = labelVectorTransformer.transform(dataset)
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
+ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", label_transformer=to_vector)
 models = ensembleTrainer.train(dataset)
 
 print(models)
