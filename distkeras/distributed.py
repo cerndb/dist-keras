@@ -113,7 +113,7 @@ class EnsembleTrainerWorker(object):
         # Construct the feature and label vectors
         try:
             for row in iterator:
-                print(row.asDict(True))
+                print(row)
                 X.append(row[self.features_column])
                 Y.append(row[self.label_column])
             X = np.asarray(X)
