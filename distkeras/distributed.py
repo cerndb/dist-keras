@@ -60,7 +60,6 @@ class EnsembleTrainer(Trainer):
         self.num_models = num_models
         self.features_column = features_col
         self.label_column = label_col
-        self.label_transformer = label_transformer
 
     def train(self, data):
         # Repartition the data to fit the number of models.
