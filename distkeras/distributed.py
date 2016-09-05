@@ -89,8 +89,10 @@ class EnsembleTrainer(Trainer):
         # Repartition the data to fit the number of models.
         data = data.repartition(self.num_models)
         # Allocate an ensemble worker.
-        worker = EnsembleTrainerWorker(self.master_model, self.features_column, self.label_column)
-        # Train the models.
+        worker = EnsembleTrainerWorker(keras_model=self.master_model,
+                                       features_col=self.features_column,
+                                       label_col=self.label_column)
+        # Train the models, and collect them as a list.
         models = data.mapPartitions(worker.train).collect()
 
         return models
