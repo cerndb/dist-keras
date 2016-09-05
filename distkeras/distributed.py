@@ -47,8 +47,9 @@ class LabelVectorTransformer(Transformer):
         try:
             for row in iterator:
                 label = row[self.input_column]
-                transformed = to_vector(label, self.output_dim)
+                transformed = DenseVector(to_vector(label, self.output_dim).tolist())
                 new_row = Row(row.__fields__ + [self.output_column])(row + (transformed,))
+                print(new_row)
                 rows.append(new_row)
         except TypeError:
             pass
