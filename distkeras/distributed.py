@@ -39,7 +39,26 @@ class EnsembleTrainer(Trainer):
         self.features_column = features_col
         self.label_column = label_col
 
-    def _train(self, iterator):
+    def train(self, data):
+        # Repartition the data to fit the number of models.
+        data = data.repartition(self.num_models)
+        # Allocate an ensemble worker.
+        worker = EnsembleTrainerWorker(self.master_model, self.features_column, self.label_column)
+        # Train the models.
+        models = data.mapPartitions(worker.train).collect()
+
+        return models
+
+class EnsembleTrainerWorker(object):
+
+    def __init__(self, keras_model, features_col, label_col):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+
+    def train(self, iterator):
+        # Deserialize the Keras model.
+        model = model_from_json(self.model)
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([row[self.features_column] for row in feature_iterator])
         Y = np.asarray([row[self.label_column] for row in label_iterator])
@@ -53,11 +72,3 @@ class EnsembleTrainer(Trainer):
         partitionResult = (history, model.to_json())
 
         return iter([partitionResult])
-
-    def train(self, data):
-        # Repartition the data to fit the number of models.
-        data = data.repartition(self.num_models)
-        # Train the models.
-        models = data.mapPartitions(self._train).collect()
-
-        return models
