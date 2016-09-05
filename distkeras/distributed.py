@@ -101,8 +101,8 @@ class EnsembleTrainerWorker(object):
                 for row in iterator:
                     X.append(row[self.features_column])
                     Y.append(row[self.label_column])
-            X = np.asarray(X)
-            Y = np.asarray(Y)
+            X = np.array(X)
+            Y = np.array(Y)
         except TypeError:
             pass
         # TODO Add compilation parameters.
