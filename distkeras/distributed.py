@@ -37,7 +37,7 @@ class Transformer(object):
 
 class LabelVectorTransformer(Transformer):
 
-    def __init__(self, output_dim, input_col="label", outputcol="label_vectorized"):
+    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
         self.input_column = input_col
         self.output_column = output_col
         self.output_dim = output_dim
