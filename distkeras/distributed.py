@@ -59,10 +59,10 @@ class EnsembleTrainerWorker(object):
     def train(self, iterator):
         # Deserialize the Keras model.
         model = model_from_json(self.model)
+        # Construct the label feature and label vectors.
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([row[self.features_column] for row in feature_iterator])
         Y = np.asarray([row[self.label_column] for row in label_iterator])
-        model = model_from_json(self.master_model)
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
