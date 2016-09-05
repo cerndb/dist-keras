@@ -30,7 +30,7 @@ setup(name='dist-keras',
           'Programming Language :: Python :: 2.7',
       ],
       packages=['distkeras'],
-      package_data={'distkeras': ['dist-keras/*.py']},
+      package_data={'distkeras': ['distkeras/*.py']},
       # Keywords related to the project.
       keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
 )
