@@ -24,8 +24,7 @@ import numpy as np
 
 class Trainer(object):
 
-    def __init__(self, spark_context, keras_model):
-        self.sc = spark_context
+    def __init__(self, keras_model):
         self.master_model = keras_model.to_json()
 
     def train(self, data):
@@ -34,8 +33,8 @@ class Trainer(object):
 
 class EnsembleTrainer(Trainer):
 
-    def __init__(self, spark_context, keras_model, num_models=2, features_col="features", label_col="label"):
-        super(EnsembleTrainer, self).__init__(spark_context, keras_model)
+    def __init__(self, keras_model, num_models=2, features_col="features", label_col="label"):
+        super(EnsembleTrainer, self).__init__(keras_model)
         self.num_models = num_models
         self.features_column = features_col
         self.label_column = label_col
