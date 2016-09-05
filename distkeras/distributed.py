@@ -21,8 +21,8 @@ import numpy as np
 
 ## BEGIN Utility functions. ####################################################
 
-def to_vector(x, n_dim):
-    vector = np.zeros(n_dim)
+def to_vector(x):
+    vector = np.zeros(2)
     vector[x] = 1.0
 
     return vector
