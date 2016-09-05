@@ -35,7 +35,7 @@ class Trainer(object):
 class EnsembleTrainer(Trainer):
 
     def __init__(self, spark_context, keras_model, num_models=2, features_col="features", label_col="label"):
-        super(EnsembleTrainer, self).__init__(spark_context, keras_model):
+        super(EnsembleTrainer, self).__init__(spark_context, keras_model)
         self.num_models = num_models
         self.features_column = features_col
         self.label_column = label_col
