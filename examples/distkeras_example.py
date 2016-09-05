@@ -68,7 +68,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(sc, model, features_col="features_normalized")
+ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
 models = ensembleTrainer.train(dataset)
 
 print(models)
