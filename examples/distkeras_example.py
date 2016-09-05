@@ -40,7 +40,7 @@ features.remove('Label')
 assembler = VectorAssembler(inputCols=features, outputCol="features")
 dataset = assembler.transform(dataset)
 # Since the output layer will not be able to read the string label, convert it to an double.
-labelIndexer = StringIndexer(inputCol="Label", outputCol="label_index").fit(dataset)
+labelIndexer = StringIndexer(inputCol="Label", outputCol="label").fit(dataset)
 dataset = labelIndexer.transform(dataset)
 # Feature normalization.
 standardScaler = StandardScaler(inputCol="features", outputCol="features_normalized", withStd=True, withMean=True)
