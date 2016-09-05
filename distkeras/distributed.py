@@ -21,13 +21,52 @@ import numpy as np
 
 ## BEGIN Utility functions. ####################################################
 
-def to_vector(x):
-    vector = np.zeros(2)
-    vector[x] = 1
+def to_vector(x, n_dim):
+    vector = np.zeros(n_dim)
+    vector[x] = 1.0
 
     return vector
 
 ## END Utility functions. ######################################################
+
+class Transformer(object):
+
+    def transform(self, data):
+        raise NotImplementedError
+
+
+class LabelVectorTransformer(Transformer):
+
+    def __init__(self, output_dim, input_col="label", outputcol="label_vectorized"):
+        self.input_column = input_col
+        self.output_column = output_col
+        self.output_dim = output_dim
+
+    def _transform(self, iterator):
+        rows = []
+        try:
+            for row in iterator:
+                label = row[self.input_column]
+                transformed = to_vector(label, self.output_dim)
+                new_row = Row(row.__fields__ + [self.output_column])(row + transformed,))
+                rows.append(new_row)
+        except TypeError:
+            pass
+
+        return iter(rows)
+
+    def transform(self, data):
+        return data.mapPartitions(self._transform)
+
+
+class Predictor(Transformer):
+
+    def __init__(self, keras_model):
+        self.model = keras_model.to_json()
+
+    def predict(self, data):
+        raise NotImplementedError
+
 
 class Trainer(object):
 
@@ -73,7 +112,7 @@ class EnsembleTrainerWorker(object):
         try:
             for row in iterator:
                 X.append(row[self.features_column])
-                Y.append(to_vector(row[self.label_column]))
+                Y.append(row[self.label_column])
             X = np.asarray(X)
             Y = np.asarray(Y)
         except TypeError:
