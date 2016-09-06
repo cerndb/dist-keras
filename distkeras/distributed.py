@@ -80,6 +80,38 @@ class LabelVectorTransformer(Transformer):
     def transform(self, data):
         return data.mapPartitions(self._transform)
 
+class LabelIndexTransformer(Transformer):
+
+    def __init__(self, output_dim, input_col="prediction", output_col="predicted_index",
+                 default_index=0, activation_threshold=0.55):
+        self.input_column = input_col
+        self.output_column = output_col
+        self.output_dim = output_dim
+        self.activation_threshold = activation_threshold
+        self.default_index = default_index
+
+    def get_index(vector):
+        for index in range(0, self.output_dim):
+            if index >= self.activation_threshold:
+                return index
+        return self.default_index
+
+    def _transform(self, iterator):
+        rows = []
+        try:
+            for row in iterator:
+                output_vector = row[self.input_column]
+                index = float(self.get_index(output_vector))
+                new_row = new_dataframe_row(row, self.output_column, index)
+                rows.append(new_row)
+        except ValueError:
+            pass
+
+        return iter(rows)
+
+    def transform(self, data):
+        return data.mapPartitions(self._transform)
+
 
 class Predictor(Transformer):
 

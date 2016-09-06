@@ -19,6 +19,7 @@ from pyspark.ml.feature import StringIndexer
 from distkeras.distributed import EnsembleTrainer
 from distkeras.distributed import LabelVectorTransformer
 from distkeras.distributed import ModelPredictor
+from distkeras.distributed import LabelIndexTransformer
 
 import os
 
@@ -89,5 +90,9 @@ print(model)
 predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")
 dataset = predictorTransformer.predict(dataset).toDF()
 dataset.printSchema()
-examples = dataset.collect()
-print(examples[0])
+
+# Apply the label index transformer, which will transform the output vector to an indexed label.
+indexTransformer = LabelIndexTransformer(output_dim=nb_classes)
+dataset = indexTransformer.transform(dataset)
+dataset.printSchema()
+print(dataset.first())
