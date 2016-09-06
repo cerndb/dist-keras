@@ -87,5 +87,5 @@ print(model)
 
 # Apply the model prediction to the dataframe.
 predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")
-dataset = predictorTransformer.predict(dataset)
+dataset = predictorTransformer.predict(dataset).toDF()
 dataset.printSchema()

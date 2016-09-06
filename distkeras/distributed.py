@@ -62,7 +62,7 @@ class LabelVectorTransformer(Transformer):
         return iter(rows)
 
     def transform(self, data):
-        return data.mapPartitions(self._transform).toDF()
+        return data.mapPartitions(self._transform)
 
 
 class Predictor(Transformer):
@@ -92,7 +92,7 @@ class ModelPredictor(Predictor):
         return iter(rows)
 
     def predict(self, data):
-        return data.mapPartitions(self._predict).toDF()
+        return data.mapPartitions(self._predict)
 
 
 class Trainer(object):
