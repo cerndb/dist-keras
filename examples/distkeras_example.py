@@ -80,6 +80,8 @@ dataset = dataset.sample(True, 0.01)
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_features, input_col="label_index")
 dataset = labelVectorTransformer.transform(dataset)
+dataset = dataset.toDF()
+dataset.printSchema()
 
 # Create the distributed Ensemble trainer.
 ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
