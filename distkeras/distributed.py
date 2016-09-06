@@ -101,8 +101,9 @@ class ModelPredictor(Predictor):
         model = deserialize_keras_model(self.model)
         try:
             for row in iterator:
-                X = np.asarray(row[self.features_column])
+                X = np.asarray([row[self.features_column]])
                 Y = model.predict(X)
+                print(Y)
         except ValueError:
             pass
 
