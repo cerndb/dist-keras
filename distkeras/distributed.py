@@ -124,7 +124,7 @@ class EnsembleTrainerWorker(object):
         model = model_from_json(self.model)
         feature_iterator, label_iterator = tee(iterator, 2)
         for x in iterator:
-            print(x)
+            print(x[self.label_column])
             break
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         # Check if a label transformer is available.
