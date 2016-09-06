@@ -52,7 +52,7 @@ class LabelVectorTransformer(Transformer):
         except TypeError:
             pass
 
-        return iter(rows)
+        return rows
 
     def transform(self, data):
         return data.mapPartitions(self._transform)
