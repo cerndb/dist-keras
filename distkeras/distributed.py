@@ -91,7 +91,7 @@ class ModelPredictor(Predictor):
 
         return iter(rows)
 
-   def predict(self, data):
+    def predict(self, data):
         return data.mapPartitions(self._predict)
 
 
