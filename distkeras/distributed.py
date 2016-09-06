@@ -103,9 +103,10 @@ class ModelPredictor(Predictor):
             for row in iterator:
                 X = np.asarray([row[self.features_column]])
                 Y = model.predict(X)
-                v = DenseVector(np.asarray(Y).tolist())
-                new_row = new_dataframe_row(row, self.output_column, v)
-                print(new_row)
+                v = DenseVector(Y.tolist())
+                print(v)
+                #new_row = new_dataframe_row(row, self.output_column, v)
+                #print(new_row)
                 rows.append(row)
         except ValueError:
             pass
