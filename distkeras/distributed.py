@@ -88,6 +88,18 @@ class SingleTrainer(Trainer):
         # TODO Implement.
         pass
 
+class SingleTrainerWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label"):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+
+    def train(self, iterator):
+        # TODO Implement.
+        pass
+
+
 class EnsembleTrainer(Trainer):
 
     def __init__(self, keras_model, num_models=2, features_col="features",
