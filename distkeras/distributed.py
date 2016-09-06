@@ -129,6 +129,7 @@ class EnsembleTrainerWorker(object):
             Y = np.asarray([self.label_transformer(x[self.label_column]) for x in label_iterator])
         else:
             Y = np.asarray(x[self.label_column] for x in label_iterator)
+        print(Y[0])
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
