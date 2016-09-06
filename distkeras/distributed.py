@@ -144,6 +144,6 @@ class EnsembleTrainerWorker(object):
                       metrics=['accuracy'])
         # Fit the model with the data.
         history = model.fit(X, Y, nb_epoch=1)
-        partitionResult = (history, model.to_json())
+        partitionResult = (history, model)
 
         return iter([partitionResult])
