@@ -84,6 +84,7 @@ dataset = labelVectorTransformer.transform(dataset)
 print(dataset.first())
 dataset = dataset.toDF()
 dataset.printSchema()
+dataset.cache()
 
 # Create the distributed Ensemble trainer.
 ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
