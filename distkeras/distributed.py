@@ -9,6 +9,7 @@ from itertools import chain
 from itertools import tee
 
 from keras.models import model_from_json
+from keras.models import model_from_config
 from keras.optimizers import RMSprop
 from keras.utils import np_utils
 
@@ -35,23 +36,10 @@ def new_dataframe_row(old_row, column_name, column_value):
     return new_row
 
 def serialize_keras_model(model):
-    dictionary = {}
-    dictionary['architecture'] = model.to_json()
-    dictionary['weights'] = model.get_weights()
-    dictionary['config'] = model.get_config()
+    return model.get_config()
 
-    return dictionary
-
-def deserialize_keras_model(d):
-    # Deserialize the model from the dictionary.
-    model = model_from_json(d['architecture'])
-    weights = d['weights']
-    config = d['config']
-    # Set the weights and config.
-    model.set_weights(weights)
-    model.set_config(config)
-
-    return model
+def deserialize_keras_model(serialized_model):
+    return model_form_config(serialized_model)
 
 
 ## END Utility functions. ######################################################
@@ -119,7 +107,7 @@ class ModelPredictor(Predictor):
 class Trainer(object):
 
     def __init__(self, keras_model):
-        self.master_model = keras_model.to_json()
+        self.master_model = serialize_keras_model(keras_model)
 
     def train(self, data):
         raise NotImplementedError
@@ -168,7 +156,7 @@ class EnsembleTrainerWorker(object):
 
     def train(self, iterator):
         # Deserialize the Keras model.
-        model = model_from_json(self.model)
+        model = deserialize_keras_model(self.model)
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         # Check if a label transformer is available.
