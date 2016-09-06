@@ -21,8 +21,8 @@ import numpy as np
 
 ## BEGIN Utility functions. ####################################################
 
-def to_vector(x):
-    vector = np.zeros(2)
+def to_vector(x, n_dim):
+    vector = np.zeros(n_dim)
     vector[x] = 1.0
 
     return vector
@@ -33,6 +33,29 @@ class Transformer(object):
 
     def transform(self, data):
         raise NotImplementedError
+
+class LabelVectorTransformer(Transformer):
+
+    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
+        self.input_column = input_col
+        self.output_column = output_col
+        self.output_dim = output_dim
+
+    def _transform(self, iterator):
+        rows = []
+        try:
+            for row in iterator:
+                label = row[self.input_column]
+                transformed = DenseVector(to_vector(label, self.output_dim).tolist())
+                new_row = Row(row.__fields__ + [self.output_column])(row + (transformed,))
+                rows.append(new_row)
+        except TypeError:
+            pass
+
+        return iter(rows)
+
+    def transform(self, data):
+        return data.mapPartitions(self._transform)
 
 
 class Predictor(Transformer):
@@ -56,12 +79,15 @@ class Trainer(object):
 class EnsembleTrainer(Trainer):
 
     def __init__(self, keras_model, num_models=2, features_col="features",
-                 label_col="label", label_transformer=None):
+                 label_col="label", label_transformer=None, merge_models=False):
         super(EnsembleTrainer, self).__init__(keras_model)
         self.num_models = num_models
         self.features_column = features_col
         self.label_column = label_col
         self.label_transformer = label_transformer
+
+    def merge(self, models):
+        raise NotImplementedError
 
     def train(self, data):
         # Repartition the data to fit the number of models.
@@ -73,12 +99,19 @@ class EnsembleTrainer(Trainer):
                                        label_transformer=self.label_transformer)
         # Train the models, and collect them as a list.
         models = data.mapPartitions(worker.train).collect()
+        # Check if the models need to be merged.
+        if self.merge_models:
+            merged_model = self.merge(models)
+        else:
+            merged_model = None
+        # Append the optional merged model to the list.
+        models.append(merged_model)
 
         return models
 
 class EnsembleTrainerWorker(object):
 
-    def __init__(self, keras_model, features_col, label_col, label_transformer):
+    def __init__(self, keras_model, features_col, label_col, label_transformer=None):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
