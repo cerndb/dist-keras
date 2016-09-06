@@ -36,11 +36,19 @@ def new_dataframe_row(old_row, column_name, column_value):
     return new_row
 
 def serialize_keras_model(model):
-    return model.get_config()
+    d = {}
+    d['model'] = model.to_json()
+    d['weights'] = model.get_weights()
 
-def deserialize_keras_model(serialized_model):
-    return model_from_config(serialized_model)
+    return d
 
+def deserialize_keras_model(d):
+    architecture = d['model']
+    weights = d['weights']
+    model = model_from_json(architecture)
+    model.set_weights(weights)
+
+    return model
 
 ## END Utility functions. ######################################################
 
