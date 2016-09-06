@@ -72,12 +72,9 @@ model.summary()
 # Sample the dataset, else it will take too long.
 dataset = dataset.sample(True, 0.01)
 
-print(dataset.first())
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
 dataset = labelVectorTransformer.transform(dataset)
-print(dataset.first())
-dataset = dataset.toDF()
 dataset.printSchema()
 dataset.cache()
 
@@ -86,7 +83,7 @@ ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", num
 models = ensembleTrainer.train(dataset)
 # Get the model from the tuple.
 model = models[0][1]
-print(models)
+print(model)
 
 # Apply the model prediction to the dataframe.
 predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")
