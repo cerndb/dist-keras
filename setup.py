@@ -31,10 +31,6 @@ setup(name='dist-keras',
       ],
       packages=['distkeras'],
       package_data={'distkeras': ['distkeras/*.py']},
-      install_requires=[
-          'numpy',
-          'keras',
-      ],
       # Keywords related to the project.
       keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
 )
