@@ -68,6 +68,9 @@ model.add(Activation('softmax'))
 # Print a summary of the model structure.
 model.summary()
 
+# Sample the dataset, else it will take too long.
+dataset = dataset.sample(True, 0.01)
+
 print(dataset.first())
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
