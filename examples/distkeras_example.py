@@ -18,6 +18,7 @@ from pyspark.ml.feature import StringIndexer
 
 from distkeras.distributed import EnsembleTrainer
 from distkeras.distributed import LabelVectorTransformer
+from distkeras.distributed import ModelPredictor
 
 import os
 
@@ -81,7 +82,13 @@ dataset.printSchema()
 dataset.cache()
 
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized")
+ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", merge_models=True, num_models=1)
 models = ensembleTrainer.train(dataset)
-
+# Get the model from the tuple.
+model = models[0][1]
 print(models)
+
+# Apply the model prediction to the dataframe.
+predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")
+dataset = predictorTransformer.predict(dataset)
+dataset.printSchema()

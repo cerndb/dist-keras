@@ -27,6 +27,13 @@ def to_vector(x, n_dim):
 
     return vector
 
+def new_dataframe_row(old_row, column_name, column_value):
+    d = old_row.asDict(True)
+    d[column_name] = column_value
+    new_row = Row(**dict(d))
+
+    return new_row
+
 ## END Utility functions. ######################################################
 
 class Transformer(object):
@@ -46,10 +53,8 @@ class LabelVectorTransformer(Transformer):
         try:
             for row in iterator:
                 label = row[self.input_column]
-                v_t = DenseVector(to_vector(label, self.output_dim).tolist())
-                d = row.asDict(True)
-                d[self.output_column] = v_t
-                new_row = Row(**dict(d))
+                v = DenseVector(to_vector(label, self.output_dim).tolist())
+                new_row = new_dataframe_row(row, self.output_column, v)
                 rows.append(new_row)
         except TypeError:
             pass
@@ -63,57 +68,42 @@ class LabelVectorTransformer(Transformer):
 class Predictor(Transformer):
 
     def __init__(self, keras_model):
-        self.model = keras_model.to_json()
+        self.model = keras_model
 
     def predict(self, data):
         raise NotImplementedError
 
+class ModelPredictor(Predictor):
+
+    def __init__(self, keras_model, features_col="features", output_col="prediction"):
+        super(ModelPredictor, self).__init__(keras_model)
+        self.features_column = features_col
+        self.output_column = output_col
+
+    def _predict(self, iterator):
+        rows = []
+        try:
+            for row in iterator:
+                X = np.asarray(row[self.features_column])
+                Y = self.model.predict(X)
+
+    def predict(self, data):
+        return data.mapPartitions(self._predict)
+
 
 class Trainer(object):
 
-    def __init__(self, keras_model, features_col="features", label_col="label"):
+    def __init__(self, keras_model):
         self.master_model = keras_model.to_json()
-        self.features_column = features_col
-        self.label_column = label_col
 
     def train(self, data):
         raise NotImplementedError
-
-class SingleTrainer(Trainer):
-
-    def __init__(self, keras_model, features_col="features", label_col="label"):
-        super(SingleTrainer, self).__init__(keras_model, features_col, label_col)
-
-    def train(self, data):
-        # Repartition the data into a single partition.
-        data = data.repartition(1)
-        print(data.getNumPartitions())
-        worker = SingleTrainerWorker(self.master_model, self.features_col, self.label_col)
-        models = data.mapPartitions(worker.train).collect()
-
-        return models
-
-class SingleTrainerWorker(object):
-
-    def __init__(self, keras_model, features_col="features", label_col="label"):
-        self.model = keras_model
-        self.features_column = features_col
-        self.label_column = label_col
-
-    def train(self, iterator):
-        # Deserialize the Keras model.
-        model = model_from_json(self.model)
-        # TODO Implement.
-        partitionResult = (None, model)
-
-        return iter([partitionResult])
-
 
 class EnsembleTrainer(Trainer):
 
     def __init__(self, keras_model, num_models=2, features_col="features",
                  label_col="label", label_transformer=None, merge_models=False):
-        super(EnsembleTrainer, self).__init__(keras_model, features_col, label_col)
+        super(EnsembleTrainer, self).__init__(keras_model)
         self.num_models = num_models
         self.label_transformer = label_transformer
         self.merge_models = merge_models
