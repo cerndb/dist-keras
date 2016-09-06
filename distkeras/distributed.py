@@ -113,7 +113,7 @@ class EnsembleTrainer(Trainer):
 
 class EnsembleTrainerWorker(object):
 
-    def __init__(self, keras_model, features_col, label_col, label_transformer=None):
+    def __init__(self, keras_model, features_col="features", label_col="label", label_transformer=None):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
