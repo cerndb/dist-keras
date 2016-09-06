@@ -77,6 +77,7 @@ model.summary()
 # Sample the dataset.
 dataset = dataset.sample(True, 0.01)
 
+print(dataset.first())
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index")
 dataset = labelVectorTransformer.transform(dataset)
