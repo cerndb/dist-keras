@@ -74,13 +74,13 @@ dataset = dataset.sample(True, 0.01)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
-dataset = labelVectorTransformer.transform(dataset)
+dataset = labelVectorTransformer.transform(dataset).toDF()
 dataset.printSchema()
 dataset.cache()
 
 # Create the distributed Ensemble trainer.
 ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", num_models=1)
-models = ensembleTrainer.train(dataset).toDF()
+models = ensembleTrainer.train(dataset)
 # Get the model from the tuple.
 model = models[0][1]
 print(model)
