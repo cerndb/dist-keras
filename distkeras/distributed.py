@@ -87,6 +87,7 @@ class EnsembleTrainer(Trainer):
         self.features_column = features_col
         self.label_column = label_col
         self.label_transformer = label_transformer
+        self.merge_models = merge_models
 
     def merge(self, models):
         raise NotImplementedError
