@@ -15,6 +15,7 @@ from pyspark import SQLContext
 from pyspark.ml.feature import StandardScaler
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.feature import StringIndexer
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from distkeras.distributed import EnsembleTrainer
 from distkeras.distributed import LabelVectorTransformer
@@ -96,3 +97,8 @@ indexTransformer = LabelIndexTransformer(output_dim=nb_classes)
 dataset = indexTransformer.transform(dataset).toDF()
 dataset.printSchema()
 print(dataset.first())
+
+# Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
+predictionAndLabel = dataset.select("prediction_index", "label_index")
+evaluator = MulticlassClassificationEvaluator(metricName="accuracy")
+print("Accuracy: " + str(evaluator.evaluate(predictionAndLabels)))
