@@ -100,5 +100,5 @@ print(dataset.first())
 
 # Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
 predictionAndLabels = dataset.select("predicted_index", "label_index")
-evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", label_col="label_index")
+evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", labelCol="label_index")
 print("F1: " + str(evaluator.evaluate(predictionAndLabels)))
