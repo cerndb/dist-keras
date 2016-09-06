@@ -71,21 +71,29 @@ class Predictor(Transformer):
 
 class Trainer(object):
 
-    def __init__(self, keras_model):
+    def __init__(self, keras_model, features_col="features", label_col="label"):
         self.master_model = keras_model.to_json()
+        self.features_column = features_col
+        self.label_column = label_col
 
     def train(self, data):
         raise NotImplementedError
 
+class SingleTrainer(Trainer):
+
+    def __init__(self, keras_model, features_col="features", label_col="label"):
+        super(SingleTrainer, self).__init__(keras_model, features_col, label_col)
+
+    def train(self, data):
+        # TODO Implement.
+        pass
 
 class EnsembleTrainer(Trainer):
 
     def __init__(self, keras_model, num_models=2, features_col="features",
                  label_col="label", label_transformer=None, merge_models=False):
-        super(EnsembleTrainer, self).__init__(keras_model)
+        super(EnsembleTrainer, self).__init__(keras_model, features_col, label_col)
         self.num_models = num_models
-        self.features_column = features_col
-        self.label_column = label_col
         self.label_transformer = label_transformer
         self.merge_models = merge_models
 
