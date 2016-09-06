@@ -34,6 +34,26 @@ def new_dataframe_row(old_row, column_name, column_value):
 
     return new_row
 
+def serialize_keras_model(model):
+    dictionary = {}
+    dictionary['architecture'] = model.to_json()
+    dictionary['weights'] = model.get_weights()
+    dictionary['config'] = model.get_config()
+
+    return dictionary
+
+def deserialize_keras_model(d):
+    # Deserialize the model from the dictionary.
+    model = model_from_json(d['architecture'])
+    weights = d['weights']
+    config = d['config']
+    # Set the weights and config.
+    model.set_weights(weights)
+    model.set_config(config)
+
+    return model
+
+
 ## END Utility functions. ######################################################
 
 class Transformer(object):
@@ -68,7 +88,7 @@ class LabelVectorTransformer(Transformer):
 class Predictor(Transformer):
 
     def __init__(self, keras_model):
-        self.model = keras_model
+        self.model = serialize_keras_model(keras_model)
 
     def predict(self, data):
         raise NotImplementedError
@@ -82,10 +102,11 @@ class ModelPredictor(Predictor):
 
     def _predict(self, iterator):
         rows = []
+        model = deserialize_keras_model(self.model)
         try:
             for row in iterator:
                 X = np.asarray(row[self.features_column])
-                Y = self.model.predict(X)
+                Y = model.predict(X)
         except ValueError:
             pass
 
