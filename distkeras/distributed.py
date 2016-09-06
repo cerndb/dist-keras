@@ -103,10 +103,9 @@ class ModelPredictor(Predictor):
             for row in iterator:
                 X = np.asarray([row[self.features_column]])
                 Y = model.predict(X)
-                v = Y.tolist()
+                v = np.array(Y)
                 new_row = new_dataframe_row(row, self.output_column, v)
-                print(new_row)
-                rows.append(row)
+                rows.append(new_row)
         except ValueError:
             pass
 
