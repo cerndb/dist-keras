@@ -92,7 +92,7 @@ class LabelIndexTransformer(Transformer):
 
     def get_index(self, vector):
         for index in range(0, self.output_dim):
-            if index >= self.activation_threshold:
+            if vector[index] >= self.activation_threshold:
                 return index
         return self.default_index
 

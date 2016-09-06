@@ -99,6 +99,7 @@ dataset.printSchema()
 print(dataset.first())
 
 # Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
-predictionAndLabel = dataset.select("prediction_index", "label_index")
+predictionAndLabels = dataset.select("predicted_index", "label_index", "prediction")
 evaluator = MulticlassClassificationEvaluator(metricName="accuracy")
+print(predictionAndLabels.take(10))
 print("Accuracy: " + str(evaluator.evaluate(predictionAndLabels)))
