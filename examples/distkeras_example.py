@@ -71,34 +71,36 @@ model.add(Activation('softmax'))
 # Print a summary of the model structure.
 model.summary()
 
-# Sample the dataset, else it will take too long.
-dataset = dataset.sample(True, 0.01)
+# Sample the dataset.
+dataset = dataset.sample(True, 0.5)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
-dataset = labelVectorTransformer.transform(dataset).toDF()
+dataset = labelVectorTransformer.transform(dataset).toDF().select("features_normalized", "label_index", "label")
 dataset.printSchema()
-dataset.cache()
+
+# Split the data in a training and test set.
+(trainingSet, testSet) = dataset.randomSplit([0.7, 0.3])
 
 # Create the distributed Ensemble trainer.
 ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", num_models=1)
-models = ensembleTrainer.train(dataset)
+models = ensembleTrainer.train(trainingSet)
 # Get the model from the tuple.
 model = models[0][1]
 print(model)
 
 # Apply the model prediction to the dataframe.
 predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")
-dataset = predictorTransformer.predict(dataset).toDF()
-dataset.printSchema()
+testSet = predictorTransformer.predict(testSet).toDF()
+testSet.printSchema()
+testSet.cache()
 
 # Apply the label index transformer, which will transform the output vector to an indexed label.
 indexTransformer = LabelIndexTransformer(output_dim=nb_classes)
-dataset = indexTransformer.transform(dataset).toDF()
-dataset.printSchema()
-print(dataset.first())
+testSet = indexTransformer.transform(testSet).toDF()
+testSet.printSchema()
 
 # Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
-predictionAndLabels = dataset.select("predicted_index", "label_index")
-evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", label_col="label_index")
+predictionAndLabels = testSet.select("predicted_index", "label_index")
+evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", labelCol="label_index")
 print("F1: " + str(evaluator.evaluate(predictionAndLabels)))
