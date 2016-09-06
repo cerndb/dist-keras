@@ -123,15 +123,12 @@ class EnsembleTrainerWorker(object):
         # Deserialize the Keras model.
         model = model_from_json(self.model)
         feature_iterator, label_iterator = tee(iterator, 2)
-        for x in iterator:
-            print(x[self.label_column])
-            break
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         # Check if a label transformer is available.
         if self.label_transformer:
             Y = np.asarray([self.label_transformer(x[self.label_column]) for x in label_iterator])
         else:
-            Y = np.asarray(x[self.label_column] for x in label_iterator)
+            Y = np.asarray([x[self.label_column] for x in label_iterator])
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
