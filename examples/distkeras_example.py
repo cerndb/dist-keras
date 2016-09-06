@@ -51,12 +51,6 @@ dataset = standardScalerModel.transform(dataset)
 nb_features = len(features)
 nb_classes = 2
 
-# Define the label transformer.
-def to_vector(x):
-    vector = np.zeros(2)
-    vector[x] = 1.0
-    return vector
-
 # Define the Keras model.
 model = Sequential()
 model.add(Dense(600, input_shape=(nb_features,)))
