@@ -39,7 +39,7 @@ def serialize_keras_model(model):
     return model.get_config()
 
 def deserialize_keras_model(serialized_model):
-    return model_form_config(serialized_model)
+    return model_from_config(serialized_model)
 
 
 ## END Utility functions. ######################################################
