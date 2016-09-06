@@ -82,7 +82,7 @@ dataset.printSchema()
 dataset.cache()
 
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", merge_models=True, num_models=1)
+ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", num_models=1)
 models = ensembleTrainer.train(dataset)
 # Get the model from the tuple.
 model = models[0][1]
