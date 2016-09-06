@@ -85,8 +85,13 @@ class SingleTrainer(Trainer):
         super(SingleTrainer, self).__init__(keras_model, features_col, label_col)
 
     def train(self, data):
-        # TODO Implement.
-        pass
+        # Repartition the data into a single partition.
+        data = data.repartition(1)
+        print(data.getNumPartitions())
+        worker = SingleTrainerWorker(self.master_model, self.features_col, self.label_col)
+        models = data.mapPartitions(worker.train).collect()
+
+        return models
 
 class SingleTrainerWorker(object):
 
@@ -96,8 +101,12 @@ class SingleTrainerWorker(object):
         self.label_column = label_col
 
     def train(self, iterator):
+        # Deserialize the Keras model.
+        model = model_from_json(self.model)
         # TODO Implement.
-        pass
+        partitionResult = (None, model)
+
+        return iter([partitionResult])
 
 
 class EnsembleTrainer(Trainer):
