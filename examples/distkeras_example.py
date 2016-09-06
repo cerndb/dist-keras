@@ -93,6 +93,6 @@ dataset.printSchema()
 
 # Apply the label index transformer, which will transform the output vector to an indexed label.
 indexTransformer = LabelIndexTransformer(output_dim=nb_classes)
-dataset = indexTransformer.transform(dataset)
+dataset = indexTransformer.transform(dataset).toDF()
 dataset.printSchema()
 print(dataset.first())
