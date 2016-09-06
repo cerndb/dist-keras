@@ -34,7 +34,6 @@ setup(name='dist-keras',
       install_requires=[
           'numpy',
           'keras',
-          'itertools',
       ],
       # Keywords related to the project.
       keywords=['Keras', 'Deep Learning', 'Machine Learning', 'Theano', 'Tensorflow', 'Distributed', 'Apache Spark'],
