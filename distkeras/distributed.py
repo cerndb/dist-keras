@@ -86,8 +86,12 @@ class ModelPredictor(Predictor):
             for row in iterator:
                 X = np.asarray(row[self.features_column])
                 Y = self.model.predict(X)
+        except ValueError:
+            pass
 
-    def predict(self, data):
+        return iter(rows)
+
+   def predict(self, data):
         return data.mapPartitions(self._predict)
 
 
