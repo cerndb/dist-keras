@@ -79,7 +79,7 @@ dataset = dataset.sample(True, 0.01)
 
 print(dataset.first())
 # Transform the indexed label to an vector.
-labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index")
+labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
 dataset = labelVectorTransformer.transform(dataset)
 print(dataset.first())
 dataset = dataset.toDF()
