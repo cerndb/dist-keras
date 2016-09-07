@@ -72,7 +72,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-dataset = dataset.sample(True, 0.5)
+dataset = dataset.sample(True, 0.6)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
@@ -101,10 +101,6 @@ testSet = indexTransformer.transform(testSet).toDF()
 testSet.printSchema()
 
 # Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
-<<<<<<< HEAD
 predictionAndLabels = testSet.select("predicted_index", "label_index")
-=======
-predictionAndLabels = dataset.select("predicted_index", "label_index")
->>>>>>> 03ad745dc1f76de258a359f065227f9211d2a30f
 evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", labelCol="label_index")
 print("F1: " + str(evaluator.evaluate(predictionAndLabels)))
