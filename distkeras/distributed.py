@@ -52,6 +52,8 @@ def deserialize_keras_model(d):
 
 ## END Utility functions. ######################################################
 
+## BEGIN Transformers. #########################################################
+
 class Transformer(object):
 
     def transform(self, data):
@@ -112,6 +114,9 @@ class LabelIndexTransformer(Transformer):
     def transform(self, data):
         return data.mapPartitions(self._transform)
 
+## END Transformers. ###########################################################
+
+## BEGIN Predictors. ###########################################################
 
 class Predictor(Transformer):
 
@@ -146,6 +151,9 @@ class ModelPredictor(Predictor):
     def predict(self, data):
         return data.mapPartitions(self._predict)
 
+## END Predictors. #############################################################
+
+## BEGIN Trainers. #############################################################
 
 class Trainer(object):
 
@@ -154,62 +162,6 @@ class Trainer(object):
 
     def train(self, data):
         raise NotImplementedError
-
-class ODGO(Trainer):
-
-    def __init__(self, keras_model, num_workers=2, features_col="features",
-                 label_col="label"):
-        super(ODGO, self).__init__(keras_model)
-        self.num_workers = num_workers
-        self.features_column = features_col
-        self.label_column = label_col
-
-    def process_gradients(self, gradients):
-        raise NotImplementedError
-
-    def train(self, data):
-        # Repartition the data to fit the number of workers.
-        data = data.repartition(self.num_workers)
-        worker = ODGOWorker(self.master_model, self.features_column, self.label_column)
-        gradients = data.mapPartitions(worker.train).collect()
-        # Process the gradients and the weights.
-        model = self.process_gradients(gradients)
-
-        return model
-
-class ODGOWorker(object):
-
-    def __init__(self, keras_model, features_col="features", label_col="label"):
-        self.model = keras_model
-        self.features_column = features_col
-        self.label_column = label_col
-
-    def train(self, iterator):
-        # Initialize an empty weights and gradient list.
-        weights = []
-        gradients = []
-        # Deserialize the Keras model.
-        model = deserialize_keras_model(self.model)
-        # TODO Add compilation parameters.
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=RMSprop(),
-                      metrics=['accuracy'])
-        try:
-            for row in iterator:
-                X = np.asarray([row[self.features_column]])
-                Y = np.asarray([row[self.label_column]])
-                W = np.asarray(model.get_weights())
-                print(W)
-                weights.append(W)
-                model.fit(X, Y)
-                gradient = np.asarray(model.get_weights()) - W
-                gradients.append(gradient)
-        except ValueError:
-            pass
-
-        partitionResult = [(weights, gradients)]
-
-        return iter(partitionResult)
 
 class EnsembleTrainer(Trainer):
 
@@ -272,3 +224,5 @@ class EnsembleTrainerWorker(object):
         partitionResult = (history, model)
 
         return iter([partitionResult])
+
+## END Trainers. ###############################################################
