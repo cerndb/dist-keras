@@ -198,7 +198,7 @@ class ODGOWorker(object):
             for row in iterator:
                 X = np.asarray([row[self.features_column]])
                 Y = np.asarray([row[self.label_column]])
-                W = np.as_array(model.get_weights())
+                W = np.asarray(model.get_weights())
                 print(W)
                 weights.append(W)
                 model.fit(X, Y)
