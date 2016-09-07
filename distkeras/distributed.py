@@ -198,10 +198,11 @@ class ODGOWorker(object):
             for row in iterator:
                 X = np.asarray([row[self.features_column]])
                 Y = np.asarray([row[self.label_column]])
-                W = model.get_weights()
+                W = np.as_array(model.get_weights())
+                print(W)
                 weights.append(W)
                 model.fit(X, Y)
-                gradient = model.get_weights() - W
+                gradient = np.asarray(model.get_weights()) - W
                 gradients.append(gradient)
         except ValueError:
             pass
