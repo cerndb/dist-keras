@@ -190,6 +190,10 @@ class ODGOWorker(object):
         gradients = []
         # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
+        # TODO Add compilation parameters.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=RMSprop(),
+                      metrics=['accuracy'])
         try:
             for row in iterator:
                 X = np.asarray([row[self.features_col]])

@@ -101,6 +101,10 @@ testSet = indexTransformer.transform(testSet).toDF()
 testSet.printSchema()
 
 # Evaluate the classifier using the MulticlassClassifierEvaluation form Spark's interals
+<<<<<<< HEAD
 predictionAndLabels = testSet.select("predicted_index", "label_index")
+=======
+predictionAndLabels = dataset.select("predicted_index", "label_index")
+>>>>>>> 03ad745dc1f76de258a359f065227f9211d2a30f
 evaluator = MulticlassClassificationEvaluator(metricName="f1", predictionCol="predicted_index", labelCol="label_index")
 print("F1: " + str(evaluator.evaluate(predictionAndLabels)))
