@@ -196,8 +196,8 @@ class ODGOWorker(object):
                       metrics=['accuracy'])
         try:
             for row in iterator:
-                X = np.asarray([row[self.features_col]])
-                Y = np.asarray([row[self.label_col]])
+                X = np.asarray([row[self.features_column]])
+                Y = np.asarray([row[self.label_column]])
                 W = model.get_weights()
                 weights.append(W)
                 model.fit(X, Y)
