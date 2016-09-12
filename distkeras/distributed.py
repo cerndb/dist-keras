@@ -333,7 +333,7 @@ class EASGD(Trainer):
             # Gradient update, declare next iteration.
             self.set_ready(False)
             # Store the gradient of the worker.
-            self.variables[worker_id] = variables
+            self.variables[worker_id] = variable
             # Check if the gradients of all workers are available.
             if len(self.variables) == self.num_workers:
                 self.process_variables()
