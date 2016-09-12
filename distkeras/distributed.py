@@ -315,8 +315,13 @@ class EASGD(Trainer):
                              rho=self.rho,
                              learning_rate=self.learning_rate,
                              batch_size=self.batch_size)
-        # Prepare the data, and start the distributed training.
-        data.repartition(self.num_workers)
+        # Fetch the current number of partitions.
+        numPartitions = data.rdd.getNumPartitions()
+        # Check if we need to merge or repartition.
+        if numPartitions > self.num_workers:
+            data.coalesce(self.num_workers)
+        else:
+            data.repartition(self.num_workers)
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the EASGD REST API.
         self.stop_service()
