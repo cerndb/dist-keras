@@ -268,7 +268,7 @@ class EASGD(Trainer):
     def reset(self):
         # Reset the training attributes.
         self.model = deserialize_keras_model(self.master_model)
-        self.gradients = {}
+        self.variables = {}
         self.service = None
         self.ready = False
         self.iteration = 0
@@ -292,8 +292,8 @@ class EASGD(Trainer):
         self.service.terminate()
         self.service.join()
 
-    def process_gradients(self):
-        print("\n\n\n--- Processing Gradients in iteration " + `self.iteration` + "---\n\n\n")
+    def process_variables(self):
+        print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
 
     def train(self, data):
         # Start the EASGD REST API.
@@ -302,7 +302,7 @@ class EASGD(Trainer):
         worker = EASGDWorker(keras_model=self.master_model,
                              features_col=self.features_column,
                              label_col=self.label_column,
-                             rho=self.rho
+                             rho=self.rho,
                              learning_rate=self.learning_rate)
         # Prepare the data, and start the distributed training.
         data.repartition(self.num_workers)
@@ -327,17 +327,17 @@ class EASGD(Trainer):
         @app.route("/update", methods=['POST'])
         def update():
             data = pickle.loads(request.data)
-            gradient = data['gradient']
+            variable = data['variable']
             worker_id = data['worker_id']
 
             # Gradient update, declare next iteration.
             self.set_ready(False)
             # Store the gradient of the worker.
-            self.gradients[worker_id] = gradient
+            self.variables[worker_id] = variables
             # Check if the gradients of all workers are available.
-            if len(self.gradients) == self.num_workers:
-                self.process_gradients()
-                self.gradients = {}
+            if len(self.variables) == self.num_workers:
+                self.process_variables()
+                self.variables = {}
                 self.set_ready(True)
                 self.iteration += 1
 
@@ -368,10 +368,10 @@ class EASGDWorker(object):
         self.rho = rho
         self.learning_rate = learning_rate
 
-    def master_send_gradient(self, worker_id, gradient):
+    def master_send_variable(self, worker_id, variable):
         data = {}
         data['worker_id'] = worker_id
-        data['gradient'] = gradient
+        data['variable'] = variable
         rest_post(self.master_host, self.master_port, "/update", data)
 
     def master_is_ready(self):
@@ -399,7 +399,7 @@ class EASGDWorker(object):
         model.fit(X, Y, nb_epoch=1)
         # Compute the gradient.
         gradient = np.asarray(model.get_weights()) - W
-        self.master_send_gradient(index, gradient)
+        self.master_send_variable(index, W)
         # Wait until all clients synchronized the gradient.
         while not self.master_is_ready():
             time.sleep(1)
