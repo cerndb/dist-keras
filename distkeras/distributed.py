@@ -420,7 +420,7 @@ class EASGDWorker(object):
                 model.set_weights(W)
                 # Wait until all clients synchronized the gradient.
                 while not self.master_is_ready():
-                    time.sleep(0.2)
+                    time.sleep(1)
         except StopIteration:
             pass
 
