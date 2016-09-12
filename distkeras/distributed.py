@@ -396,27 +396,32 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        # Get the next batch.
-        batch = [next(iterator) for _ in range(self.batch_size)]
-        # Build the training matrix.
-        feature_iterator, label_iterator = tee(batch, 2)
-        X = np.asarray([x[self.features_column] for x in feature_iterator])
-        Y = np.asarray([x[self.label_column] for x in label_iterator])
-        # Fetch the master (center) variable.
-        self.fetch_center_variable()
-        # Fetch the current weight parameterization.
-        W = np.asarray(model.get_weights())
-        # Train the model with the current batch.
-        model.fit(X, Y, nb_epoch=1)
-        # Compute the gradient.
-        gradient = np.asarray(model.get_weights()) - W
-        self.master_send_variable(index, W)
-        # Update the local variable.
-        W -= self.learning_rate * (gradient + self.rho * (W - self.center_variable))
-        model.set_weights(W)
-        # Wait until all clients synchronized the gradient.
-        while not self.master_is_ready():
-            time.sleep(1)
+        has_data = True
+        try:
+            while has_data:
+                # Get the next batch.
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                # Build the training matrix.
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                # Fetch the master (center) variable.
+                self.fetch_center_variable()
+                # Fetch the current weight parameterization.
+                W = np.asarray(model.get_weights())
+                # Train the model with the current batch.
+                model.fit(X, Y, nb_epoch=1)
+                # Compute the gradient.
+                gradient = np.asarray(model.get_weights()) - W
+                self.master_send_variable(index, W)
+                # Update the local variable.
+                W -= self.learning_rate * (gradient + self.rho * (W - self.center_variable))
+                model.set_weights(W)
+                # Wait until all clients synchronized the gradient.
+                while not self.master_is_ready():
+                    time.sleep(1)
+        except StopIteration:
+            has_data = False
 
         return iter([])
 
