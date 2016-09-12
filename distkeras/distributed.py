@@ -365,7 +365,7 @@ class EASGD(Trainer):
 
 class EASGDWorker(object):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=100,
                  rho=5, learning_rate=0.01):
         self.model = keras_model
         self.features_column = features_col
