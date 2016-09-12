@@ -295,6 +295,7 @@ class EASGD(Trainer):
     def process_variables(self):
         print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
         center_variable = np.asarray(self.model.get_weights())
+        temp = np.copy(center_variable)
         # Iterate through all worker variables.
         for i in range(0, self.num_workers):
             temp += self.rho * (self.variables[i] - center_variable)
