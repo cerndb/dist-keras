@@ -294,6 +294,14 @@ class EASGD(Trainer):
 
     def process_variables(self):
         print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
+        center_variable = np.asarray(self.model.get_weights())
+        # Iterate through all worker variables.
+        for i in range(0, self.num_workers):
+            temp += self.rho * (self.variables[i] - center_variable)
+        temp *= self.learning_rate
+        center_variable += temp
+        # Update the center variable
+        self.model.set_weights(center_variable)
 
     def train(self, data):
         # Start the EASGD REST API.
