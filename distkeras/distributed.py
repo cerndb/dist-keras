@@ -323,6 +323,10 @@ class EASGD(Trainer):
         else:
             data = data.repartition(self.num_workers)
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        # Compile the model with the new weights.
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=RMSprop(),
+                           metrics=['accuracy'])
         # Stop the EASGD REST API.
         self.stop_service()
 
