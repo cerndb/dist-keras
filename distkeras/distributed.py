@@ -319,9 +319,9 @@ class EASGD(Trainer):
         numPartitions = data.rdd.getNumPartitions()
         # Check if we need to merge or repartition.
         if numPartitions > self.num_workers:
-            data.coalesce(self.num_workers)
+            data = data.coalesce(self.num_workers)
         else:
-            data.repartition(self.num_workers)
+            data = data.repartition(self.num_workers)
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the EASGD REST API.
         self.stop_service()
