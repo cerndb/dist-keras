@@ -253,13 +253,14 @@ class EnsembleTrainerWorker(object):
 class EASGD(Trainer):
 
     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
-                 rho=5, learning_rate=0.01):
+                 rho=5, learning_rate=0.01, batch_size=1000):
         super(EASGD, self).__init__(keras_model=keras_model)
         self.features_column = features_col
         self.label_column = label_col
         self.num_workers = num_workers
         self.rho = rho
         self.learning_rate = learning_rate
+        self.batch_size = batch_size
         # Initialize attribute which do not change throughout the training process.
         self.mutex = Lock()
         # Initialize default parameters.
@@ -312,7 +313,8 @@ class EASGD(Trainer):
                              features_col=self.features_column,
                              label_col=self.label_column,
                              rho=self.rho,
-                             learning_rate=self.learning_rate)
+                             learning_rate=self.learning_rate,
+                             batch_size=self.batch_size)
         # Prepare the data, and start the distributed training.
         data.repartition(self.num_workers)
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
@@ -365,7 +367,7 @@ class EASGD(Trainer):
 
 class EASGDWorker(object):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=100,
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
                  rho=5, learning_rate=0.01):
         self.model = keras_model
         self.features_column = features_col
@@ -396,9 +398,8 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        has_data = True
         try:
-            while has_data:
+            while True:
                 # Get the next batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Build the training matrix.
@@ -419,9 +420,9 @@ class EASGDWorker(object):
                 model.set_weights(W)
                 # Wait until all clients synchronized the gradient.
                 while not self.master_is_ready():
-                    time.sleep(1)
+                    time.sleep(0.2)
         except StopIteration:
-            has_data = False
+            pass
 
         return iter([])
 
