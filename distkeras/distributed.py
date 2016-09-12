@@ -306,7 +306,7 @@ class EASGD(Trainer):
     def easgd_service(self):
         app = Flask(__name__)
 
-        ## BEGIN REST routes.###################################################
+        ## BEGIN REST routes. ##################################################
 
         @app.route("/center_variable", methods=['GET'])
         def center_variable():

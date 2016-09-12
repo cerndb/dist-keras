@@ -21,6 +21,7 @@ from distkeras.distributed import EnsembleTrainer
 from distkeras.distributed import LabelVectorTransformer
 from distkeras.distributed import ModelPredictor
 from distkeras.distributed import LabelIndexTransformer
+from distkeras.distributed import EASGD
 
 import os
 
