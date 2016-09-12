@@ -16,6 +16,8 @@ import cPickle as pickle
 
 import urllib2
 
+import time
+
 from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark import SQLContext
@@ -36,102 +38,24 @@ from distkeras.distributed import deserialize_keras_model
 
 import os
 
-# class EASGDWorker(object):
+def rest_post(host, port, endpoint, data):
+    request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
+                              pickle.dumps(data, -1),
+                              headers={'Content-Type': 'application/dist-keras'})
 
-#     def __init__(self, keras_model, master_address, master_port, features_col="features",
-#                  label_col="label", batch_size=1000, nb_epoch=1):
-#         self.model = deserialize_keras_model(keras_model)
-#         self.features_column = features_col
-#         self.label_column = label_col
-#         self.batch_size = batch_size
-#         self.master_address = master_address
-#         self.master_port = master_port
+    return urllib2.urlopen(request).read()
 
-#     def train(self, index, iterator):
-#         print(index)
-#         partitionResult = None
+def rest_get(host, port, endpoint):
+    request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
+                              headers={'Content-Type': 'application/dist-keras'})
 
-#         return iter([partitionResult])
-
-# class EASGD(Trainer):
-
-#     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2, batch_size=1000, nb_epoch=1):
-#         super(EASGD, self).__init__(keras_model)
-#         self.features_column = features_col
-#         self.label_column = label_col
-#         self.num_workers = num_workers
-#         self.batch_size = batch_size
-#         self.nb_epoch = nb_epoch
-#         self.model = None
-#         self.gradient_update = 0
-#         self.worker_gradients = []
-#         self.service = None
-#         self.mutex = Lock()
-
-#     def start_service(self):
-#         # Reset service variables
-#         self.gradient_update = 0
-#         self.worker_gradients = []
-#         # Start the REST API server
-#         self.service = Process(target=self.easgd_service)
-#         self.service.start()
-
-#     def stop_service(self):
-#         self.service.stop()
-#         self.service.join()
-
-#     def easgd_service(self):
-#         app = Flask(__name__)
-
-#         ## BEGIN REST Routes. ##################################################
-
-#         @app.route("/center_variable", methods=['GET'])
-#         def easgd_get_center_variable():
-#             with self.mutex:
-#                 center_variable = self.model.get_weights().copy()
-
-#             return pickle.dump(center_variable, -1)
-
-#         @app.route("/update", methods=['POST'])
-#         def easgd_update():
-#             # Fetch the data from the worker.
-#             data = pickle.load(request.data)
-#             gradient_update_id = data['gradient_update']
-#             worker_id = data['worker_id']
-#             gradient = data['gradient']
-#             # Check if all gradients are updated.
-
-#         ## END REST Routes. ####################################################
-
-#         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
-
-#     def prepare_master_model(self):
-#         self.model = deserialize_keras_model(self.master_model)
-
-#     def train(self, data):
-#         # Start the EASGD service.
-#         self.start_service()
-#         # Repartition the data to fit the number of workers.
-#         data = data.repartition(self.num_workers)
-#         # Prepare the master model.
-#         self.prepare_master_model()
-#         # Allocate a new EASGD worker.
-#         worker = EASGDWorker(self.master_model, "localhost", 4000)
-#         # Call the train function on the worker.
-#         data.rdd.mapPartitionsWithIndex(worker.train).collect()
-#         # Stop the EASGD service.
-#         self.stop_service()
-
-#         return self.master_model
-
-
-
-
+    return pickle.loads(urllib2.urlopen(request).read())
 
 
 class EASGD(Trainer):
 
     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2):
+        super(EASGD, self).__init__(keras_model=keras_model)
         self.features_column = features_col
         self.label_column = label_col
         self.num_workers = num_workers
@@ -143,9 +67,10 @@ class EASGD(Trainer):
     def reset(self):
         # Reset the training attributes.
         self.model = deserialize_keras_model(self.master_model)
-        self.gradients = []
+        self.gradients = {}
         self.service = None
         self.ready = False
+        self.iteration = 0
 
     def set_ready(self, state):
         with self.mutex:
@@ -167,11 +92,18 @@ class EASGD(Trainer):
         self.service.join()
 
     def process_gradients(self):
-        raise NotImplementedError
+        print("\n\n\n--- Processing Gradients in iteration " + `self.iteration` + "---\n\n\n")
 
     def train(self, data):
         # Start the EASGD REST API.
         self.start_service()
+        # Specify the parameters to the worker method.
+        worker = EASGDWorker(keras_model=self.master_model,
+                             features_col=self.features_column,
+                             label_col=self.label_column)
+        # Prepare the data, and start the distributed training.
+        data.repartition(self.num_workers)
+        data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the EASGD REST API.
         self.stop_service()
 
@@ -185,12 +117,13 @@ class EASGD(Trainer):
         @app.route("/center_variable", methods=['GET'])
         def center_variable():
             with self.mutex:
-                center_variable = self.model.get_weights().copy()
+                center_variable = self.model.get_weights()
 
             return pickle.dumps(center_variable, -1)
 
         @app.route("/update", methods=['POST'])
         def update():
+            data = pickle.loads(request.data)
             gradient = data['gradient']
             worker_id = data['worker_id']
 
@@ -201,8 +134,11 @@ class EASGD(Trainer):
             # Check if the gradients of all workers are available.
             if len(self.gradients) == self.num_workers:
                 self.process_gradients()
-                self.gradients = []
+                self.gradients = {}
                 self.set_ready(True)
+                self.iteration += 1
+
+            return 'OK'
 
         @app.route("/ready", methods=['GET'])
         def ready():
@@ -215,32 +151,46 @@ class EASGD(Trainer):
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 
+class EASGDWorker(object):
 
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000):
+        self.model = deserialize_keras_model(keras_model)
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = "127.0.0.1"
+        self.master_port = 5000
+        self.master_variable = None
+        self.batch_size = batch_size
 
-nb_classes = 2
+    def master_send_gradient(self, worker_id, gradient):
+        data = {}
+        data['worker_id'] = worker_id
+        data['gradient'] = gradient
+        rest_post(self.master_host, self.master_port, "/update", data)
 
-# Define the Keras model.
-model = Sequential()
-model.add(Dense(600, input_shape=(30,)))
-model.add(Activation('relu'))
-model.add(Dropout(0.2))
-model.add(Dense(600))
-model.add(Activation('relu'))
-model.add(Dropout(0.2))
-model.add(Dense(600))
-model.add(Dropout(0.2))
-model.add(Activation('relu'))
-model.add(Dense(nb_classes))
-model.add(Activation('softmax'))
+    def master_is_ready(self):
+        return rest_get(self.master_host, self.master_port, "/ready")
 
-# Print a summary of the model structure.
-model.summary()
-trainer = EASGD(keras_model=model)
-trainer.start_service()
-quit()
+    def fetch_center_variable(self):
+        self.center_variable = rest_get(self.master_host, self.master_port, "/center_variable")
 
+    def train(self, index, iterator):
+        # Compile the model.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=RMSprop(),
+                      metrics=['accuracy'])
+        for i in range(0, 20):
+            # Fetch the master (center) variable.
+            self.fetch_center_variable()
+            # TODO Compute gradient here.
+            time.sleep(5)
+            # Send the computed gradient to the master.
+            self.master_send_gradient(index, gradient)
+            # Loop until the master is ready.
+            while not self.master_is_ready():
+                time.sleep(1)
 
-
+        return iter([])
 
 # Setup Spark, and use the Databricks CSV loader.
 os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell"
