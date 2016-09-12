@@ -84,7 +84,7 @@ dataset.printSchema()
 (trainingSet, testSet) = dataset.randomSplit([0.7, 0.3])
 
 # Create the distributed Ensemble trainer.
-trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=100, num_workers=2)
+trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=100, num_workers=1)
 model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.
