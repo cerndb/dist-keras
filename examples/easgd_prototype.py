@@ -18,6 +18,8 @@ import urllib2
 
 import time
 
+from itertools import tee
+
 from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark import SQLContext
@@ -51,6 +53,10 @@ def rest_get(host, port, endpoint):
 
     return pickle.loads(urllib2.urlopen(request).read())
 
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
 
 class EASGD(Trainer):
 
@@ -88,7 +94,7 @@ class EASGD(Trainer):
         self.service.start()
 
     def stop_service(self):
-        self.service.stop()
+        self.service.terminate()
         self.service.join()
 
     def process_gradients(self):
@@ -154,7 +160,7 @@ class EASGD(Trainer):
 class EASGDWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000):
-        self.model = deserialize_keras_model(keras_model)
+        self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
         self.master_host = "127.0.0.1"
@@ -175,20 +181,28 @@ class EASGDWorker(object):
         self.center_variable = rest_get(self.master_host, self.master_port, "/center_variable")
 
     def train(self, index, iterator):
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        # Build the training matrix.
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        # Fetch the master (center) variable.
+        self.fetch_center_variable()
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        for i in range(0, 20):
-            # Fetch the master (center) variable.
-            self.fetch_center_variable()
-            # TODO Compute gradient here.
-            time.sleep(5)
-            # Send the computed gradient to the master.
-            self.master_send_gradient(index, gradient)
-            # Loop until the master is ready.
-            while not self.master_is_ready():
-                time.sleep(1)
+        # Fetch the current weight parameterization.
+        W = np.asarray(model.get_weights())
+        # Train the model with the current batch.
+        model.fit(X, Y, nb_epoch=1)
+        # Compute the gradient.
+        gradient = np.asarray(model.get_weights()) - W
+        self.master_send_gradient(index, gradient)
+        # Wait until all clients synchronized the gradient.
+        while not self.master_is_ready():
+            time.sleep(1)
 
         return iter([])
 
