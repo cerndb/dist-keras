@@ -412,7 +412,7 @@ class EASGDWorker(object):
         gradient = np.asarray(model.get_weights()) - W
         self.master_send_variable(index, W)
         # Update the local variable.
-        W -= self.learning_rate * (gradient + self.rho(W - self.center_variable))
+        W -= self.learning_rate * (gradient + self.rho * (W - self.center_variable))
         model.set_weights(W)
         # Wait until all clients synchronized the gradient.
         while not self.master_is_ready():
