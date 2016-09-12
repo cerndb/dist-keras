@@ -392,16 +392,18 @@ class EASGDWorker(object):
     def train(self, index, iterator):
         # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
-        # Build the training matrix.
-        feature_iterator, label_iterator = tee(iterator, 2)
-        X = np.asarray([x[self.features_column] for x in feature_iterator])
-        Y = np.asarray([x[self.label_column] for x in label_iterator])
-        # Fetch the master (center) variable.
-        self.fetch_center_variable()
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
+        # Get the next batch.
+        batch = [next(iterator) for _ in range(self.batch_size)]
+        # Build the training matrix.
+        feature_iterator, label_iterator = tee(batch, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        # Fetch the master (center) variable.
+        self.fetch_center_variable()
         # Fetch the current weight parameterization.
         W = np.asarray(model.get_weights())
         # Train the model with the current batch.
