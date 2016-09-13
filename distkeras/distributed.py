@@ -418,7 +418,7 @@ class EASGDWorker(object):
                 W1 = np.asarray(model.optimizer.weights)
                 # Train the model with the current batch.
                 model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.optimizer.weights
+                W2 = np.asarray(model.optimizer.weights)
                 # Compute the gradient.
                 gradient = np.asarray(model.optimizer.updates)
                 self.master_send_variable(index, W2)
