@@ -253,7 +253,7 @@ class EnsembleTrainerWorker(object):
 class EASGD(Trainer):
 
     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
-                 rho=5, learning_rate=0.01, batch_size=1000):
+                 rho=5.0, learning_rate=0.01, batch_size=1000):
         super(EASGD, self).__init__(keras_model=keras_model)
         self.features_column = features_col
         self.label_column = label_col
@@ -418,8 +418,10 @@ class EASGDWorker(object):
                 W = np.asarray(model.get_weights())
                 # Train the model with the current batch.
                 model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
                 # Compute the gradient.
-                gradient = np.asarray(model.get_weights()) - W
+                gradient = W2 - W
+                print(gradient)
                 self.master_send_variable(index, W)
                 # Update the local variable.
                 W += self.learning_rate * (gradient + self.rho * (W - self.center_variable))
