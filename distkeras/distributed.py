@@ -296,7 +296,7 @@ class EASGD(Trainer):
     def process_variables(self):
         print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
         center_variable = np.asarray(self.model.get_weights())
-        temp = np.copy(center_variable)
+        temp = np.copy(center_variable).fill(0)
         # Iterate through all worker variables.
         for i in range(0, self.num_workers):
             temp += self.rho * (self.variables[i] - center_variable)
@@ -304,6 +304,10 @@ class EASGD(Trainer):
         center_variable += temp
         # Update the center variable
         self.model.set_weights(center_variable)
+        # Compile the model with the new weights.
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=RMSprop(),
+                           metrics=['accuracy'])
 
     def train(self, data):
         # Start the EASGD REST API.
@@ -323,10 +327,6 @@ class EASGD(Trainer):
         else:
             data = data.repartition(self.num_workers)
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
-        # Compile the model with the new weights.
-        self.model.compile(loss='categorical_crossentropy',
-                           optimizer=RMSprop(),
-                           metrics=['accuracy'])
         # Stop the EASGD REST API.
         self.stop_service()
 
