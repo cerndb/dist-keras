@@ -427,6 +427,9 @@ class EASGDWorker(object):
                 # Update the local variable.
                 W -= self.learning_rate * (gradient + self.rho * (W - self.center_variable))
                 model.set_weights(W)
+                model.compile(loss='categorical_crossentropy',
+                              optimizer=RMSprop(),
+                              metrics=['accuracy'])
                 # Wait until all clients synchronized the gradient.
                 while not self.master_is_ready():
                     time.sleep(0.2)
