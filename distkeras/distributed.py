@@ -415,10 +415,10 @@ class EASGDWorker(object):
                 # Fetch the master (center) variable.
                 self.fetch_center_variable()
                 # Fetch the current weight parameterization.
-                W1 = np.asarray(model.get_weights())
+                W1 = np.asarray(model.optimizer.get_weights())
                 # Train the model with the current batch.
                 model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.get_weights())
+                W2 = np.asarray(model.optimizer.get_weights())
                 # Compute the gradient.
                 gradient = W2 - W1
                 self.master_send_variable(index, W2)
