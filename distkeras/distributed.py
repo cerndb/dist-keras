@@ -420,7 +420,7 @@ class EASGDWorker(object):
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 # Compute the gradient.
-                gradient = W2 - W
+                gradient = W2 - W1
                 self.master_send_variable(index, W1)
                 # Update the local variable.
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
