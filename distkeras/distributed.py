@@ -265,6 +265,7 @@ class EASGD(Trainer):
         self.mutex = Lock()
         # Initialize default parameters.
         self.reset()
+        self.TEST = 10
 
     def reset(self):
         # Reset the training attributes.
@@ -272,7 +273,7 @@ class EASGD(Trainer):
         self.variables = {}
         self.service = None
         self.ready = False
-        self.iteration = 0
+        self.iteration = 1
 
     def set_ready(self, state):
         with self.mutex:
@@ -295,16 +296,19 @@ class EASGD(Trainer):
 
     def process_variables(self):
         print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
-        center_variable = np.asarray(self.model.get_weights())
-        temp = np.copy(center_variable)
-        temp.fill(0.0)
-        # Iterate through all worker variables.
-        for i in range(0, self.num_workers):
-            temp += self.rho * (self.variables[i] - center_variable)
-        temp *= self.learning_rate
-        center_variable += temp
+        center_variable = self.model.get_weights()
+        w = self.variables[0]
+        # temp = np.copy(center_variable)
+        # temp.fill(0.0)
+
+        # # Iterate through all worker variables.
+        # for i in range(0, self.num_workers):
+        #     temp += self.rho * (self.variables[i] - center_variable)
+        # temp *= self.learning_rate
+        # center_variable += temp
         # Update the center variable
-        self.model.set_weights(center_variable)
+        self.model.set_weights(w)
+        print(self.model.get_weights())
 
     def train(self, data):
         # Start the EASGD REST API.
@@ -326,6 +330,8 @@ class EASGD(Trainer):
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the EASGD REST API.
         self.stop_service()
+        print(self.model.get_weights())
+        print(self.TEST)
 
         return self.model
 
@@ -345,24 +351,31 @@ class EASGD(Trainer):
         def update():
             data = pickle.loads(request.data)
             variable = data['variable']
+            iteration = data['iteration']
             worker_id = data['worker_id']
 
-            # Gradient update, declare next iteration.
-            self.set_ready(False)
-            # Store the gradient of the worker.
-            self.variables[worker_id] = variable
-            # Check if the gradients of all workers are available.
-            if len(self.variables) == self.num_workers:
-                self.process_variables()
-                self.variables = {}
-                self.set_ready(True)
-                self.iteration += 1
+            # Check if the variable update is the correct iteration.
+            if iteration == self.iteration:
+                # Gradient update, declare next iteration.
+                self.set_ready(False)
+                # Store the gradient of the worker.
+                self.variables[worker_id] = variable
+                # Check if the gradients of all workers are available.
+                if len(self.variables) == self.num_workers:
+                    self.process_variables()
+                    self.variables = {}
+                    self.set_ready(True)
+                    self.iteration += 1
+                    self.TEST = 5
 
             return 'OK'
 
-        @app.route("/ready", methods=['GET'])
+        @app.route("/ready", methods=['POST'])
         def ready():
+            data = pickle.loads(request.data)
+            iteration = data['iteration']
             ready = self.get_ready()
+            ready = (ready or iteration < self.iteration)
 
             return pickle.dumps(ready, -1)
 
@@ -383,16 +396,20 @@ class EASGDWorker(object):
         self.master_variable = None
         self.batch_size = batch_size
         self.rho = rho
+        self.iteration = 1
         self.learning_rate = learning_rate
 
     def master_send_variable(self, worker_id, variable):
         data = {}
         data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
         data['variable'] = variable
         rest_post(self.master_host, self.master_port, "/update", data)
 
     def master_is_ready(self):
-        return rest_get(self.master_host, self.master_port, "/ready")
+        data = {}
+        data['iteration'] = self.iteration
+        return rest_post(self.master_host, self.master_port, "/ready", data)
 
     def fetch_center_variable(self):
         self.center_variable = rest_get(self.master_host, self.master_port, "/center_variable")
@@ -404,32 +421,42 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        try:
-            while True:
-                # Get the next batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Build the training matrix.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Fetch the master (center) variable.
-                self.fetch_center_variable()
-                # Fetch the current weight parameterization.
-                W1 = np.asarray(model.optimizer.weights)
-                # Train the model with the current batch.
-                model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.optimizer.weights)
-                # Compute the gradient.
-                gradient = np.asarray(model.optimizer.updates)
-                self.master_send_variable(index, W2)
-                # Update the local variable.
-                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-                model.optimizer.set_weights(W)
-                # Wait until all clients synchronized the gradient.
-                while not self.master_is_ready():
-                    time.sleep(0.2)
-        except StopIteration:
-            pass
+        W1 = np.asarray(model.get_weights())
+
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        model.fit(X, Y, nb_epoch=1)
+        W = np.asarray(model.get_weights())
+        self.master_send_variable(index, W)
+        # try:
+        #     while True:
+        #         # Increment the iteration number.
+        #         self.iteration += 1
+        #         # Get the next batch.
+        #         batch = [next(iterator) for _ in range(self.batch_size)]
+        #         # Build the training matrix.
+        #         feature_iterator, label_iterator = tee(batch, 2)
+        #         X = np.asarray([x[self.features_column] for x in feature_iterator])
+        #         Y = np.asarray([x[self.label_column] for x in label_iterator])
+        #         # Fetch the master (center) variable.
+        #         self.fetch_center_variable()
+        #         # Train the model with the current batch.
+        #         loss = model.train_on_batch(X, Y)
+        #         print("Loss: " + `loss`)
+        #         W2 = np.asarray(model.optimizer.get_weights())
+        #         # Compute the gradient.
+        #         gradient = W2 - W1
+        #         self.master_send_variable(index, W2)
+        #         # Update the local variable.
+        #         # W = W1 + gradient
+        #         #W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+        #         # model.optimizer.set_weights(W)
+        #         # Wait until all clients synchronized the gradient.
+        #         while not self.master_is_ready():
+        #             time.sleep(0.2)
+        # except StopIteration:
+        #     pass
 
         return iter([])
 

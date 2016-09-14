@@ -73,7 +73,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-dataset = dataset.sample(True, 0.1)
+dataset = dataset.sample(True, 0.05)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
@@ -84,7 +84,7 @@ dataset.printSchema()
 (trainingSet, testSet) = dataset.randomSplit([0.7, 0.3])
 
 # Create the distributed Ensemble trainer.
-trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=500, num_workers=1, rho=1.0)
+trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=500, num_workers=1, rho=5.0, learning_rate=0.01)
 model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.
