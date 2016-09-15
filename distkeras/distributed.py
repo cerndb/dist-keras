@@ -17,7 +17,7 @@ from keras.utils import np_utils
 
 from threading import Lock
 
-from multiprocessing import Process
+import threading
 
 from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
@@ -74,6 +74,11 @@ def rest_get(host, port, endpoint):
                               headers={'Content-Type': 'application/dist-keras'})
 
     return pickle.loads(urllib2.urlopen(request).read())
+
+def rest_get_ping(host, port, endpoint):
+    request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
+                              headers={'Content-Type': 'application/dist-keras'})
+    urllib2.urlopen(request)
 
 ## END Utility functions. ######################################################
 
@@ -265,13 +270,12 @@ class EASGD(Trainer):
         self.mutex = Lock()
         # Initialize default parameters.
         self.reset()
-        self.TEST = 10
 
     def reset(self):
         # Reset the training attributes.
         self.model = deserialize_keras_model(self.master_model)
         self.variables = {}
-        self.service = None
+        self.parameter_server = None
         self.ready = False
         self.iteration = 1
 
@@ -287,28 +291,26 @@ class EASGD(Trainer):
         return localReady
 
     def start_service(self):
-        self.service = Process(target=self.easgd_service)
-        self.service.start()
+        self.parameter_server = threading.Thread(target=self.easgd_service)
+        self.parameter_server.start()
 
     def stop_service(self):
-        self.service.terminate()
-        self.service.join()
+        rest_get_ping('localhost', 5000, '/shutdown')
+        self.parameter_server.join()
 
     def process_variables(self):
         print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
         center_variable = self.model.get_weights()
-        w = self.variables[0]
-        # temp = np.copy(center_variable)
-        # temp.fill(0.0)
+        temp = np.copy(center_variable)
+        temp.fill(0.0)
 
-        # # Iterate through all worker variables.
-        # for i in range(0, self.num_workers):
-        #     temp += self.rho * (self.variables[i] - center_variable)
-        # temp *= self.learning_rate
-        # center_variable += temp
+        # Iterate through all worker variables.
+        for i in range(0, self.num_workers):
+            temp += self.variables[i]
+        temp /= float(self.num_workers)
+        center_variable += temp
         # Update the center variable
-        self.model.set_weights(w)
-        print(self.model.get_weights())
+        self.model.set_weights(center_variable)
 
     def train(self, data):
         # Start the EASGD REST API.
@@ -330,8 +332,6 @@ class EASGD(Trainer):
         data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the EASGD REST API.
         self.stop_service()
-        print(self.model.get_weights())
-        print(self.TEST)
 
         return self.model
 
@@ -366,7 +366,6 @@ class EASGD(Trainer):
                     self.variables = {}
                     self.set_ready(True)
                     self.iteration += 1
-                    self.TEST = 5
 
             return 'OK'
 
@@ -378,6 +377,13 @@ class EASGD(Trainer):
             ready = (ready or iteration < self.iteration)
 
             return pickle.dumps(ready, -1)
+
+        @app.route("/shutdown", methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
 
         ## END REST routes. ####################################################
 
@@ -422,41 +428,19 @@ class EASGDWorker(object):
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
         W1 = np.asarray(model.get_weights())
-
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         Y = np.asarray([x[self.label_column] for x in label_iterator])
-        model.fit(X, Y, nb_epoch=1)
-        W = np.asarray(model.get_weights())
-        self.master_send_variable(index, W)
-        # try:
-        #     while True:
-        #         # Increment the iteration number.
-        #         self.iteration += 1
-        #         # Get the next batch.
-        #         batch = [next(iterator) for _ in range(self.batch_size)]
-        #         # Build the training matrix.
-        #         feature_iterator, label_iterator = tee(batch, 2)
-        #         X = np.asarray([x[self.features_column] for x in feature_iterator])
-        #         Y = np.asarray([x[self.label_column] for x in label_iterator])
-        #         # Fetch the master (center) variable.
-        #         self.fetch_center_variable()
-        #         # Train the model with the current batch.
-        #         loss = model.train_on_batch(X, Y)
-        #         print("Loss: " + `loss`)
-        #         W2 = np.asarray(model.optimizer.get_weights())
-        #         # Compute the gradient.
-        #         gradient = W2 - W1
-        #         self.master_send_variable(index, W2)
-        #         # Update the local variable.
-        #         # W = W1 + gradient
-        #         #W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-        #         # model.optimizer.set_weights(W)
-        #         # Wait until all clients synchronized the gradient.
-        #         while not self.master_is_ready():
-        #             time.sleep(0.2)
-        # except StopIteration:
-        #     pass
+        W1 = np.asarray(model.get_weights())
+        for i in range(0, 4):
+            self.fetch_center_variable()
+            model.set_weights(np.asarray(self.center_variable))
+            model.fit(X, Y, nb_epoch=1)
+            W2 = np.asarray(model.get_weights())
+            gradient = W2 - W1
+            W1 = W2
+            self.master_send_variable(index, gradient)
+            self.iteration += 1
 
         return iter([])
 
