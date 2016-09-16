@@ -427,20 +427,22 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        W1 = np.asarray(model.get_weights())
-        feature_iterator, label_iterator = tee(iterator, 2)
-        X = np.asarray([x[self.features_column] for x in feature_iterator])
-        Y = np.asarray([x[self.label_column] for x in label_iterator])
-        W1 = np.asarray(model.get_weights())
-        for i in range(0, 4):
-            self.fetch_center_variable()
-            model.set_weights(np.asarray(self.center_variable))
-            model.fit(X, Y, nb_epoch=1)
-            W2 = np.asarray(model.get_weights())
-            gradient = W2 - W1
-            W1 = W2
-            self.master_send_variable(index, gradient)
-            self.iteration += 1
+        try:
+            while True:
+                self.fetch_center_variable()
+                model.set_weights(np.asarray(self.center_variable))
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                W1 = np.asarray(model.get_weights())
+                model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
+                gradient = W2 - W1
+                self.master_send_variable(index, gradient)
+                self.iteration += 1
+        except StopIteration:
+            pass
 
         return iter([])
 
