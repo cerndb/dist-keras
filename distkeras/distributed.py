@@ -354,11 +354,9 @@ class EASGD(Trainer):
             iteration = data['iteration']
             worker_id = data['worker_id']
 
-            print(`iteration` + " -- " + `self.iteration`)
+            self.set_ready(False)
             # Check if the variable update is the correct iteration.
             if iteration == self.iteration:
-                # Gradient update, declare next iteration.
-                self.set_ready(False)
                 # Store the gradient of the worker.
                 self.variables[worker_id] = variable
                 # Check if the gradients of all workers are available.
@@ -377,7 +375,7 @@ class EASGD(Trainer):
             ready = self.get_ready()
             ready = (ready or iteration < self.iteration)
 
-            return pickle.dumps(ready, -1)
+            return str(int(ready))
 
         @app.route("/shutdown", methods=['GET'])
         def shutdown():
@@ -416,7 +414,9 @@ class EASGDWorker(object):
     def master_is_ready(self):
         data = {}
         data['iteration'] = self.iteration
-        return rest_post(self.master_host, self.master_port, "/ready", data)
+        master_ready = int(rest_post(self.master_host, self.master_port, "/ready", data))
+
+        return master_ready == 1
 
     def fetch_center_variable(self):
         self.center_variable = rest_get(self.master_host, self.master_port, "/center_variable")
@@ -441,9 +441,9 @@ class EASGDWorker(object):
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
                 self.master_send_variable(index, gradient)
-                self.iteration += 1
                 while not self.master_is_ready():
                     time.sleep(0.2)
+                self.iteration += 1
         except StopIteration:
             pass
 
