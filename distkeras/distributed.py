@@ -354,6 +354,7 @@ class EASGD(Trainer):
             iteration = data['iteration']
             worker_id = data['worker_id']
 
+            print(`iteration` + " -- " + `self.iteration`)
             # Check if the variable update is the correct iteration.
             if iteration == self.iteration:
                 # Gradient update, declare next iteration.
@@ -441,6 +442,8 @@ class EASGDWorker(object):
                 gradient = W2 - W1
                 self.master_send_variable(index, gradient)
                 self.iteration += 1
+                while not self.master_is_ready():
+                    time.sleep(0.2)
         except StopIteration:
             pass
 
