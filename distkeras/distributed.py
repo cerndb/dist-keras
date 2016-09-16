@@ -299,15 +299,15 @@ class EASGD(Trainer):
         self.parameter_server.join()
 
     def process_variables(self):
-        print("\n\n\n--- Processing Variables in iteration " + `self.iteration` + "---\n\n\n")
         center_variable = self.model.get_weights()
         temp = np.copy(center_variable)
         temp.fill(0.0)
 
         # Iterate through all worker variables.
         for i in range(0, self.num_workers):
-            temp += self.variables[i]
+            temp += (self.rho * (self.variables[i] - center_variable))
         temp /= float(self.num_workers)
+        temp *= self.learning_rate
         center_variable += temp
         # Update the center variable
         self.model.set_weights(center_variable)
@@ -419,7 +419,7 @@ class EASGDWorker(object):
         return master_ready == 1
 
     def fetch_center_variable(self):
-        self.center_variable = rest_get(self.master_host, self.master_port, "/center_variable")
+        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
 
     def train(self, index, iterator):
         # Deserialize the Keras model.
@@ -431,7 +431,6 @@ class EASGDWorker(object):
         try:
             while True:
                 self.fetch_center_variable()
-                model.set_weights(np.asarray(self.center_variable))
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
@@ -440,7 +439,9 @@ class EASGDWorker(object):
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
-                self.master_send_variable(index, gradient)
+                self.master_send_variable(index, W1)
+                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                model.set_weights(W)
                 while not self.master_is_ready():
                     time.sleep(0.2)
                 self.iteration += 1
