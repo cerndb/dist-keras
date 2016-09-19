@@ -410,68 +410,6 @@ class EASGD(SynchronizedDistributedTrainer):
 
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
-
-class EASGDWorker(object):
-
-    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
-                 rho=5, learning_rate=0.01):
-        self.model = keras_model
-        self.features_column = features_col
-        self.label_column = label_col
-        self.master_host = "127.0.0.1"
-        self.master_port = 5000
-        self.master_variable = None
-        self.batch_size = batch_size
-        self.rho = rho
-        self.iteration = 1
-        self.learning_rate = learning_rate
-
-    def master_send_variable(self, worker_id, variable):
-        data = {}
-        data['worker_id'] = worker_id
-        data['iteration'] = self.iteration
-        data['variable'] = variable
-        rest_post(self.master_host, self.master_port, "/update", data)
-
-    def master_is_ready(self):
-        data = {}
-        data['iteration'] = self.iteration
-        master_ready = int(rest_post(self.master_host, self.master_port, "/ready", data))
-
-        return master_ready == 1
-
-    def fetch_center_variable(self):
-        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
-
-    def train(self, index, iterator):
-        # Deserialize the Keras model.
-        model = deserialize_keras_model(self.model)
-        # Compile the model.
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=RMSprop(),
-                      metrics=['accuracy'])
-        try:
-            while True:
-                self.fetch_center_variable()
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                W1 = np.asarray(model.get_weights())
-                model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.get_weights())
-                gradient = W2 - W1
-                self.master_send_variable(index, W2)
-                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-                model.set_weights(W)
-                while not self.master_is_ready():
-                    time.sleep(0.2)
-                self.iteration += 1
-        except StopIteration:
-            pass
-
-        return iter([])
-
 class DPGO(SynchronizedDistributedTrainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
@@ -541,3 +479,106 @@ class DPGO(SynchronizedDistributedTrainer):
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 ## END Trainers. ###############################################################
+
+## BEGIN Workers. ##############################################################
+
+
+class PDGOWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = "127.0.0.1"
+        self.master_port = 5000
+        self.batch_size = batch_size
+        self.iteration = 1
+        self.mean = None
+        self.covariance_matrix = None
+
+    def master_is_ready(self):
+        data = {}
+        data['iteration'] = self.iteration
+        master_ready = int(rest_post(self.master_host, self.master_port, "/update", data))
+
+        return master_ready == 1
+
+    def master_fetch_distribution(self):
+        data = rest_get(self.master_host, self.master_port, "/distribution")
+        mean = data['mean']
+        covarianceMatrix = data['covariance_matrix']
+        self.mean = mean
+        self.covariance_matrix = covarianceMatrix
+
+    def master_send_variable(self, worker_id, variable):
+        data = {}
+        data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, "/update", data)
+
+    def train(self, index, iterator):
+        raise NotImplementedError
+
+class EASGDWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
+                 rho=5, learning_rate=0.01):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = "127.0.0.1"
+        self.master_port = 5000
+        self.master_variable = None
+        self.batch_size = batch_size
+        self.rho = rho
+        self.iteration = 1
+        self.learning_rate = learning_rate
+
+    def master_send_variable(self, worker_id, variable):
+        data = {}
+        data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, "/update", data)
+
+    def master_is_ready(self):
+        data = {}
+        data['iteration'] = self.iteration
+        master_ready = int(rest_post(self.master_host, self.master_port, "/ready", data))
+
+        return master_ready == 1
+
+    def fetch_center_variable(self):
+        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
+
+    def train(self, index, iterator):
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        # Compile the model.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=RMSprop(),
+                      metrics=['accuracy'])
+        try:
+            while True:
+                self.fetch_center_variable()
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                W1 = np.asarray(model.get_weights())
+                model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
+                gradient = W2 - W1
+                self.master_send_variable(index, W2)
+                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                model.set_weights(W)
+                while not self.master_is_ready():
+                    time.sleep(0.2)
+                self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
+
+## END Workers. ################################################################
