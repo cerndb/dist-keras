@@ -255,29 +255,20 @@ class EnsembleTrainerWorker(object):
 
         return iter([partitionResult])
 
-class EASGD(Trainer):
+class SynchronizedDistributedTrainer(Trainer):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
-                 rho=5.0, learning_rate=0.01, batch_size=1000):
-        super(EASGD, self).__init__(keras_model=keras_model)
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+                 features_col="features", label_col="label"):
+        super(SynchronizedDistributedTrainer, self).__init__(keras_model=keras_model)
+        self.num_workers = num_workers
+        self.batch_size = batch_size
         self.features_column = features_col
         self.label_column = label_col
-        self.num_workers = num_workers
-        self.rho = rho
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        # Initialize attribute which do not change throughout the training process.
-        self.mutex = Lock()
-        # Initialize default parameters.
-        self.reset()
-
-    def reset(self):
-        # Reset the training attributes.
-        self.model = deserialize_keras_model(self.master_model)
-        self.variables = {}
-        self.parameter_server = None
         self.ready = False
         self.iteration = 1
+        self.parameter_server = None
+        self.mutex = Lock()
+        self.model = None
 
     def set_ready(self, state):
         with self.mutex:
@@ -291,12 +282,66 @@ class EASGD(Trainer):
         return localReady
 
     def start_service(self):
-        self.parameter_server = threading.Thread(target=self.easgd_service)
+        self.parameter_server = threading.Thread(target=self.service)
         self.parameter_server.start()
+
+    def service(self):
+        raise NotImplementedError
+
+    def stop_service(self):
+        raise NotImplementedError
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def train(self, data):
+        # Start the communication service.
+        self.start_service()
+        # Allocate a worker program.
+        worker = self.allocate_worker()
+        # Fetch the current number of partitions.
+        numPartitions = data.rdd.getNumPartitions()
+        # Check if we need to merge or repartition.
+        if numPartitions > self.num_workers:
+            data = data.coalesce(self.num_workers)
+        else:
+            data = data.repartition(self.num_workers)
+        data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        # Stop the communication service.
+        self.stop_service()
+
+        return self.model
+
+class EASGD(SynchronizedDistributedTrainer):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
+                 rho=5.0, learning_rate=0.01, batch_size=1000):
+        super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                    batch_size=batch_size, features_col=features_col,
+                                    label_col=label_col)
+        self.rho = rho
+        self.learning_rate = learning_rate
+        # Initialize default model parameters.
+        self.initialize_variables()
+
+    def initialize_variables(self):
+        # Reset the training attributes.
+        self.model = deserialize_keras_model(self.master_model)
+        self.variables = {}
 
     def stop_service(self):
         rest_get_ping('localhost', 5000, '/shutdown')
         self.parameter_server.join()
+
+    def allocate_worker(self):
+        worker = EASGDWorker(keras_model=self.master_model,
+                             features_col=self.features_column,
+                             label_col=self.label_column,
+                             rho=self.rho,
+                             learning_rate=self.learning_rate,
+                             batch_size=self.batch_size)
+
+        return worker
 
     def process_variables(self):
         center_variable = self.model.get_weights()
@@ -312,30 +357,7 @@ class EASGD(Trainer):
         # Update the center variable
         self.model.set_weights(center_variable)
 
-    def train(self, data):
-        # Start the EASGD REST API.
-        self.start_service()
-        # Specify the parameters to the worker method.
-        worker = EASGDWorker(keras_model=self.master_model,
-                             features_col=self.features_column,
-                             label_col=self.label_column,
-                             rho=self.rho,
-                             learning_rate=self.learning_rate,
-                             batch_size=self.batch_size)
-        # Fetch the current number of partitions.
-        numPartitions = data.rdd.getNumPartitions()
-        # Check if we need to merge or repartition.
-        if numPartitions > self.num_workers:
-            data = data.coalesce(self.num_workers)
-        else:
-            data = data.repartition(self.num_workers)
-        data.rdd.mapPartitionsWithIndex(worker.train).collect()
-        # Stop the EASGD REST API.
-        self.stop_service()
-
-        return self.model
-
-    def easgd_service(self):
+    def service(self):
         app = Flask(__name__)
 
         ## BEGIN REST routes. ##################################################
@@ -449,5 +471,73 @@ class EASGDWorker(object):
             pass
 
         return iter([])
+
+class DPGO(SynchronizedDistributedTrainer):
+
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+                 features_col="features", label_col="label"):
+        super(DPGO, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                   batch_size=batch_size, features_col=features_col,
+                                   label_col=label_col)
+        self.initialize_variables()
+
+    def initialize_variables():
+        self.model = deserialize_keras_model(self.master_model)
+        self.variables = {}
+
+    def stop_service(self):
+        rest_get_ping('localhost', 5000, '/shutdown')
+        self.parameter_server.join()
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def process_variables(self):
+        raise NotImplementedError
+
+    def service(self):
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route("/distribution", methods=['GET'])
+        def distribution():
+            raise NotImplementedError
+
+        @app.route("/update", methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            self.set_ready(False)
+            if iteration == self.iteration:
+                self.variables[worker_id] = variable
+                if len(self.variables) == self.num_workers:
+                    self.process_variables()
+                    self.variables = {}
+                    self.set_ready(True)
+                    self.iteration += 1
+
+        @app.route("/ready", methods['POST'])
+        def ready():
+            data = pickle.loads(request.data)
+            iteration = data['iteration']
+            ready = self.get_ready()
+            ready = (ready or iteration < self.iteration)
+
+            return str(int(ready))
+
+        @app.route("/shutdown", methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routers. ###################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 ## END Trainers. ###############################################################
