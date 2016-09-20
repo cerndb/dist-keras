@@ -498,7 +498,10 @@ class DPGO(SynchronizedDistributedTrainer):
         @app.route("/distribution", methods=['GET'])
         def distribution():
             with self.mutex:
-                data = (self.mean, self.mean_vector, self.cov)
+                data = {}
+                data['mean'] = self.mean
+                data['mean_vector'] = self.mean_vector
+                data['covariance_matrix'] = self.cov
 
             return pick.dumps(data, -1)
 
@@ -554,6 +557,7 @@ class PDGOWorker(object):
         self.batch_size = batch_size
         self.iteration = 1
         self.mean = None
+        self.mean_vector = None
         self.covariance_matrix = None
 
     def master_is_ready(self):
@@ -566,8 +570,10 @@ class PDGOWorker(object):
     def master_fetch_distribution(self):
         data = rest_get(self.master_host, self.master_port, "/distribution")
         mean = data['mean']
+        mean_vector = data['mean_vector']
         covarianceMatrix = data['covariance_matrix']
         self.mean = mean
+        self.mean_vector = mean_vector
         self.covariance_matrix = covarianceMatrix
 
     def master_send_variable(self, worker_id, variable):
