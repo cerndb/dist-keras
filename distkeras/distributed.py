@@ -80,6 +80,34 @@ def rest_get_ping(host, port, endpoint):
                               headers={'Content-Type': 'application/dist-keras'})
     urllib2.urlopen(request)
 
+def uniform_weights(weights, contraints=[-0.5, 0,5]):
+    # TODO Implement.
+    pass
+
+def weights_mean(weights):
+    # Check if the precondition has been met.
+    assert(weights.shape[0] > 1)
+
+    return np.mean(weights, axis=0)
+
+def weights_covariance(weights):
+    num_weights = weights.shape[0]
+
+    # Check if the precondition has been met.
+    assert(num_weights > 1)
+
+    w = []
+    for weight in weights:
+        flat = np.asarray([])
+        for layer in weight:
+            layer = layer.flatten()
+            flat = np.hstack((flat, layer))
+        w.append(flat)
+    w = np.asarray(w)
+    cov = np.cov(w, rowvar=0)
+
+    return cov
+
 ## END Utility functions. ######################################################
 
 ## BEGIN Transformers. #########################################################
@@ -422,16 +450,27 @@ class DPGO(SynchronizedDistributedTrainer):
     def initialize_variables():
         self.model = deserialize_keras_model(self.master_model)
         self.variables = {}
+        self.mean = None
+        self.cov = None
 
     def stop_service(self):
         rest_get_ping('localhost', 5000, '/shutdown')
         self.parameter_server.join()
 
     def allocate_worker(self):
-        raise NotImplementedError
+        worker = DPGOWorker(keras_model=self.master_model,
+                            batch_size=self.batch_size,
+                            features_col=self.features_column,
+                            label_col=self.label_column)
+
+        return worker
 
     def process_variables(self):
-        raise NotImplementedError
+        # Compute the mean of the variables.
+        variables = np.asarray(self.variables.values())
+        self.mean = np.mean(variables, axis=0)
+        reshaped = variables.reshape(variables.shape[0], -1)
+        self.cov = np.cov(reshaped, rowvar=0)
 
     def service(self):
         app = Flask(__name__)
@@ -440,7 +479,10 @@ class DPGO(SynchronizedDistributedTrainer):
 
         @app.route("/distribution", methods=['GET'])
         def distribution():
-            raise NotImplementedError
+            with self.mutex:
+                data = (self.mean, self.cov)
+
+            return pick.dumps(data, -1)
 
         @app.route("/update", methods=['POST'])
         def update():
@@ -555,29 +597,14 @@ class EASGDWorker(object):
     def train(self, index, iterator):
         # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
+        # Initialize the model weights with a constrainted uniform distribution.
+        weights = uniform_weights(model.get_weights(), [-5, 5])
+        model.set_weights(weights)
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        try:
-            while True:
-                self.fetch_center_variable()
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                W1 = np.asarray(model.get_weights())
-                model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.get_weights())
-                gradient = W2 - W1
-                self.master_send_variable(index, W2)
-                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-                model.set_weights(W)
-                while not self.master_is_ready():
-                    time.sleep(0.2)
-                self.iteration += 1
-        except StopIteration:
-            pass
+        # TODO Implement.
 
         return iter([])
 
