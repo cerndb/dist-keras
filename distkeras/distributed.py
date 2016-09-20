@@ -583,6 +583,10 @@ class PDGOWorker(object):
         data['variable'] = variable
         rest_post(self.master_host, self.master_port, "/update", data)
 
+    def convert_to_weights(self, sample):
+        # TODO Implement.
+        raise NotImplementedError
+
     def train(self, index, iterator):
         # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
@@ -604,7 +608,10 @@ class PDGOWorker(object):
                     time.sleep(0.2)
                 self.iteration += 1
                 self.master_fetch_distribution()
-                # TODO Sample distribution.
+                # Sample an instance from the distribution and convert.
+                sample = np.random.multivariate_normal(self.mean_vector, self.covariance_matrix)
+                weights_sample = self.convert_to_weights(sample)
+                model.set_weights(weights_sample)
         except StopIteration:
             pass
 
