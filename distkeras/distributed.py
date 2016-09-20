@@ -85,10 +85,21 @@ def uniform_weights(weights, contraints=[-0.5, 0,5]):
     pass
 
 def weights_mean(weights):
-    # Check if the precondition has been met.
-    assert(weights.shape[0] > 1)
+    num_weights = weights.shape[0]
 
-    return np.mean(weights, axis=0)
+    # Check if the precondition has been met.
+    assert(num_weights > 1)
+
+    w = []
+    for weight in weights:
+        flat = np.asarray([])
+        for layer in weight:
+            layer = layer.flatten()
+            flat = np.hstack((flat, layer))
+        w.append(flat)
+    w = np.asarray(w)
+
+    return np.mean(w, axis=0)
 
 def weights_covariance(weights):
     num_weights = weights.shape[0]
