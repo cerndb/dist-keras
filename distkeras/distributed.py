@@ -85,6 +85,11 @@ def uniform_weights(weights, contraints=[-0.5, 0,5]):
     pass
 
 def weights_mean(weights):
+    assert(weights.shape[0] > 1)
+
+    return np.mean(weights, axis=0)
+
+def weights_mean_vector(weights):
     num_weights = weights.shape[0]
 
     # Check if the precondition has been met.
@@ -462,6 +467,7 @@ class DPGO(SynchronizedDistributedTrainer):
         self.model = deserialize_keras_model(self.master_model)
         self.variables = {}
         self.mean = None
+        self.mean_vector = None
         self.cov = None
 
     def stop_service(self):
@@ -481,6 +487,7 @@ class DPGO(SynchronizedDistributedTrainer):
             # Compute the mean of the variables.
             variables = np.asarray(self.variables.values())
             self.mean = weights_mean(variables)
+            self.mean_vector = weights_mean_vector(variables)
             self.cov = weights_covariance(variables)
 
     def service(self):
@@ -491,7 +498,7 @@ class DPGO(SynchronizedDistributedTrainer):
         @app.route("/distribution", methods=['GET'])
         def distribution():
             with self.mutex:
-                data = (self.mean, self.cov)
+                data = (self.mean, self.mean_vector, self.cov)
 
             return pick.dumps(data, -1)
 
