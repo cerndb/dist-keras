@@ -466,11 +466,11 @@ class DPGO(SynchronizedDistributedTrainer):
         return worker
 
     def process_variables(self):
-        # Compute the mean of the variables.
-        variables = np.asarray(self.variables.values())
-        self.mean = np.mean(variables, axis=0)
-        reshaped = variables.reshape(variables.shape[0], -1)
-        self.cov = np.cov(reshaped, rowvar=0)
+        with self.mutex:
+            # Compute the mean of the variables.
+            variables = np.asarray(self.variables.values())
+            self.mean = weights_mean(variables)
+            self.cov = weights_covariance(variables)
 
     def service(self):
         app = Flask(__name__)
@@ -560,7 +560,31 @@ class PDGOWorker(object):
         rest_post(self.master_host, self.master_port, "/update", data)
 
     def train(self, index, iterator):
-        raise NotImplementedError
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        # TODO Random weight initialization.
+        # Compile the model.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=RMSprop(),
+                      metrics=['accuracy'])
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                model.fit(X, Y, nb_epoch=1)
+                W = np.asarray(model.get_weights())
+                self.master_send_variable(index, W)
+                while not self.master_is_ready():
+                    time.sleep(0.2)
+                self.iteration += 1
+                self.master_fetch_distribution()
+                # TODO Sample distribution.
+        except StopIteration:
+            pass
+
+        return iter([])
 
 class EASGDWorker(object):
 
@@ -604,7 +628,25 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
                       metrics=['accuracy'])
-        # TODO Implement.
+        try:
+            while True:
+                self.fetch_center_variable()
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                W1 = np.asarray(model.get_weights())
+                model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
+                gradient = W2 - W1
+                self.master_send_variable(index, W2)
+                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                model.set_weights(W)
+                while not self.master_is_ready():
+                    time.sleep(0.2)
+                self.iteration += 1
+        except StopIteration:
+            pass
 
         return iter([])
 
