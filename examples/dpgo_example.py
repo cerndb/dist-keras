@@ -26,10 +26,12 @@ from distkeras.distributed import DPGO
 
 import os
 
-num_workers = 8
+num_executors = 5
+num_cores = 2
+num_workers = num_executors * num_cores
 
 # Setup Spark, and use the Databricks CSV loader.
-os.environ['PYSPARK_SUBMIT_ARGS'] = "--master yarn --deploy-mode client --packages com.databricks:spark-csv_2.10:1.4.0 --num-executors 4 --executor-cores 2 pyspark-shell"
+os.environ['PYSPARK_SUBMIT_ARGS'] = "--master yarn --deploy-mode client --packages com.databricks:spark-csv_2.10:1.4.0 --num-executors " + `num_executors` + " --executor-cores " + `num_cores` + " pyspark-shell"
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
 sc = SparkContext(appName="DistKeras ATLAS Higgs example")
 sqlContext = SQLContext(sc)
@@ -72,7 +74,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-dataset = dataset.sample(True, 0.95, 1234)
+# dataset = dataset.sample(True, 0.95, 1234)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
@@ -80,7 +82,7 @@ dataset = labelVectorTransformer.transform(dataset).toDF().select("features_norm
 dataset.printSchema()
 
 # Split the data in a training and test set.
-(trainingSet, testSet) = dataset.randomSplit([0.75, 0.25])
+(trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
 # Create the distributed Ensemble trainer.
 trainer = DPGO(keras_model=model, features_col="features_normalized", batch_size=700,
