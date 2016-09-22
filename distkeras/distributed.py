@@ -81,8 +81,7 @@ def rest_get_ping(host, port, endpoint):
     urllib2.urlopen(request)
 
 def uniform_weights(weights, contraints=[-0.5, 0,5]):
-    # TODO Implement.
-    pass
+    raise NotImplementedError
 
 def weights_mean(weights):
     assert(weights.shape[0] > 1)
@@ -106,12 +105,11 @@ def weights_mean_vector(weights):
 
     return np.mean(w, axis=0)
 
-def weights_covariance(weights):
+def weights_std(weights):
     num_weights = weights.shape[0]
 
     # Check if the precondition has been met.
     assert(num_weights > 1)
-
     w = []
     for weight in weights:
         flat = np.asarray([])
@@ -120,9 +118,12 @@ def weights_covariance(weights):
             flat = np.hstack((flat, layer))
         w.append(flat)
     w = np.asarray(w)
-    cov = np.cov(w, rowvar=0)
+    std = np.std(w, axis=0)
+    for i in range(0, std.shape[0]):
+        if std[i] == 0.0:
+            std[i] = 0.000001
 
-    return cov
+    return std
 
 ## END Utility functions. ######################################################
 
@@ -463,7 +464,7 @@ class DPGO(SynchronizedDistributedTrainer):
                                    label_col=label_col)
         self.initialize_variables()
 
-    def initialize_variables():
+    def initialize_variables(self):
         self.model = deserialize_keras_model(self.master_model)
         self.variables = {}
         self.mean = None
@@ -488,7 +489,7 @@ class DPGO(SynchronizedDistributedTrainer):
             variables = np.asarray(self.variables.values())
             self.mean = weights_mean(variables)
             self.mean_vector = weights_mean_vector(variables)
-            self.cov = weights_covariance(variables)
+            self.std_vector = weights_std(variables)
 
     def service(self):
         app = Flask(__name__)
@@ -497,13 +498,12 @@ class DPGO(SynchronizedDistributedTrainer):
 
         @app.route("/distribution", methods=['GET'])
         def distribution():
-            with self.mutex:
-                data = {}
-                data['mean'] = self.mean
-                data['mean_vector'] = self.mean_vector
-                data['covariance_matrix'] = self.cov
+            data = {}
+            data['mean'] = self.mean
+            data['mean_vector'] = self.mean_vector
+            data['std_vector'] = self.std_vector
 
-            return pick.dumps(data, -1)
+            return pickle.dumps(data, -1)
 
         @app.route("/update", methods=['POST'])
         def update():
@@ -511,7 +511,6 @@ class DPGO(SynchronizedDistributedTrainer):
             variable = data['variable']
             iteration = data['iteration']
             worker_id = data['worker_id']
-
             self.set_ready(False)
             if iteration == self.iteration:
                 self.variables[worker_id] = variable
@@ -521,7 +520,9 @@ class DPGO(SynchronizedDistributedTrainer):
                     self.set_ready(True)
                     self.iteration += 1
 
-        @app.route("/ready", methods['POST'])
+            return 'OK'
+
+        @app.route("/ready", methods=['POST'])
         def ready():
             data = pickle.loads(request.data)
             iteration = data['iteration']
@@ -534,6 +535,8 @@ class DPGO(SynchronizedDistributedTrainer):
         def shutdown():
             f = request.environ.get('werkzeug.server.shutdown')
             f()
+            # Set the output model to the mean.
+            self.model.set_weights(self.mean)
 
             return 'OK'
 
@@ -546,24 +549,24 @@ class DPGO(SynchronizedDistributedTrainer):
 ## BEGIN Workers. ##############################################################
 
 
-class PDGOWorker(object):
+class DPGOWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
-        self.master_host = "127.0.0.1"
+        self.master_host = "localhost"
         self.master_port = 5000
         self.batch_size = batch_size
         self.iteration = 1
         self.mean = None
         self.mean_vector = None
-        self.covariance_matrix = None
+        self.std_vector = None
 
     def master_is_ready(self):
         data = {}
         data['iteration'] = self.iteration
-        master_ready = int(rest_post(self.master_host, self.master_port, "/update", data))
+        master_ready = int(rest_post(self.master_host, self.master_port, "/ready", data))
 
         return master_ready == 1
 
@@ -571,10 +574,10 @@ class PDGOWorker(object):
         data = rest_get(self.master_host, self.master_port, "/distribution")
         mean = data['mean']
         mean_vector = data['mean_vector']
-        covarianceMatrix = data['covariance_matrix']
+        std_vector = data['std_vector']
         self.mean = mean
         self.mean_vector = mean_vector
-        self.covariance_matrix = covarianceMatrix
+        self.std_vector = std_vector
 
     def master_send_variable(self, worker_id, variable):
         data = {}
@@ -583,9 +586,28 @@ class PDGOWorker(object):
         data['variable'] = variable
         rest_post(self.master_host, self.master_port, "/update", data)
 
-    def convert_to_weights(self, sample):
-        # TODO Implement.
-        raise NotImplementedError
+    def convert_to_weights(self, model, vector):
+        weights_structure = model.get_weights()
+        transformed_weights = []
+        data_index = 0
+        for layer in weights_structure:
+            # Check if the current layer is a trainable layer.
+            if len(layer.shape) > 1:
+                layer = np.zeros(layer.shape)
+                for i in range(0, layer.shape[0]):
+                    for j in range(0, layer.shape[1]):
+                        layer[i][j] = vector[data_index]
+                        data_index += 1
+            transformed_weights.append(layer)
+
+        return np.asarray(transformed_weights)
+
+    def sample_distribution(self):
+        sample = np.zeros(len(self.mean_vector))
+        for i in range(0, len(sample)):
+            sample[i] = np.random.normal(self.mean_vector[i], self.std_vector[i])
+
+        return sample
 
     def train(self, index, iterator):
         # Deserialize the Keras model.
@@ -608,9 +630,9 @@ class PDGOWorker(object):
                     time.sleep(0.2)
                 self.iteration += 1
                 self.master_fetch_distribution()
+                sample = self.sample_distribution()
                 # Sample an instance from the distribution and convert.
-                sample = np.random.multivariate_normal(self.mean_vector, self.covariance_matrix)
-                weights_sample = self.convert_to_weights(sample)
+                weights_sample = self.convert_to_weights(model, sample)
                 model.set_weights(weights_sample)
         except StopIteration:
             pass
@@ -653,8 +675,8 @@ class EASGDWorker(object):
         # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
         # Initialize the model weights with a constrainted uniform distribution.
-        weights = uniform_weights(model.get_weights(), [-5, 5])
-        model.set_weights(weights)
+        #weights = uniform_weights(model.get_weights(), [-5, 5])
+        #model.set_weights(weights)
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
                       optimizer=RMSprop(),
