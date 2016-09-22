@@ -26,8 +26,10 @@ from distkeras.distributed import DPGO
 
 import os
 
+num_workers = 2
+
 # Setup Spark, and use the Databricks CSV loader.
-os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell"
+os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell --num-executors " + `num_workers` + " --executor-cores 1"
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
 sc = SparkContext(appName="DistKeras ATLAS Higgs example")
 sqlContext = SQLContext(sc)
@@ -70,7 +72,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-dataset = dataset.sample(True, 0.2, 1234)
+dataset = dataset.sample(True, 0.95, 1234)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
@@ -82,7 +84,7 @@ dataset.printSchema()
 
 # Create the distributed Ensemble trainer.
 trainer = DPGO(keras_model=model, features_col="features_normalized", batch_size=700,
-               num_workers=4)
+               num_workers=num_workers)
 model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.
