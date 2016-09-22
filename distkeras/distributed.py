@@ -368,6 +368,9 @@ class EASGD(SynchronizedDistributedTrainer):
                                     label_col=label_col)
         self.rho = rho
         self.learning_rate = learning_rate
+        # Initialize master server parameters.
+        self.master_host = determine_host_address()
+        self.master_port = 5000
         # Initialize default model parameters.
         self.initialize_variables()
 
@@ -377,7 +380,7 @@ class EASGD(SynchronizedDistributedTrainer):
         self.variables = {}
 
     def stop_service(self):
-        rest_get_ping('localhost', 5000, '/shutdown')
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
         self.parameter_server.join()
 
     def allocate_worker(self):
@@ -386,7 +389,9 @@ class EASGD(SynchronizedDistributedTrainer):
                              label_col=self.label_column,
                              rho=self.rho,
                              learning_rate=self.learning_rate,
-                             batch_size=self.batch_size)
+                             batch_size=self.batch_size,
+                             master_host=self.master_host,
+                             master_port=self.master_port)
 
         return worker
 
@@ -649,12 +654,12 @@ class DPGOWorker(object):
 class EASGDWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
-                 rho=5, learning_rate=0.01):
+                 rho=5, learning_rate=0.01, master_host="localhost", master_port=5000):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
-        self.master_host = "127.0.0.1"
-        self.master_port = 5000
+        self.master_host = master_host
+        self.master_port = master_port
         self.master_variable = None
         self.batch_size = batch_size
         self.rho = rho
