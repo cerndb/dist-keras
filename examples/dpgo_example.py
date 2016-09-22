@@ -29,7 +29,7 @@ import os
 num_workers = 16
 
 # Setup Spark, and use the Databricks CSV loader.
-os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell --total-executor-cores " + `num_workers`
+os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell --executor-cores 8 --total-executor-cores " + `num_workers`
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
 sc = SparkContext(appName="DistKeras ATLAS Higgs example")
 sqlContext = SQLContext(sc)
