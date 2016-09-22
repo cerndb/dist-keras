@@ -5,6 +5,8 @@ methods.
 
 ## BEGIN Imports. ##############################################################
 
+from distkeras.networking import *
+
 from flask import Flask, request
 
 from itertools import chain
@@ -15,16 +17,16 @@ from keras.models import model_from_json
 from keras.optimizers import RMSprop
 from keras.utils import np_utils
 
-from threading import Lock
-
-import threading
-
 from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
+
+from threading import Lock
 
 import cPickle as pickle
 
 import numpy as np
+
+import threading
 
 import time
 
@@ -462,6 +464,8 @@ class DPGO(SynchronizedDistributedTrainer):
         super(DPGO, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                    batch_size=batch_size, features_col=features_col,
                                    label_col=label_col)
+        self.master_host = determine_host_address()
+        self.master_port = 5000
         self.initialize_variables()
 
     def initialize_variables(self):
@@ -472,14 +476,16 @@ class DPGO(SynchronizedDistributedTrainer):
         self.cov = None
 
     def stop_service(self):
-        rest_get_ping('localhost', 5000, '/shutdown')
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
         self.parameter_server.join()
 
     def allocate_worker(self):
         worker = DPGOWorker(keras_model=self.master_model,
                             batch_size=self.batch_size,
                             features_col=self.features_column,
-                            label_col=self.label_column)
+                            label_col=self.label_column,
+                            master_host=self.master_host,
+                            master_port=self.master_port)
 
         return worker
 
@@ -551,12 +557,13 @@ class DPGO(SynchronizedDistributedTrainer):
 
 class DPGOWorker(object):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000):
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
+                 master_host="localhost", master_port=5000):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
-        self.master_host = "localhost"
-        self.master_port = 5000
+        self.master_host = master_host
+        self.master_port = master_port
         self.batch_size = batch_size
         self.iteration = 1
         self.mean = None
