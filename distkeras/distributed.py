@@ -15,6 +15,7 @@ from itertools import tee
 from keras.models import model_from_config
 from keras.models import model_from_json
 from keras.optimizers import RMSprop
+from keras.optimizers import Adagrad
 from keras.utils import np_utils
 
 from pyspark.mllib.linalg import DenseVector
@@ -294,7 +295,7 @@ class EnsembleTrainerWorker(object):
             Y = np.asarray([x[self.label_column] for x in label_iterator])
         # TODO Add compilation parameters.
         model.compile(loss='categorical_crossentropy',
-                      optimizer=RMSprop(),
+                      optimizer=Adagrad(),
                       metrics=['accuracy'])
         # Fit the model with the data.
         history = model.fit(X, Y, nb_epoch=1)
@@ -629,7 +630,7 @@ class DPGOWorker(object):
         # TODO Random weight initialization.
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
-                      optimizer=RMSprop(),
+                      optimizer=Adagrad(),
                       metrics=['accuracy'])
         try:
             while True:
@@ -693,7 +694,7 @@ class EASGDWorker(object):
         #model.set_weights(weights)
         # Compile the model.
         model.compile(loss='categorical_crossentropy',
-                      optimizer=RMSprop(),
+                      optimizer=Adagrad(),
                       metrics=['accuracy'])
         try:
             while True:
