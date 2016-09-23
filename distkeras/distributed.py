@@ -256,7 +256,7 @@ class SingleTrainer(Trainer):
                                      label_col=self.label_column, num_epoch=self.num_epoch,
                                      batch_size=self.batch_size)
         data = data.coalesce(1)
-        model = data.mapPartitions(worker.train).collect
+        model = data.mapPartitions(worker.train).collect()
         model = model[0]
 
         return model
