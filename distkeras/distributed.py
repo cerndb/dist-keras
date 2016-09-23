@@ -113,6 +113,7 @@ def weights_std(weights):
 
     # Check if the precondition has been met.
     assert(num_weights > 1)
+
     w = []
     for weight in weights:
         flat = np.asarray([])
@@ -406,7 +407,7 @@ class EASGD(SynchronizedDistributedTrainer):
             temp += (self.rho * (self.variables[i] - center_variable))
         temp /= float(self.num_workers)
         temp *= self.learning_rate
-        center_variable -= temp
+        center_variable += temp
         # Update the center variable
         self.model.set_weights(center_variable)
 
