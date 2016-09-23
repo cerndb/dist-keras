@@ -25,8 +25,8 @@ from distkeras.distributed import EASGD
 
 import os
 
-num_executors = 1
-num_cores = 2
+num_executors = 8
+num_cores = 3
 num_workers = num_executors * num_cores
 
 # Setup Spark, and use the Databricks CSV loader.
