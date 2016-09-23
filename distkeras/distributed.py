@@ -504,7 +504,6 @@ class DPGO(SynchronizedDistributedTrainer):
             self.mean = weights_mean(variables)
             self.mean_vector = weights_mean_vector(variables)
             self.std_vector = weights_std(variables)
-            self.std_vector /= 3.0
 
     def service(self):
         app = Flask(__name__)
