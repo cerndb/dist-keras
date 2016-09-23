@@ -33,7 +33,7 @@ num_workers = num_executors * num_cores
 # Setup Spark, and use the Databricks CSV loader.
 os.environ['PYSPARK_SUBMIT_ARGS'] = "--master yarn --deploy-mode client --packages com.databricks:spark-csv_2.10:1.4.0 --num-executors " + `num_executors` + " --executor-cores " + `num_cores` + " pyspark-shell"
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
-sc = SparkContext(appName="DistKeras ATLAS Higgs example")
+sc = SparkContext(appName="DistKeras - DPGO example")
 sqlContext = SQLContext(sc)
 
 # Read the Higgs dataset.

@@ -19,15 +19,18 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from distkeras.distributed import EnsembleTrainer
 from distkeras.distributed import LabelVectorTransformer
+from distkeras.distributed import SingleTrainer
 from distkeras.distributed import ModelPredictor
 from distkeras.distributed import LabelIndexTransformer
+from distkeras.distributed import EASGD
+from distkeras.distributed import DPGO
 
 import os
 
 # Setup Spark, and use the Databricks CSV loader.
-os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell"
+os.environ['PYSPARK_SUBMIT_ARGS'] = "--master yarn --deploy-mode client --packages com.databricks:spark-csv_2.10:1.4.0 pyspark-shell"
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
-sc = SparkContext(appName="DistKeras ATLAS Higgs example")
+sc = SparkContext(appName="DistKeras - SingleTrainer optimizer example")
 sqlContext = SQLContext(sc)
 
 # Read the Higgs dataset.
@@ -61,10 +64,6 @@ model.add(Activation('relu'))
 model.add(Dropout(0.2))
 model.add(Dense(600))
 model.add(Activation('relu'))
-model.add(Dropout(0.2))
-model.add(Dense(600))
-model.add(Dropout(0.2))
-model.add(Activation('relu'))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
 
@@ -72,7 +71,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-dataset = dataset.sample(True, 0.2)
+# dataset = dataset.sample(True, 0.95, 1234)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
@@ -80,14 +79,11 @@ dataset = labelVectorTransformer.transform(dataset).toDF().select("features_norm
 dataset.printSchema()
 
 # Split the data in a training and test set.
-(trainingSet, testSet) = dataset.randomSplit([0.7, 0.3])
+(trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
 # Create the distributed Ensemble trainer.
-ensembleTrainer = EnsembleTrainer(model, features_col="features_normalized", num_models=1)
-models = ensembleTrainer.train(trainingSet)
-# Get the model from the tuple.
-model = models[0][1]
-print(model)
+trainer = SingleTrainer(keras_model=model, features_col="features_normalized")
+model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.
 predictorTransformer = ModelPredictor(keras_model=model, features_col="features_normalized")

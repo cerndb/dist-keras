@@ -242,6 +242,25 @@ class Trainer(object):
     def train(self, data):
         raise NotImplementedError
 
+class SingleTrainer(Trainer):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", num_epoch=1, batch_size=1000):
+        super(SingleTrainer, self).__init__(keras_model)
+        self.features_column = features_col
+        self.label_column = label_col
+        self.num_epoch = num_epoch
+        self.batch_size = batch_size
+
+    def train(self, data):
+        worker = SingleTrainerWorker(keras_model=self.keras_model, features_col=self.features_column,
+                                     label_col=self.label_column, num_epoch=self.num_epoch,
+                                     batch_size=self.batch_size)
+        data = data.coalesce(1)
+        model = data.mapPartitions(worker.train).collect
+        model = model[0]
+
+        return model
+
 class EnsembleTrainer(Trainer):
 
     def __init__(self, keras_model, num_models=2, features_col="features",
@@ -275,34 +294,6 @@ class EnsembleTrainer(Trainer):
         models.append(merged_model)
 
         return models
-
-class EnsembleTrainerWorker(object):
-
-    def __init__(self, keras_model, features_col="features", label_col="label", label_transformer=None):
-        self.model = keras_model
-        self.features_column = features_col
-        self.label_column = label_col
-        self.label_transformer = label_transformer
-
-    def train(self, iterator):
-        # Deserialize the Keras model.
-        model = deserialize_keras_model(self.model)
-        feature_iterator, label_iterator = tee(iterator, 2)
-        X = np.asarray([x[self.features_column] for x in feature_iterator])
-        # Check if a label transformer is available.
-        if self.label_transformer:
-            Y = np.asarray([self.label_transformer(x[self.label_column]) for x in label_iterator])
-        else:
-            Y = np.asarray([x[self.label_column] for x in label_iterator])
-        # TODO Add compilation parameters.
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=Adagrad(),
-                      metrics=['accuracy'])
-        # Fit the model with the data.
-        history = model.fit(X, Y, nb_epoch=1)
-        partitionResult = (history, model)
-
-        return iter([partitionResult])
 
 class SynchronizedDistributedTrainer(Trainer):
 
@@ -562,7 +553,6 @@ class DPGO(SynchronizedDistributedTrainer):
 
 ## BEGIN Workers. ##############################################################
 
-
 class DPGOWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
@@ -654,6 +644,31 @@ class DPGOWorker(object):
 
         return iter([])
 
+class SingleTrainerWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000, num_epoch=1):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.batch_size = batch_size
+        self.num_epoch = num_epoch
+
+    def train(self, iterator):
+        model = deserialize_keras_model(self.model)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                model.fit(X, Y, nb_epoch=self.num_epoch)
+        except StopIteration:
+            pass
+
+        return iter([model])
+
 class EASGDWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
@@ -718,5 +733,33 @@ class EASGDWorker(object):
             pass
 
         return iter([])
+
+class EnsembleTrainerWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", label_transformer=None):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.label_transformer = label_transformer
+
+    def train(self, iterator):
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        # Check if a label transformer is available.
+        if self.label_transformer:
+            Y = np.asarray([self.label_transformer(x[self.label_column]) for x in label_iterator])
+        else:
+            Y = np.asarray([x[self.label_column] for x in label_iterator])
+        # TODO Add compilation parameters.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        # Fit the model with the data.
+        history = model.fit(X, Y, nb_epoch=1)
+        partitionResult = (history, model)
+
+        return iter([partitionResult])
 
 ## END Workers. ################################################################
