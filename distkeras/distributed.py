@@ -257,7 +257,7 @@ class SingleTrainer(Trainer):
                                      batch_size=self.batch_size)
         data = data.coalesce(1)
         model = data.mapPartitions(worker.train).collect()
-        model = model[0]
+        model = deserialize_keras_model(model[0])
 
         return model
 
@@ -668,7 +668,7 @@ class SingleTrainerWorker(object):
         except StopIteration:
             pass
 
-        return iter([model])
+        return iter([serialize_keras_model(model)])
 
 class EASGDWorker(object):
 
