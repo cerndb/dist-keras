@@ -703,16 +703,17 @@ class EASGDWorker(object):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
-                W1 = np.asarray(model.get_weights())
-                model.fit(X, Y, nb_epoch=1)
-                W2 = np.asarray(model.get_weights())
-                gradient = W2 - W1
-                self.master_send_variable(index, W2)
-                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-                model.set_weights(W)
-                while not self.master_is_ready():
-                    time.sleep(0.2)
-                self.iteration += 1
+                for i in range(0, 10):
+                    W1 = np.asarray(model.get_weights())
+                    model.fit(X, Y, nb_epoch=1)
+                    W2 = np.asarray(model.get_weights())
+                    gradient = W2 - W1
+                    self.master_send_variable(index, W2)
+                    W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                    model.set_weights(W)
+                    while not self.master_is_ready():
+                        time.sleep(0.2)
+                    self.iteration += 1
         except StopIteration:
             pass
 
