@@ -25,7 +25,7 @@ from distkeras.distributed import EASGD
 
 import os
 
-num_executors = 5
+num_executors = 1
 num_cores = 2
 num_workers = num_executors * num_cores
 

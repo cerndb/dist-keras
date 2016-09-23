@@ -405,7 +405,7 @@ class EASGD(SynchronizedDistributedTrainer):
             temp += (self.rho * (self.variables[i] - center_variable))
         temp /= float(self.num_workers)
         temp *= self.learning_rate
-        center_variable += temp
+        center_variable -= temp
         # Update the center variable
         self.model.set_weights(center_variable)
 
@@ -431,10 +431,11 @@ class EASGD(SynchronizedDistributedTrainer):
             self.set_ready(False)
             # Check if the variable update is the correct iteration.
             if iteration == self.iteration:
-                # Store the gradient of the worker.
-                self.variables[worker_id] = variable
+                with self.mutex:
+                    self.variables[worker_id] = variable
+                    num_variables = len(self.variables)
                 # Check if the gradients of all workers are available.
-                if len(self.variables) == self.num_workers:
+                if num_variables == self.num_workers:
                     self.process_variables()
                     self.variables = {}
                     self.set_ready(True)
