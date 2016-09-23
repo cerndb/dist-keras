@@ -252,7 +252,7 @@ class SingleTrainer(Trainer):
         self.batch_size = batch_size
 
     def train(self, data):
-        worker = SingleTrainerWorker(keras_model=self.keras_model, features_col=self.features_column,
+        worker = SingleTrainerWorker(keras_model=self.master_model, features_col=self.features_column,
                                      label_col=self.label_column, num_epoch=self.num_epoch,
                                      batch_size=self.batch_size)
         data = data.coalesce(1)
