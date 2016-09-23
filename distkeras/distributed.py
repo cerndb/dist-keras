@@ -661,6 +661,7 @@ class SingleTrainerWorker(object):
         try:
             while True:
                 batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 model.fit(X, Y, nb_epoch=self.num_epoch)
