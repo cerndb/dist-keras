@@ -658,15 +658,20 @@ class SingleTrainerWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=Adagrad(),
                       metrics=['accuracy'])
+        training_time = 0
         try:
             while True:
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
+                start_time = time.time()
                 model.fit(X, Y, nb_epoch=self.num_epoch)
+                training_time += time.time() - start_time
         except StopIteration:
             pass
+
+        print("Training time: " + `training_time`)
 
         return iter([serialize_keras_model(model)])
 
@@ -712,6 +717,8 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=Adagrad(),
                       metrics=['accuracy'])
+        training_time = 0
+        wait_time = 0
         try:
             while True:
                 self.fetch_center_variable()
@@ -721,17 +728,24 @@ class EASGDWorker(object):
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 for i in range(0, 10):
                     W1 = np.asarray(model.get_weights())
+                    start_time = time.time()
                     model.fit(X, Y, nb_epoch=1)
+                    training_time += time.time() - start_time
                     W2 = np.asarray(model.get_weights())
                     gradient = W2 - W1
                     self.master_send_variable(index, W2)
                     W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
                     model.set_weights(W)
+                    start_time = time.time()
                     while not self.master_is_ready():
                         time.sleep(0.2)
+                    wait_time += time.time() - start_time
                     self.iteration += 1
         except StopIteration:
             pass
+
+        print("Training time: " + `training_time`)
+        print("Wait time: " + `wait_time`)
 
         return iter([])
 

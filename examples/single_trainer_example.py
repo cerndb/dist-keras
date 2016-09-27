@@ -81,6 +81,8 @@ dataset.printSchema()
 # Split the data in a training and test set.
 (trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
+trainingSet.sample(False, 0.01)
+trainingSet.cache()
 # Create the distributed Ensemble trainer.
 trainer = SingleTrainer(keras_model=model, features_col="features_normalized")
 model = trainer.train(trainingSet)

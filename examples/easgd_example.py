@@ -83,6 +83,8 @@ dataset.printSchema()
 # Split the data in a training and test set.
 (trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
+trainingSet.sample(False, 0.01)
+trainingSet.cache()
 # Create the distributed Ensemble trainer.
 trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=700,
                 num_workers=num_workers, rho=5.0, learning_rate=0.05)
