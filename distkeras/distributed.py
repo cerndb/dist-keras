@@ -659,6 +659,7 @@ class SingleTrainerWorker(object):
                       optimizer=Adagrad(),
                       metrics=['accuracy'])
         training_time = 0
+        actual_time = time.time()
         try:
             while True:
                 batch = [next(iterator) for _ in range(self.batch_size)]
@@ -670,8 +671,10 @@ class SingleTrainerWorker(object):
                 training_time += time.time() - start_time
         except StopIteration:
             pass
+        actual_time = time.time() - actual_time
 
         print("Training time: " + `training_time`)
+        print("Actual time: " + `actual_time`)
 
         return iter([serialize_keras_model(model)])
 
@@ -719,6 +722,7 @@ class EASGDWorker(object):
                       metrics=['accuracy'])
         training_time = 0
         wait_time = 0
+        actual_time = time.time()
         try:
             while True:
                 self.fetch_center_variable()
@@ -743,7 +747,9 @@ class EASGDWorker(object):
                     self.iteration += 1
         except StopIteration:
             pass
+        actual_time = time.time() - actual_time
 
+        print("Actual time: " + `actual_time`)
         print("Training time: " + `training_time`)
         print("Wait time: " + `wait_time`)
 
