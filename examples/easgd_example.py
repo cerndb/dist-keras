@@ -73,7 +73,7 @@ model.add(Activation('softmax'))
 model.summary()
 
 # Sample the dataset.
-# dataset = dataset.sample(True, 0.01, 1234)
+dataset = dataset.sample(True, 0.05, 1234)
 
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
