@@ -42,6 +42,8 @@ DPGO(keras_model, num_workers=2, batch_size=1000, features_col="features", label
 
 * Zhang, S., Choromanska, A. E., & LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693).
 
+* Moritz, P., Nishihara, R., Stoica, I., & Jordan, M. I. (2015). SparkNet: Training Deep Networks in Spark. arXiv preprint arXiv:1511.06051.
+
 ## Licensing
 
 ![GPLv3](resources/gpl_v3.png)
