@@ -51,7 +51,7 @@ class LabelVectorTransformer(Transformer):
         return iter(rows)
 
     def transform(self, data):
-        return data.mapPartitions(self._transform)
+        return data.rdd.mapPartitions(self._transform)
 
 class LabelIndexTransformer(Transformer):
 
@@ -83,7 +83,7 @@ class LabelIndexTransformer(Transformer):
         return iter(rows)
 
     def transform(self, data):
-        return data.mapPartitions(self._transform)
+        return data.rdd.mapPartitions(self._transform)
 
 ## END Transformers. ###########################################################
 
@@ -120,7 +120,7 @@ class ModelPredictor(Predictor):
         return iter(rows)
 
     def predict(self, data):
-        return data.mapPartitions(self._predict)
+        return data.rdd.mapPartitions(self._predict)
 
 ## END Predictors. #############################################################
 
@@ -148,7 +148,7 @@ class SingleTrainer(Trainer):
                                      label_col=self.label_column, num_epoch=self.num_epoch,
                                      batch_size=self.batch_size)
         data = data.coalesce(1)
-        model = data.mapPartitions(worker.train).collect()
+        model = data.rdd.mapPartitions(worker.train).collect()
         model = deserialize_keras_model(model[0])
 
         return model
@@ -176,7 +176,7 @@ class EnsembleTrainer(Trainer):
                                        label_col=self.label_column,
                                        label_transformer=self.label_transformer)
         # Train the models, and collect them as a list.
-        models = data.mapPartitions(worker.train).collect()
+        models = data.rdd.mapPartitions(worker.train).collect()
         # Check if the models need to be merged.
         if self.merge_models:
             merged_model = self.merge(models)
@@ -347,5 +347,22 @@ class EASGD(SynchronizedDistributedTrainer):
         ## END REST routes. ####################################################
 
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
+class DGE(SynchronizedDistributedTrainer):
+
+    def __init__(self, keras_model, features_col="features", label_col="label",
+                 num_workers=2, batch_size=1000):
+        super(DGE, self).__init__(keras_model=keras, num_workers=num_workers,
+                                  batch_size=batch_size, features_col=features_col,
+                                  label_col=label_col)
+
+    def stop_service(self):
+        raise NotImplementedError
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def service(self):
+        raise NotImplementedError
 
 ## END Trainers. ###############################################################
