@@ -46,4 +46,4 @@ DPGO(keras_model, num_workers=2, batch_size=1000, features_col="features", label
 
 ## Licensing
 
-![GPLv3](resources/gpl_v3.png)
+![GPLv3](resources/gpl_v3.png) ![CERN](resources/cern_logo.jpg =140x)
