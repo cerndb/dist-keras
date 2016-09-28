@@ -44,4 +44,4 @@ DPGO(keras_model, num_workers=2, batch_size=1000, features_col="features", label
 
 ## Licensing
 
-![resources/gpl_v3.png](GPLv3)
+![GPLv3](resources/gpl_v3.png)
