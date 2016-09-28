@@ -23,7 +23,6 @@ from distkeras.distributed import SingleTrainer
 from distkeras.distributed import ModelPredictor
 from distkeras.distributed import LabelIndexTransformer
 from distkeras.distributed import EASGD
-from distkeras.distributed import DPGO
 
 import os
 
