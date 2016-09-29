@@ -110,3 +110,108 @@ class EnsembleTrainerWorker(object):
         partitionResult = (history, model)
 
         return iter([partitionResult])
+
+class SingleTrainerWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000, num_epoch=1):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.batch_size = batch_size
+        self.num_epoch = num_epoch
+
+    def train(self, iterator):
+        model = deserialize_keras_model(self.model)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        training_time = 0
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                start_time = time.time()
+                model.fit(X, Y, nb_epoch=self.num_epoch)
+                training_time += time.time() - start_time
+        except StopIteration:
+            pass
+
+        print("Training time: " + `training_time`)
+
+        return iter([serialize_keras_model(model)])
+
+class EASGDWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
+                 rho=5, learning_rate=0.01, master_host="localhost", master_port=5000):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = master_host
+        self.master_port = master_port
+        self.master_variable = None
+        self.batch_size = batch_size
+        self.rho = rho
+        self.iteration = 1
+        self.learning_rate = learning_rate
+
+    def master_send_variable(self, worker_id, variable):
+        data = {}
+        data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, "/update", data)
+
+    def master_is_ready(self):
+        data = {}
+        data['iteration'] = self.iteration
+        master_ready = int(rest_post(self.master_host, self.master_port, "/ready", data))
+
+        return master_ready == 1
+
+    def fetch_center_variable(self):
+        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
+
+    def train(self, index, iterator):
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        # Initialize the model weights with a constrainted uniform distribution.
+        #weights = uniform_weights(model.get_weights(), [-5, 5])
+        #model.set_weights(weights)
+        # Compile the model.
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        training_time = 0
+        wait_time = 0
+        try:
+            while True:
+                self.fetch_center_variable()
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                for i in range(0, 10):
+                    W1 = np.asarray(model.get_weights())
+                    start_time = time.time()
+                    model.fit(X, Y, nb_epoch=1)
+                    training_time += time.time() - start_time
+                    W2 = np.asarray(model.get_weights())
+                    gradient = W2 - W1
+                    self.master_send_variable(index, W2)
+                    W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                    model.set_weights(W)
+                    start_time = time.time()
+                    while not self.master_is_ready():
+                        time.sleep(0.2)
+                    wait_time += time.time() - start_time
+                    self.iteration += 1
+        except StopIteration:
+            pass
+
+        print("Training time: " + `training_time`)
+        print("Wait time: " + `wait_time`)
+
+        return iter([])
