@@ -110,3 +110,15 @@ class EnsembleTrainerWorker(object):
         partitionResult = (history, model)
 
         return iter([partitionResult])
+
+class DGEWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label", batch_size=1000,
+                 master_host="localhost", master_port=5000):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.batch_size = batch_size
+        self.master_host = master_host
+        self.master_port = master_port
+        self.iteration = 1
