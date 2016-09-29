@@ -72,9 +72,6 @@ model.add(Activation('softmax'))
 # Print a summary of the model structure.
 model.summary()
 
-# Sample the dataset.
-dataset = dataset.sample(True, 0.05, 1234)
-
 # Transform the indexed label to an vector.
 labelVectorTransformer = LabelVectorTransformer(output_dim=nb_classes, input_col="label_index", output_col="label")
 dataset = labelVectorTransformer.transform(dataset).toDF().select("features_normalized", "label_index", "label")
@@ -84,7 +81,7 @@ dataset.printSchema()
 (trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
 # Create the distributed Ensemble trainer.
-trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=700,
+trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=10000,
                 num_workers=num_workers, rho=5.0, learning_rate=0.05)
 model = trainer.train(trainingSet)
 

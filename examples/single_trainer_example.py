@@ -84,7 +84,7 @@ dataset.printSchema()
 trainingSet.sample(False, 0.01)
 trainingSet.cache()
 # Create the distributed Ensemble trainer.
-trainer = SingleTrainer(keras_model=model, features_col="features_normalized")
+trainer = SingleTrainer(keras_model=model, features_col="features_normalized", batch_size=10000)
 model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.
