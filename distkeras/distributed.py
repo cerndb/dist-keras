@@ -187,6 +187,8 @@ class EnsembleTrainer(Trainer):
 
         return models
 
+## BEGIN Asynchronous trainers. ################################################
+
 class AsynchronousDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
@@ -228,6 +230,10 @@ class AsynchronousDistributedTrainer(Trainer):
         self.stop_service()
 
         return self.model
+
+## END Asynchronous trainers. ##################################################
+
+## BEGIN Synchronous trainers. #################################################
 
 class SynchronizedDistributedTrainer(Trainer):
 
@@ -466,5 +472,7 @@ class DGE(SynchronizedDistributedTrainer):
         ## END REST routes. ####################################################
 
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
+## END Synchronous trainers. ###################################################
 
 ## END Trainers. ###############################################################
