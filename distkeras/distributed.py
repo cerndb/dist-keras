@@ -187,6 +187,48 @@ class EnsembleTrainer(Trainer):
 
         return models
 
+class AsynchronousDistributedTrainer(Trainer):
+
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+                 features_col="features", label_col="label"):
+        super(AsynchronousDistributedTrainer, self).__init__(keras_model=keras_model)
+        self.num_workers = num_workers
+        self.batch_size = batch_size
+        self.features_column = features_col
+        self.label_column = label_col
+        self.iteration = 1
+        self.parameter_server = None
+        self.mutex = Lock()
+        self.model = None
+
+    def start_service(self):
+        self.parameter_server = threading.Thread(target=self.service)
+        self.parameter_server.start()
+
+    def service(self):
+        raise NotImplementedError
+
+    def stop_service(self):
+        raise NotImplementedError
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def train(self, data):
+        # Start the communication service.
+        self.start_service()
+        # Allocate a worker program.
+        worker = self.allocate_worker()
+        numPartitions = data.rdd.getNumPartitions()
+        if numPartitions > self.num_workers:
+            data = data.coalesce(self.num_workers)
+        else:
+            data = data.repartition(self.num_workers)
+        data.rdd.mapPartitionsWithIndex(data).collect()
+        self.stop_service()
+
+        return self.model
+
 class SynchronizedDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
