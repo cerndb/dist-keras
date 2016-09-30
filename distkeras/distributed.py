@@ -231,6 +231,60 @@ class AsynchronousDistributedTrainer(Trainer):
 
         return self.model
 
+class AsynchronousEASGD(AsynchronousDistributedTrainer):
+
+    def __init__(self, keras_model, num_workers=1, batch_size=1000,
+                 features_col="features", label_col="label",
+                 alpha=0.01, learning_rate=0.01, master_port=5000):
+        super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                                batch_size=batch_size, features_col=features_col,
+                                                label_col=label_col)
+        # Initialize the algorithm parameters.
+        self.learning_rate = learning_rate
+        self.alpha = alpha
+        # Initialize the master server parameters.
+        self.master_host = determine_host_address()
+        self.master_port = master_port
+        # Initialize the default model parameters.
+        self.initialize_variables()
+
+    def initialize_variables(self):
+        self.model = deserialize_keras_model(self.master_model)
+
+    def stop_service(self):
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
+        self.parameter_server.join()
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def service(self):
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route('/update', methods['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            # TODO Implement.
+
+            return 'OK'
+
+        @app.route('/shutdown', methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routes. ####################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
 ## END Asynchronous trainers. ##################################################
 
 ## BEGIN Synchronous trainers. #################################################
@@ -295,15 +349,16 @@ class SynchronizedDistributedTrainer(Trainer):
 class EASGD(SynchronizedDistributedTrainer):
 
     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
-                 rho=5.0, learning_rate=0.01, batch_size=1000):
+                 rho=5.0, learning_rate=0.01, batch_size=1000, master_port=5000):
         super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                     batch_size=batch_size, features_col=features_col,
                                     label_col=label_col)
+        # Initialize the algorithm parameters.
         self.rho = rho
         self.learning_rate = learning_rate
         # Initialize master server parameters.
         self.master_host = determine_host_address()
-        self.master_port = 5000
+        self.master_port = master_port
         # Initialize default model parameters.
         self.initialize_variables()
 
