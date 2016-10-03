@@ -86,7 +86,7 @@ EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, 
 
 ### Asynchronous EASGD
 
-TODO
+In this section we propose the asynchronous version of [EASGD](#easgd).
 
 ```python
 AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
@@ -104,11 +104,11 @@ DOWNPOUR(keras_model, learning_rate=0.01, num_workers=2, batch_size=1000, featur
 
 ### Transformers
 
-TODO
+A transformer is a utility class which takes a collection of columns (or just a single column), and produces an additional column which is added to the resulting DataFrame. An example of such a Transformer is our `LabelIndexTransformer`.
 
 ### Predictors
 
-TODO
+Predictors are utility classes which addsa prediction column to the DataFrame given a specified Keras model and its input features.
 
 ## References
 
