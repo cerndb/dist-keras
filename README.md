@@ -2,9 +2,11 @@
 
 Distributed Deep Learning with Apache Spark and Keras.
 
-Attention: since this is alpha software, I have hardcoded the loss in the workers. You can change this easily by modifing the compilation arguments.
+**Attention**: since this is alpha software, I have hardcoded the loss in the workers. You can change this easily by modifing the compilation arguments.
 
 ## Introduction
+
+Distributed Keras is a framework built on top of Apache Spark and Keras. We designed the framework in such a way that a developercould implement a new distributed optimizer with easy, and thus enabling a person to focus on research. Several distributed methods are supported, such as the training of **ensemble models**, and **data parallel** models.
 
 ## Algorithms
 
@@ -26,10 +28,10 @@ EnsembleTrainer(keras_model, num_models=2, merge_models=False, features_col="fea
 EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label")
 ```
 
-### DPGO (Experimental)
+### Asynchronous EASGD
 
 ```python
-DPGO(keras_model, num_workers=2, batch_size=1000, features_col="features", label_col="label")
+AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
 ```
 
 ## Utility classes
