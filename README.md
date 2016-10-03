@@ -6,7 +6,7 @@ Distributed Deep Learning with Apache Spark and Keras.
 
 ## Introduction
 
-Distributed Keras is a framework built on top of Apache Spark and Keras. We designed the framework in such a way that a developercould implement a new distributed optimizer with easy, and thus enabling a person to focus on research. Several distributed methods are supported, such as the training of **ensemble models**, and **data parallel** models.
+Distributed Keras is a framework built on top of Apache Spark and Keras. We designed the framework in such a way that a developer could implement a new distributed optimizer with eas, and thus enabling a person to focus on research. Several distributed methods are supported, such as, but not restricted to the training of **ensemble models**, and **data parallel** models.
 
 ## Algorithms
 
