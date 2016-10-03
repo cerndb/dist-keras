@@ -122,7 +122,7 @@ class AsynchronousEASGDWorker(object):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column]] for x in feature_iterator)
-                Y = np.asarray([y[self.label_column]] for x in label_iterator)
+                Y = np.asarray([x[self.label_column]] for x in label_iterator)
                 W = np.asarray(model.get_weights())
                 if self.iteration % self.communication_period == 0:
                     self.fetch_center_variable()
