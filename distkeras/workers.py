@@ -86,7 +86,7 @@ class AsynchronousEASGDWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label",
                  batch_size=1000, rho=5.0, learning_rate=0.01, master_host="localhost",
-                 master_port=5000, communication_period=5, nb_epoch=1):
+                 master_port=5000, communication_window=5, nb_epoch=1):
         self.model = keras_model
         self.features_column = features_col
         self.label_column = label_col
@@ -97,7 +97,7 @@ class AsynchronousEASGDWorker(object):
         self.rho = rho
         self.learning_rate = learning_rate
         self.alpha = self.learning_rate * self.rho
-        self.communication_period = communication_period
+        self.communication_period = communication_window
         self.nb_epoch = nb_epoch
         self.iteration = 1
 
