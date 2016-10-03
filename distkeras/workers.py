@@ -124,6 +124,7 @@ class AsynchronousEASGDWorker(object):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 if self.iteration % self.communication_period == 0:
+                    print("Updating")
                     self.fetch_center_variable()
                     W = np.asarray(model.get_weights())
                     # Compute the elastic difference.
