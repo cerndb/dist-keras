@@ -8,11 +8,11 @@ Distributed Deep Learning with Apache Spark and Keras.
 
 Distributed Keras is a distributed deep learning framework built on top of Apache Spark and Keras. We designed the framework in such a way that a developer could implement a new distributed optimizer with ease, thus enabling a person to focus on research. Several distributed methods are supported, such as, but not restricted to, the training of **ensemble models**, and **data parallel** models.
 
-As discussed above, most methods are implemented as data parallel models. Data parallel models, as described in [[3]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf), is a learning paradigm where multiple replicas of a model are used to optimize a single objective. Using data parallelism, we are able to significantly increase the training time of the model. Depending on the parametrization, we are able to achieve better model performance compared to a more common training approach (e.g., like the `SingleTrainer` implementation), and yet, spending less time on the training of the model.
+As discussed above, most methods are implemented as data parallel models. Data parallel models, as described in [[3]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf), is a learning paradigm where multiple replicas of a model are used to optimize a single objective. Using data parallelism, we are able to significantly increase the training time of the model. Depending on the parametrization, we are able to achieve better model performance compared to a more common training approach (e.g., like the [SingleTrainer](#SingleTrainer) implementation), and yet, spending less time on the training of the model.
 
 ## Algorithms
 
-### SingleTrainer
+### <a name="trainer_single_trainer"></a>SingleTrainer
 
 ```python
 SingleTrainer(keras_model, num_epoch=1, batch_size=1000, features_col="features", label_col="label")
