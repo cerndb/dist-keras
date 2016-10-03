@@ -50,6 +50,8 @@ export PYTHONPATH="$SPARK_HOME/python/:$SPARK_HOME/python/lib/py4j-0.9-src.zip:$
 
 ## Running an example
 
+TODO
+
 ### Spark 2.0
 
 If you want to run the examples using Apache Spark 2.0.0 and higher. You will need to remove the line containing `sqlContext = SQLContext(sc)`. We need to do this because in Spark 2.0+, the SQLContext, and Hive context are now merged in the Spark session.
@@ -58,11 +60,15 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 
 ### Single Trainer
 
+A single trainer is in all simplicity a trainer which will use a single Spark executor to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers.
+
 ```python
 SingleTrainer(keras_model, num_epoch=1, batch_size=1000, features_col="features", label_col="label")
 ```
 
 ### Ensemble Trainer
+
+This trainer will employ [ensemble learning](https://en.wikipedia.org/wiki/Ensemble_learning) to build a classifier. There are two modes, in the first mode, you will get a list of Keras models which have been trained on different partitions of the data. In the other mode, all the models will be merged by adding an averaging layer to the networks. The resulting model will thus have the same outputs as the specified Keras model, with the difference that the actual output is the averaged output of the parallely trained models.
 
 ```python
 EnsembleTrainer(keras_model, num_models=2, merge_models=False, features_col="features", label_col="label")
@@ -84,7 +90,11 @@ AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch
 
 ### Transformers
 
+TODO
+
 ### Predictors
+
+TODO
 
 ## References
 
