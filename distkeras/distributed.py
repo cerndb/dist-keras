@@ -272,6 +272,13 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
         ## BEGIN REST routes. ##################################################
 
+        @app.route(['center_variable'], methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return pickle.dumps(center_variable, -1)
+
         @app.route('/update', methods=['POST'])
         def update():
             data = pickle.loads(request.data)
