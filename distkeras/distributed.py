@@ -270,7 +270,12 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
             iteration = data['iteration']
             worker_id = data['worker_id']
 
-            # TODO Implement.
+            # The variable is equal to the elastic difference
+            # computed by the worker.
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
 
             return 'OK'
 

@@ -27,7 +27,7 @@ class EASGDWorker(object):
         self.label_column = label_col
         self.master_host = master_host
         self.master_port = master_port
-        self.master_variable = None
+        self.center_variable = None
         self.batch_size = batch_size
         self.rho = rho
         self.iteration = 1
@@ -67,17 +67,73 @@ class EASGDWorker(object):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
-                for i in range(0, 10):
-                    W1 = np.asarray(model.get_weights())
-                    model.fit(X, Y, nb_epoch=1)
-                    W2 = np.asarray(model.get_weights())
-                    gradient = W2 - W1
-                    self.master_send_variable(index, W2)
-                    W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                W1 = np.asarray(model.get_weights())
+                model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
+                gradient = W2 - W1
+                self.master_send_variable(index, W2)
+                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                model.set_weights(W)
+                while not self.master_is_ready():
+                    time.sleep(0.2)
+                self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
+
+class AsynchronousEASGDWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label",
+                 batch_size=1000, rho=5.0, learning_rate=0.01, master_host="localhost",
+                 master_port=5000, communication_period=5, nb_epoch=1):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = master_host
+        self.master_port = master_port
+        self.center_variable = None
+        self.batch_size = batch_size
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.alpha = self.learning_rate * self.rho
+        self.communication_period = communication_period
+        self.nb_epoch = nb_epoch
+
+    def master_send_ed(self, worker_id, variable):
+        data = {}
+        data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, "/update", data)
+
+    def fetch_center_variable(self):
+        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
+
+    def train(self, index, iterator):
+        # Deserialize the Keras model.
+        model = deserialize_keras_model(self.model)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column]] for x in feature_iterator)
+                Y = np.asarray([y[self.label_column]] for x in label_iterator)
+                W = np.asarray(model.get_weights())
+                if self.iteration % self.communication_period == 0:
+                    self.fetch_center_variable()
+                    # Compute the elastic difference.
+                    E = self.alpha * (W - self.center_variable)
+                    # Update the model.
+                    W = W - E
                     model.set_weights(W)
-                    while not self.master_is_ready():
-                        time.sleep(0.2)
-                    self.iteration += 1
+                    # Sent the elastic difference back to the master.
+                    master_send_ed(index, E)
+                model.fit(X, Y, nb_epoch=1)
+                self.iteration += 1
         except StopIteration:
             pass
 
