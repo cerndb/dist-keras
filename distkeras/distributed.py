@@ -235,13 +235,13 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, num_workers=1, batch_size=1000,
                  features_col="features", label_col="label",
-                 alpha=0.01, learning_rate=0.01, master_port=5000):
+                 rho=0.01, learning_rate=0.01, master_port=5000):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
                                                 label_col=label_col)
         # Initialize the algorithm parameters.
         self.learning_rate = learning_rate
-        self.alpha = alpha
+        self.rho = rho
         # Initialize the master server parameters.
         self.master_host = determine_host_address()
         self.master_port = master_port
@@ -256,7 +256,14 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
         self.parameter_server.join()
 
     def allocate_worker(self):
-        raise NotImplementedError
+        worker = AsynchronousEASGDWorker(keras_model=self.master_model,
+                                         features_col=self.features_column,
+                                         label_col=self.label_column,
+                                         rho=self.rho,
+                                         learning_rate=self.learning_rate,
+                                         batch_size=self.batch_size,
+                                         master_host=self.master_host,
+                                         master_port=self.master_port)
 
     def service(self):
         app = Flask(__name__)
