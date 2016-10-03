@@ -76,14 +76,26 @@ EnsembleTrainer(keras_model, num_models=2, merge_models=False, features_col="fea
 
 ### EASGD
 
+The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [https://arxiv.org/pdf/1412.6651.pdf]([1]) .
+
 ```python
 EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label")
 ```
 
 ### Asynchronous EASGD
 
+TODO
+
 ```python
 AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
+```
+
+### DOWNPOUR
+
+TODO
+
+```python
+DOWNPOUR(keras_model, learning_rate=0.01, num_workers=2, batch_size=1000, features_col="features", label_col="label", communication_window=5)
 ```
 
 ## Utility classes
