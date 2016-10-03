@@ -238,10 +238,11 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                  rho=0.01, learning_rate=0.01, master_port=5000):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
-                                                label_col=label_col)
+                                                label_col=label_col, communication_window=3)
         # Initialize the algorithm parameters.
         self.learning_rate = learning_rate
         self.rho = rho
+        self.communication_window = communication_window
         # Initialize the master server parameters.
         self.master_host = determine_host_address()
         self.master_port = master_port
@@ -260,6 +261,7 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                                          features_col=self.features_column,
                                          label_col=self.label_column,
                                          rho=self.rho,
+                                         communication_window=self.communication_window,
                                          learning_rate=self.learning_rate,
                                          batch_size=self.batch_size,
                                          master_host=self.master_host,
