@@ -292,6 +292,7 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                 center_variable = self.model.get_weights()
                 center_variable = center_variable + variable
                 self.model.set_weights(center_variable)
+                self.iteration += 1
 
             return 'OK'
 
