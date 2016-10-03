@@ -99,6 +99,7 @@ class AsynchronousEASGDWorker(object):
         self.alpha = self.learning_rate * self.rho
         self.communication_period = communication_period
         self.nb_epoch = nb_epoch
+        self.iteration = 1
 
     def master_send_ed(self, worker_id, variable):
         data = {}
