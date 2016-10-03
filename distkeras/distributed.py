@@ -226,7 +226,7 @@ class AsynchronousDistributedTrainer(Trainer):
             data = data.coalesce(self.num_workers)
         else:
             data = data.repartition(self.num_workers)
-        data.rdd.mapPartitionsWithIndex(data).collect()
+        data.rdd.mapPartitionsWithIndex(worker.train).collect()
         self.stop_service()
 
         return self.model
@@ -265,12 +265,14 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                                          master_host=self.master_host,
                                          master_port=self.master_port)
 
+        return worker
+
     def service(self):
         app = Flask(__name__)
 
         ## BEGIN REST routes. ##################################################
 
-        @app.route('/update', methods['POST'])
+        @app.route('/update', methods=['POST'])
         def update():
             data = pickle.loads(request.data)
             variable = data['variable']
