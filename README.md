@@ -86,7 +86,7 @@ EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, 
 
 ### Asynchronous EASGD
 
-In this section we propose the asynchronous version of [EASGD](#easgd).
+In this section we propose the asynchronous version of [EASGD](#easgd). Instead of waiting on the synchronization of other trainers, this method communicates the elastic difference (as described in the paper), with the parameter server. The only synchronization mechanism that has been implemented, is to ensure no race-conditions occur when updating the center variable.
 
 ```python
 AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
