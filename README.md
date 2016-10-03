@@ -21,7 +21,6 @@ When you only require the framework, just use `pip` to install dist-keras.
 ```bash
 pip install git+https://github.com/JoeriHermans/dist-keras.git
 ```
-
 ### git
 
 Using this approach, you will be able to easily execute the examples.
@@ -35,6 +34,18 @@ In order to install possible missing dependencies, and to compile the dist-keras
 ```bash
 cd dist-keras
 pip install -e .
+```
+
+### General notes
+
+#### .bashrc
+
+Make sure the following variables are set in your `.bashrc`. It is possible, depending on your system configuration, that the following configuration **doesn't have to be applied**.
+
+```bash
+# Example of a .bashrc configuration.
+export SPARK_HOME=/usr/lib/spark
+export PYTHONPATH="$SPARK_HOME/python/:$SPARK_HOME/python/lib/py4j-0.9-src.zip:$PYTHONPATH"
 ```
 
 ## Running an example
