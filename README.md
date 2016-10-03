@@ -94,7 +94,7 @@ AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch
 
 ### DOWNPOUR
 
-TODO
+This trainer is still in an implementation phase. Documentation shall be added once DOWNPOUR has been fully implemented and evaluated.
 
 ```python
 DOWNPOUR(keras_model, learning_rate=0.01, num_workers=2, batch_size=1000, features_col="features", label_col="label", communication_window=5)
