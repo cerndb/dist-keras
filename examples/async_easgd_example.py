@@ -26,12 +26,12 @@ from distkeras.distributed import AsynchronousEASGD
 
 import os
 
-num_executors = 8
+num_executors = 7
 num_cores = 3
 num_workers = num_executors * num_cores
 
 # Setup Spark, and use the Databricks CSV loader.
-os.environ['PYSPARK_SUBMIT_ARGS'] = "--master yarn --deploy-mode client --packages com.databricks:spark-csv_2.10:1.4.0 --num-executors " + `num_executors` + " --executor-cores " + `num_cores` + " pyspark-shell"
+os.environ['PYSPARK_SUBMIT_ARGS'] = "--packages com.databricks:spark-csv_2.10:1.4.0 --num-executors " + `num_executors` + " --executor-cores " + `num_cores` + " pyspark-shell"
 # Setup the Spark -, and SQL Context (note: this is for Spark < 2.0.0)
 sc = SparkContext(appName="DistKeras - EASGD example")
 sqlContext = SQLContext(sc)
