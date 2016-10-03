@@ -234,7 +234,7 @@ class AsynchronousDistributedTrainer(Trainer):
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, num_workers=1, batch_size=1000,
-                 features_col="features", label_col="label", communication_window=3
+                 features_col="features", label_col="label", communication_window=3,
                  rho=0.01, learning_rate=0.01, master_port=5000):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
