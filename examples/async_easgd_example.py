@@ -22,6 +22,7 @@ from distkeras.distributed import LabelVectorTransformer
 from distkeras.distributed import ModelPredictor
 from distkeras.distributed import LabelIndexTransformer
 from distkeras.distributed import EASGD
+from distkeras.distributed import AsynchronousEASGD
 
 import os
 
@@ -81,8 +82,8 @@ dataset.printSchema()
 (trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
 # Create the distributed Ensemble trainer.
-trainer = EASGD(keras_model=model, features_col="features_normalized", batch_size=10000,
-                num_workers=num_workers, rho=5.0, learning_rate=0.05)
+trainer = AsynchronousEASGD(keras_model=model, features_col="features_normalized", batch_size=1000,
+                            num_workers=num_workers, rho=2.0, learning_rate=0.2)
 model = trainer.train(trainingSet)
 
 # Apply the model prediction to the dataframe.

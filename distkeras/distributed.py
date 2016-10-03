@@ -187,6 +187,132 @@ class EnsembleTrainer(Trainer):
 
         return models
 
+## BEGIN Asynchronous trainers. ################################################
+
+class AsynchronousDistributedTrainer(Trainer):
+
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+                 features_col="features", label_col="label"):
+        super(AsynchronousDistributedTrainer, self).__init__(keras_model=keras_model)
+        self.num_workers = num_workers
+        self.batch_size = batch_size
+        self.features_column = features_col
+        self.label_column = label_col
+        self.iteration = 1
+        self.parameter_server = None
+        self.mutex = Lock()
+        self.model = None
+
+    def start_service(self):
+        self.parameter_server = threading.Thread(target=self.service)
+        self.parameter_server.start()
+
+    def service(self):
+        raise NotImplementedError
+
+    def stop_service(self):
+        raise NotImplementedError
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def train(self, data):
+        # Start the communication service.
+        self.start_service()
+        # Allocate a worker program.
+        worker = self.allocate_worker()
+        numPartitions = data.rdd.getNumPartitions()
+        if numPartitions > self.num_workers:
+            data = data.coalesce(self.num_workers)
+        else:
+            data = data.repartition(self.num_workers)
+        data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.stop_service()
+
+        return self.model
+
+class AsynchronousEASGD(AsynchronousDistributedTrainer):
+
+    def __init__(self, keras_model, num_workers=1, batch_size=1000,
+                 features_col="features", label_col="label", communication_window=3,
+                 rho=0.01, learning_rate=0.01, master_port=5000):
+        super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                                batch_size=batch_size, features_col=features_col,
+                                                label_col=label_col)
+        # Initialize the algorithm parameters.
+        self.learning_rate = learning_rate
+        self.rho = rho
+        self.communication_window = communication_window
+        # Initialize the master server parameters.
+        self.master_host = determine_host_address()
+        self.master_port = master_port
+        # Initialize the default model parameters.
+        self.initialize_variables()
+
+    def initialize_variables(self):
+        self.model = deserialize_keras_model(self.master_model)
+
+    def stop_service(self):
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
+        self.parameter_server.join()
+
+    def allocate_worker(self):
+        worker = AsynchronousEASGDWorker(keras_model=self.master_model,
+                                         features_col=self.features_column,
+                                         label_col=self.label_column,
+                                         rho=self.rho,
+                                         communication_window=self.communication_window,
+                                         learning_rate=self.learning_rate,
+                                         batch_size=self.batch_size,
+                                         master_host=self.master_host,
+                                         master_port=self.master_port)
+
+        return worker
+
+    def service(self):
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return pickle.dumps(center_variable, -1)
+
+        @app.route('/update', methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            # The variable is equal to the elastic difference
+            # computed by the worker.
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
+                self.iteration += 1
+
+            return 'OK'
+
+        @app.route('/shutdown', methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routes. ####################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
+## END Asynchronous trainers. ##################################################
+
+## BEGIN Synchronous trainers. #################################################
+
 class SynchronizedDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
@@ -247,15 +373,16 @@ class SynchronizedDistributedTrainer(Trainer):
 class EASGD(SynchronizedDistributedTrainer):
 
     def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
-                 rho=5.0, learning_rate=0.01, batch_size=1000):
+                 rho=5.0, learning_rate=0.01, batch_size=1000, master_port=5000):
         super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                     batch_size=batch_size, features_col=features_col,
                                     label_col=label_col)
+        # Initialize the algorithm parameters.
         self.rho = rho
         self.learning_rate = learning_rate
         # Initialize master server parameters.
         self.master_host = determine_host_address()
-        self.master_port = 5000
+        self.master_port = master_port
         # Initialize default model parameters.
         self.initialize_variables()
 
@@ -355,14 +482,76 @@ class DGE(SynchronizedDistributedTrainer):
         super(DGE, self).__init__(keras_model=keras, num_workers=num_workers,
                                   batch_size=batch_size, features_col=features_col,
                                   label_col=label_col)
+        self.initialize_variables()
+
+    def initialize_variables(self):
+        self.iteration = 1
+        self.particles = {}
 
     def stop_service(self):
-        raise NotImplementedError
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
+        self.parameter_server.join()
 
     def allocate_worker(self):
+        worker = DGEWorker(keras_model=self.master_model,
+                           features_col=self.features_column,
+                           label_col=self.label_column,
+                           batch_size=self.batch_size,
+                           master_host=self.master_host,
+                           master_port=self.master_port)
+
+        return worker
+
+    def process_variables(self):
         raise NotImplementedError
 
     def service(self):
-        raise NotImplementedError
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route("/sample", methods['GET'])
+        def sample():
+            raise NotImplementedError
+
+        @app.route("/update", methods['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            self.set_ready(False)
+            # Check if the variable update is the correct iteration
+            if iteration == self.iteration:
+                with self.mutex:
+                    self.variables[worker_id] = variable
+                    num_particles = len(self.particles)
+                # Check if the particles of all workers are available.
+                if num_particles == self.num_workers:
+                    self.process_variables()
+                    self.particles = {}
+                    self.set_ready(True)
+                    self.iteration += 1
+
+        @app.route("/ready", methods['POST'])
+        def ready():
+            data = pickle.loads(request.data)
+            iteration = data['iteration']
+            ready = self.get_ready()
+            ready = (ready or iteration < self.iteration)
+
+        @app.route("/shutdown", methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routes. ####################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
+## END Synchronous trainers. ###################################################
 
 ## END Trainers. ###############################################################
