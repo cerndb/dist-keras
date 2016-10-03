@@ -12,7 +12,24 @@ As discussed above, most methods are implemented as data parallel models. Data p
 
 ## Installation
 
-We will guide you how to install Distributed Keras. However, we will assume that an Apache Spark installation is already available.
+We will guide you how to install Distributed Keras. However, we will assume that an Apache Spark installation is available.
+
+### pip
+
+```bash
+pip install git+https://github.com/JoeriHermans/dist-keras.git
+```
+
+### git
+
+```bash
+git clone https://github.com/JoeriHermans/dist-keras
+```
+
+```bash
+cd dist-keras
+pip install -e .
+```
 
 ## Running an example
 
