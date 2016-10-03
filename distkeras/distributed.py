@@ -272,7 +272,7 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
         ## BEGIN REST routes. ##################################################
 
-        @app.route(['center_variable'], methods=['GET'])
+        @app.route(['/center_variable'], methods=['GET'])
         def center_variable():
             with self.mutex:
                 center_variable = self.model.get_weights()
