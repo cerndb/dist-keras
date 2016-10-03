@@ -132,7 +132,7 @@ class AsynchronousEASGDWorker(object):
                     W = W - E
                     model.set_weights(W)
                     # Sent the elastic difference back to the master.
-                    master_send_ed(index, E)
+                    self.master_send_ed(index, E)
                 model.fit(X, Y, nb_epoch=1)
                 self.iteration += 1
         except StopIteration:
