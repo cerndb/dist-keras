@@ -314,13 +314,14 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=5,
-                 master_port=5000):
+                 master_port=5000, nb_epoch=1):
         super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                        batch_size=batch_size, features_col=features_col,
                                        label_col=label_col)
         self.communication_window = communication_window
         self.master_host = determine_host_address()
         self.master_port = master_port
+        self.nb_epoch = nb_epoch
         self.initialize_variables()
 
     def initialize_variables(self):
@@ -332,7 +333,14 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         self.parameter_server.join()
 
     def allocate_worker(self):
-        raise NotImplementedError
+        worker = DOWNPOURWorker(keras_model=self.master_model,
+                                features_col=self.features_column,
+                                label_col=self.label_column,
+                                batch_size=self.batch_size,
+                                master_host=self.master_host,
+                                master_port=self.master_port,
+                                communication_window=self.communication_window
+                                nb_epoch=self.nb_epoch)
 
     def service(self):
         app = Flask(__name__)
