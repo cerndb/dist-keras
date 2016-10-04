@@ -21,6 +21,7 @@ from distkeras.distributed import LabelVectorTransformer
 from distkeras.distributed import ModelPredictor
 from distkeras.distributed import LabelIndexTransformer
 from distkeras.distributed import EASGD
+from distkeras.distributed import DOWNPOUR
 from distkeras.distributed import AsynchronousEASGD
 
 import os
