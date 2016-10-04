@@ -193,6 +193,8 @@ class DOWNPOURWorker(object):
                 # Update the distributed variable
                 gradient = self.learning_rate * (W2 - W1)
                 v -= gradient
+                W = W1 + gradient
+                model.set_weights(W)
                 self.iteration += 1
         except StopIteration:
             pass
