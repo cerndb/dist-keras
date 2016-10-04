@@ -179,7 +179,7 @@ class DOWNPOURWorker(object):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
-                if self.iteration % self.communication_period == 0:
+                if self.iteration % self.communication_window == 0:
                     # Send the variable to the parameter server, and reset.
                     self.master_send_v(index, v)
                     v.fill(0.0)
