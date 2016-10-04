@@ -40,8 +40,26 @@ def deserialize_keras_model(d):
 
     return model
 
-def uniform_weights(weights, contraints=[-0.5, 0,5]):
-    raise NotImplementedError
+def uniform_weights(model, constraints=[-0.5, 0.5]):
+    # We assume the following: Keras will return a list of weight matrices.
+    # All layers, even the activiation layers, will be randomly initialized.
+    weights = model.get_weights()
+    for layer in weights:
+        shape = layer.shape
+        if len(shape) > 1:
+            # Fill the matrix with random numbers.
+            n_rows = shape[0]
+            n_columns = shape[1]
+            for i in range(0, n_rows):
+                for j in range(0, n_columns):
+                    layer[i][j] = np.random.uniform(low=constraints[0], high=constraints[1])
+        else:
+            # Fill the vector with random numbers.
+            n_elements = shape[0]
+            for i in range(0, n_elements):
+                layer[i] = np.random.uniform(low=constraints[0], high=constraints[1])
+    # Set the new weights in the model.
+    model.set_weights(weights)
 
 def weights_mean(weights):
     assert(weights.shape[0] > 1)
