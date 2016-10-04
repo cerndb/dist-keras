@@ -339,7 +339,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 batch_size=self.batch_size,
                                 master_host=self.master_host,
                                 master_port=self.master_port,
-                                communication_window=self.communication_window
+                                communication_window=self.communication_window,
                                 nb_epoch=self.nb_epoch)
 
         return worker
