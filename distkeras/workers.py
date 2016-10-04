@@ -193,6 +193,10 @@ class DOWNPOURWorker(object):
                 gradient = W2 - W1
                 v -= gradient
                 self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
 
 class EnsembleTrainerWorker(object):
 
