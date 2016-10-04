@@ -233,7 +233,7 @@ class AsynchronousDistributedTrainer(Trainer):
 
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
-    def __init__(self, keras_model, num_workers=1, batch_size=1000,
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=3,
                  rho=0.01, learning_rate=0.01, master_port=5000):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
@@ -250,6 +250,7 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
         self.initialize_variables()
 
     def initialize_variables(self):
+        self.iteration = 1
         self.model = deserialize_keras_model(self.master_model)
 
     def stop_service(self):
@@ -297,6 +298,66 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                 self.iteration += 1
 
             return 'OK'
+
+        @app.route('/shutdown', methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routes. ####################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
+
+class DOWNPOUR(AsynchronousDistributedTrainer):
+
+    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+                 features_col="features", label_col="label", communication_window=5,
+                 master_port=5000):
+        super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                       batch_size=batch_size, features_col=features_col,
+                                       label_col=label_col)
+        self.communication_window = communication_window
+        self.master_host = determine_host_address()
+        self.master_port = master_port
+        self.initialize_variables()
+
+    def initialize_variables(self):
+        self.iteration = 1
+        self.model = deserialize_keras_model(self.master_model)
+
+    def stop_service(self):
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
+        self.parameter_server.join()
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def service(self):
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return pickle.dumps(center_variable, -1)
+
+        @app.route('/update', methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
+                self.iteration += 1
 
         @app.route('/shutdown', methods=['GET'])
         def shutdown():

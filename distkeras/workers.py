@@ -140,6 +140,61 @@ class AsynchronousEASGDWorker(object):
 
         return iter([])
 
+class DOWNPOURWorker(object):
+
+    def __init__(self, keras_model, features_col="features", label_col="label",
+                 batch_size=1000, master_host="localhost",
+                 master_port=5000, communication_window=5, nb_epoch=1):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.master_host = master_host
+        self.master_port = master_port
+        self.batch_size = batch_size
+        self.communication_window = communication_window
+        self.nb_epoch = nb_epoch
+        self.iteration = 1
+        self.center_variable = None
+
+    def master_send_v(self, worker_id, v):
+        data = {}
+        data['worker_id'] = worker_id
+        data['variable'] = v
+        data['iteration'] = self.iteration
+        rest_post(self.master_host, self.master_port, '/update', data)
+
+    def fetch_center_variable(self):
+        self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
+
+    def train(self, index, iterator):
+        model = deserialize_keras_model(self.model)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adagrad(),
+                      metrics=['accuracy'])
+        v = np.asarray(model.get_weights())
+        v.fill(0.0)
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                if self.iteration % self.communication_period == 0:
+                    # Send the variable to the parameter server, and reset.
+                    self.master_send_v(index, v)
+                    v.fill(0.0)
+                    # Update the local variable.
+                    self.fetch_center_variable()
+                    model.set_weights(self.center_variable.get_weights())
+                W1 = np.asarray(model.get_weights())
+                model.fit(X, Y, nb_epoch=1)
+                W2 = np.asarray(model.get_weights())
+                # Update the distributed variable
+                gradient = W2 - W1
+                v -= gradient
+                self.iteration += 1
+
+
 class EnsembleTrainerWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", label_transformer=None):
