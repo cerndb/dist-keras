@@ -342,6 +342,8 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 communication_window=self.communication_window
                                 nb_epoch=self.nb_epoch)
 
+        return worker
+
     def service(self):
         app = Flask(__name__)
 
