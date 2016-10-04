@@ -143,7 +143,7 @@ class AsynchronousEASGDWorker(object):
 class DOWNPOURWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label",
-                 batch_size=1000, master_host="localhost", learning_rate=0.01
+                 batch_size=1000, master_host="localhost", learning_rate=0.01,
                  master_port=5000, communication_window=5, nb_epoch=1):
         self.model = keras_model
         self.features_column = features_col
