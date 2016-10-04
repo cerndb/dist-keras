@@ -191,10 +191,8 @@ class DOWNPOURWorker(object):
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 # Update the distributed variable
-                gradient = self.learning_rate * (W2 - W1)
-                v -= gradient
-                W = W1 + gradient
-                model.set_weights(W)
+                gradient = (W2 - W1)
+                v += gradient
                 self.iteration += 1
         except StopIteration:
             pass
