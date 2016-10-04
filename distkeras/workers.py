@@ -185,7 +185,7 @@ class DOWNPOURWorker(object):
                     v.fill(0.0)
                     # Update the local variable.
                     self.fetch_center_variable()
-                    model.set_weights(self.center_variable.get_weights())
+                    model.set_weights(self.center_variable)
                 W1 = np.asarray(model.get_weights())
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
