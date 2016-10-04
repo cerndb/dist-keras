@@ -94,7 +94,7 @@ AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch
 
 ### DOWNPOUR
 
-This trainer is still in an implementation phase. Documentation shall be added once DOWNPOUR has been fully implemented and evaluated.
+An asynchronous stochastic gradient descent procedure supporting a large number of model replicas and leverages adaptive learning rates. This implementation is based on the pseudocode provided by [1] .
 
 ```python
 DOWNPOUR(keras_model, learning_rate=0.01, num_workers=2, batch_size=1000, features_col="features", label_col="label", communication_window=5)
