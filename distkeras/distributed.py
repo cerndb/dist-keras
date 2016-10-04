@@ -314,7 +314,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=5,
-                 master_port=5000, nb_epoch=1):
+                 master_port=5000, nb_epoch=1, learning_rate=0.01):
         super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                        batch_size=batch_size, features_col=features_col,
                                        label_col=label_col)
@@ -322,6 +322,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         self.master_host = determine_host_address()
         self.master_port = master_port
         self.nb_epoch = nb_epoch
+        self.learning_rate = learning_rate
         self.initialize_variables()
 
     def initialize_variables(self):
@@ -339,6 +340,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 batch_size=self.batch_size,
                                 master_host=self.master_host,
                                 master_port=self.master_port,
+                                learning_rate=self.learning_rate,
                                 communication_window=self.communication_window,
                                 nb_epoch=self.nb_epoch)
 
@@ -365,7 +367,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
             with self.mutex:
                 center_variable = self.model.get_weights()
-                center_variable = center_variable + variable
+                center_variable = center_variable - variable
                 self.model.set_weights(center_variable)
                 self.iteration += 1
 

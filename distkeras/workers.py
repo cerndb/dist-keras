@@ -143,7 +143,7 @@ class AsynchronousEASGDWorker(object):
 class DOWNPOURWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label",
-                 batch_size=1000, master_host="localhost",
+                 batch_size=1000, master_host="localhost", learning_rate=0.01
                  master_port=5000, communication_window=5, nb_epoch=1):
         self.model = keras_model
         self.features_column = features_col
@@ -151,6 +151,7 @@ class DOWNPOURWorker(object):
         self.master_host = master_host
         self.master_port = master_port
         self.batch_size = batch_size
+        self.learning_rate = learning_rate
         self.communication_window = communication_window
         self.nb_epoch = nb_epoch
         self.iteration = 1
@@ -190,7 +191,7 @@ class DOWNPOURWorker(object):
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 # Update the distributed variable
-                gradient = W2 - W1
+                gradient = self.learning_rate * (W2 - W1)
                 v -= gradient
                 self.iteration += 1
         except StopIteration:
