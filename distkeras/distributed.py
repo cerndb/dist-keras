@@ -369,6 +369,8 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                 self.model.set_weights(center_variable)
                 self.iteration += 1
 
+            return 'OK'
+
         @app.route('/shutdown', methods=['GET'])
         def shutdown():
             f = request.environ.get('werkzeug.server.shutdown')
