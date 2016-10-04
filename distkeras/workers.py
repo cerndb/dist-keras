@@ -194,7 +194,6 @@ class DOWNPOURWorker(object):
                 v -= gradient
                 self.iteration += 1
 
-
 class EnsembleTrainerWorker(object):
 
     def __init__(self, keras_model, features_col="features", label_col="label", label_transformer=None):
