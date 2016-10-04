@@ -82,7 +82,7 @@ dataset.printSchema()
 (trainingSet, testSet) = dataset.randomSplit([0.9, 0.1])
 
 # Create the distributed Ensemble trainer.
-trainer = DOWNPOUR(keras_model=model, features_col="features_normalized", batch_size=100,
+trainer = DOWNPOUR(keras_model=model, features_col="features_normalized", batch_size=32,
                    num_workers=num_workers, learning_rate=0.1)
 model = trainer.train(trainingSet)
 
