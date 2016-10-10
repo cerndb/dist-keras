@@ -60,7 +60,6 @@ class EASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=Adagrad(),
                       metrics=['accuracy'])
-        uniform_weights(model)
         try:
             while True:
                 self.fetch_center_variable()
@@ -118,7 +117,6 @@ class AsynchronousEASGDWorker(object):
         model.compile(loss='categorical_crossentropy',
                       optimizer=Adagrad(),
                       metrics=['accuracy'])
-        uniform_weights(model)
         try:
             while True:
                 batch = [next(iterator) for _ in range(self.batch_size)]
