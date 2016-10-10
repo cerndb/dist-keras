@@ -29,9 +29,9 @@ cd dist-keras
 pip install -e .
 ```
 
-## Architecture
-
 ## Getting Started
+
+After the installation process is complete, you can start exploring the functionality by browsing the examples. We have also prepared a notebook which basically compares the different distributed optimizers with each other. This notebook is located at `examples/experiment.ipynb`. However, other examples are also provided which show you how to use the different distributed optimizers with Apache Spark for distributed pre-processing.
 
 ## References
 
