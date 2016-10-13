@@ -215,19 +215,10 @@ class SingleTrainerWorker(object):
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
-        training_time = 0
-        try:
-            while True:
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                start_time = time.time()
-                model.fit(X, Y, nb_epoch=self.num_epoch)
-                training_time += time.time() - start_time
-        except StopIteration:
-            pass
-
-        print("Training time: " + `training_time`)
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        for i in range(0, self.num_epoch):
+            model.fit(X, Y, nb_epoch=self.num_epoch)
 
         return iter([serialize_keras_model(model)])
