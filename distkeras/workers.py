@@ -10,7 +10,7 @@ from distkeras.utils import *
 
 from itertools import tee
 
-from keras.optimizers import Adagrad
+import cPickle as pickle
 
 import numpy as np
 
@@ -24,7 +24,7 @@ class EASGDWorker(object):
                  batch_size=1000, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000):
         self.model = keras_model
         self.features_column = features_col
-        self.optimizer = worker_optimizer
+        self.optimizer = pickle.dumps(worker_optimizer, -1)
         self.loss = loss
         self.label_column = label_col
         self.master_host = master_host
@@ -53,12 +53,8 @@ class EASGDWorker(object):
         self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
 
     def train(self, index, iterator):
-        # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
-        # Initialize the model weights with a constrainted uniform distribution.
-        #weights = uniform_weights(model.get_weights(), [-5, 5])
-        #model.set_weights(weights)
-        # Compile the model.
+        self.optimizer = pickle.loads(self.optimizer)
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
@@ -91,7 +87,7 @@ class AsynchronousEASGDWorker(object):
                  master_port=5000, communication_window=5, nb_epoch=1):
         self.model = keras_model
         self.features_column = features_col
-        self.optimizer = worker_optimizer
+        self.optimizer = pickle.dumps(worker_optimizer, -1)
         self.loss = loss
         self.label_column = label_col
         self.master_host = master_host
@@ -116,8 +112,8 @@ class AsynchronousEASGDWorker(object):
         self.center_variable = np.asarray(rest_get(self.master_host, self.master_port, "/center_variable"))
 
     def train(self, index, iterator):
-        # Deserialize the Keras model.
         model = deserialize_keras_model(self.model)
+        self.optimizer = pickle.loads(self.optimizer)
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
@@ -151,7 +147,7 @@ class DOWNPOURWorker(object):
                  master_port=5000, communication_window=5, nb_epoch=1):
         self.model = keras_model
         self.features_column = features_col
-        self.optimizer = worker_optimizer
+        self.optimizer = pickle.dumps(worker_optimizer, -1)
         self.loss = loss
         self.label_column = label_col
         self.master_host = master_host
@@ -175,6 +171,7 @@ class DOWNPOURWorker(object):
 
     def train(self, index, iterator):
         model = deserialize_keras_model(self.model)
+        self.optimizer = pickle.loads(self.optimizer)
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
@@ -213,13 +210,14 @@ class SingleTrainerWorker(object):
         self.model = keras_model
         self.features_column = features_col
         self.loss = loss
-        self.optimizer = worker_optimizer
+        self.optimizer = pickle.dumps(worker_optimizer, -1)
         self.label_column = label_col
         self.batch_size = batch_size
         self.num_epoch = num_epoch
 
     def train(self, iterator):
         model = deserialize_keras_model(self.model)
+        self.optimizer = pickle.loads(self.optimizer)
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
