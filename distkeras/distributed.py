@@ -128,16 +128,19 @@ class ModelPredictor(Predictor):
 
 class Trainer(object):
 
-    def __init__(self, keras_model):
+    def __init__(self, keras_model, loss, worker_optimizer):
         self.master_model = serialize_keras_model(keras_model)
+        self.loss = loss
+        self.worker_optimizer = worker_optimizer
 
     def train(self, data):
         raise NotImplementedError
 
 class SingleTrainer(Trainer):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", num_epoch=1, batch_size=1000):
-        super(SingleTrainer, self).__init__(keras_model)
+    def __init__(self, keras_model, worker_optimizer, loss features_col="features",
+                 label_col="label", num_epoch=1, batch_size=1000):
+        super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.features_column = features_col
         self.label_column = label_col
         self.num_epoch = num_epoch
@@ -146,54 +149,21 @@ class SingleTrainer(Trainer):
     def train(self, data):
         worker = SingleTrainerWorker(keras_model=self.master_model, features_col=self.features_column,
                                      label_col=self.label_column, num_epoch=self.num_epoch,
-                                     batch_size=self.batch_size)
+                                     batch_size=self.batch_size, worker_optimizer=self.worker_optimizer,
+                                     loss=self.loss)
         data = data.coalesce(1)
         model = data.rdd.mapPartitions(worker.train).collect()
         model = deserialize_keras_model(model[0])
 
         return model
 
-class EnsembleTrainer(Trainer):
-
-    def __init__(self, keras_model, num_models=2, features_col="features",
-                 label_col="label", label_transformer=None, merge_models=False):
-        super(EnsembleTrainer, self).__init__(keras_model)
-        self.num_models = num_models
-        self.label_transformer = label_transformer
-        self.merge_models = merge_models
-        self.features_column = features_col
-        self.label_column = label_col
-
-    def merge(self, models):
-        raise NotImplementedError
-
-    def train(self, data):
-        # Repartition the data to fit the number of models.
-        data = data.repartition(self.num_models)
-        # Allocate an ensemble worker.
-        worker = EnsembleTrainerWorker(keras_model=self.master_model,
-                                       features_col=self.features_column,
-                                       label_col=self.label_column,
-                                       label_transformer=self.label_transformer)
-        # Train the models, and collect them as a list.
-        models = data.rdd.mapPartitions(worker.train).collect()
-        # Check if the models need to be merged.
-        if self.merge_models:
-            merged_model = self.merge(models)
-        else:
-            merged_model = None
-        # Append the optional merged model to the list.
-        models.append(merged_model)
-
-        return models
-
 ## BEGIN Asynchronous trainers. ################################################
 
 class AsynchronousDistributedTrainer(Trainer):
 
-    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label"):
-        super(AsynchronousDistributedTrainer, self).__init__(keras_model=keras_model)
+        super(AsynchronousDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.features_column = features_col
@@ -233,12 +203,13 @@ class AsynchronousDistributedTrainer(Trainer):
 
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
-    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=3,
                  rho=0.01, learning_rate=0.01, master_port=5000):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
-                                                label_col=label_col)
+                                                label_col=label_col, worker_optimizer=worker_optimizer,
+                                                loss=loss)
         # Initialize the algorithm parameters.
         self.learning_rate = learning_rate
         self.rho = rho
@@ -266,7 +237,9 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
                                          learning_rate=self.learning_rate,
                                          batch_size=self.batch_size,
                                          master_host=self.master_host,
-                                         master_port=self.master_port)
+                                         master_port=self.master_port,
+                                         worker_optimizer=self.worker_optimizer,
+                                         loss=self.loss)
 
         return worker
 
@@ -312,12 +285,13 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
 class DOWNPOUR(AsynchronousDistributedTrainer):
 
-    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=5,
                  master_port=5000, nb_epoch=1, learning_rate=0.01):
         super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                        batch_size=batch_size, features_col=features_col,
-                                       label_col=label_col)
+                                       label_col=label_col, worker_optimizer=worker_optimizer,
+                                       loss=loss)
         self.communication_window = communication_window
         self.master_host = determine_host_address()
         self.master_port = master_port
@@ -342,7 +316,9 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 master_port=self.master_port,
                                 learning_rate=self.learning_rate,
                                 communication_window=self.communication_window,
-                                nb_epoch=self.nb_epoch)
+                                nb_epoch=self.nb_epoch,
+                                worker_optimizer=self.worker_optimizer,
+                                loss=self.loss)
 
         return worker
 
@@ -390,9 +366,9 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
 class SynchronizedDistributedTrainer(Trainer):
 
-    def __init__(self, keras_model, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label"):
-        super(SynchronizedDistributedTrainer, self).__init__(keras_model=keras_model)
+        super(SynchronizedDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.features_column = features_col
@@ -447,11 +423,12 @@ class SynchronizedDistributedTrainer(Trainer):
 
 class EASGD(SynchronizedDistributedTrainer):
 
-    def __init__(self, keras_model, features_col="features", label_col="label", num_workers=2,
+    def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label", num_workers=2,
                  rho=5.0, learning_rate=0.01, batch_size=1000, master_port=5000):
         super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                     batch_size=batch_size, features_col=features_col,
-                                    label_col=label_col)
+                                    label_col=label_col, worker_optimizer=worker_optimizer,
+                                    loss=loss)
         # Initialize the algorithm parameters.
         self.rho = rho
         self.learning_rate = learning_rate
@@ -478,7 +455,9 @@ class EASGD(SynchronizedDistributedTrainer):
                              learning_rate=self.learning_rate,
                              batch_size=self.batch_size,
                              master_host=self.master_host,
-                             master_port=self.master_port)
+                             master_port=self.master_port
+                             worker_optimizer=self.worker_optimizer,
+                             loss=self.loss)
 
         return worker
 
