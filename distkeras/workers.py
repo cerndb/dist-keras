@@ -20,7 +20,7 @@ class EASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
                  batch_size=1000, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000,
-                 num_epoch=1):
+                 num_epoch=1, communication_period=500):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
@@ -31,6 +31,7 @@ class EASGDWorker(object):
         self.master_port = master_port
         self.center_variable = None
         self.batch_size = batch_size
+        self.communication_period = int(communication_period / batch_size)
         self.rho = rho
         self.iteration = 1
         self.learning_rate = learning_rate
@@ -61,23 +62,24 @@ class EASGDWorker(object):
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         Y = np.asarray([x[self.label_column] for x in label_iterator])
-        num_examples = len(X)
         # Define the batches.
         batches_X = batches(X, self.batch_size)
         batches_Y = batches(Y, self.batch_size)
-        print(batches_X)
         num_batches = len(batches_X)
         # Iterate through the number of epochs.
         for i in range(0, self.num_epoch):
-            for b_i in range(0, num_batches):
-                self.fetch_center_variable()
-                batch_X = batches_X[b_i]
-                batch_Y = batches_Y[b_i]
-                W1 = np.asarray(model.get_weights())
-                model.train_on_batch(batch_X, batch_Y)
-                W2 = np.asarray(model.get_weights())
-                self.master_send_variable(index, W2)
+            batch_index = 0
+            while batch_index < num_batches:
+                W1 = model.get_weights()
+                # Train the model during the communication period.
+                for p_i in range(0, self.communication_period):
+                    batch_X = batches_X[batch_index]
+                    batch_Y = batches_Y[batch_index]
+                    model.train_on_batch(batch_X, batch_Y)
+                    batch_index += 1
+                W2 = model.get_weights()
                 gradient = W2 - W1
+                self.fetch_center_variable()
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
                 model.set_weights(W)
                 while not self.master_is_ready():
