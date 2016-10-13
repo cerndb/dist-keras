@@ -19,11 +19,13 @@ import time
 class EASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
-                 batch_size=1000, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000):
+                 batch_size=1000, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000,
+                 num_epoch=1):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
         self.loss = loss
+        self.num_epoch = num_epoch
         self.label_column = label_col
         self.master_host = master_host
         self.master_port = master_port

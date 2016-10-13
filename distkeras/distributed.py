@@ -424,7 +424,7 @@ class SynchronizedDistributedTrainer(Trainer):
 class EASGD(SynchronizedDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label", num_workers=2,
-                 rho=5.0, learning_rate=0.01, batch_size=1000, master_port=5000):
+                 rho=5.0, learning_rate=0.01, batch_size=1000, master_port=5000, num_epoch=1):
         super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                     batch_size=batch_size, features_col=features_col,
                                     label_col=label_col, worker_optimizer=worker_optimizer,
@@ -432,6 +432,7 @@ class EASGD(SynchronizedDistributedTrainer):
         # Initialize the algorithm parameters.
         self.rho = rho
         self.learning_rate = learning_rate
+        self.num_epoch = num_epoch
         # Initialize master server parameters.
         self.master_host = determine_host_address()
         self.master_port = master_port
@@ -452,6 +453,7 @@ class EASGD(SynchronizedDistributedTrainer):
                              features_col=self.features_column,
                              label_col=self.label_column,
                              rho=self.rho,
+                             num_epoch=self.num_epoch,
                              learning_rate=self.learning_rate,
                              batch_size=self.batch_size,
                              master_host=self.master_host,
