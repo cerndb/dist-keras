@@ -138,7 +138,7 @@ class Trainer(object):
 
 class SingleTrainer(Trainer):
 
-    def __init__(self, keras_model, worker_optimizer, loss features_col="features",
+    def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
                  label_col="label", num_epoch=1, batch_size=1000):
         super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.features_column = features_col
@@ -455,7 +455,7 @@ class EASGD(SynchronizedDistributedTrainer):
                              learning_rate=self.learning_rate,
                              batch_size=self.batch_size,
                              master_host=self.master_host,
-                             master_port=self.master_port
+                             master_port=self.master_port,
                              worker_optimizer=self.worker_optimizer,
                              loss=self.loss)
 
