@@ -105,6 +105,9 @@ def weights_std(weights):
     return std
 
 def batches(iterable, n):
+    batch = []
     size = len(iterable)
     for i in range(0, size, n):
-        yield iterable[i:min(i + n, 1)]
+        batch.append(iterable[i:min(i + n, 1)])
+
+    return np.asarray(batch)
