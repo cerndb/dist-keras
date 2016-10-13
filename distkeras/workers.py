@@ -70,14 +70,14 @@ class EASGDWorker(object):
         for i in range(0, self.num_epoch):
             batch_index = 0
             while batch_index < num_batches:
-                W1 = model.get_weights()
+                W1 = np.asarray(model.get_weights())
                 # Train the model during the communication period.
                 for p_i in range(0, self.communication_period):
                     batch_X = batches_X[batch_index]
                     batch_Y = batches_Y[batch_index]
                     model.train_on_batch(batch_X, batch_Y)
                     batch_index += 1
-                W2 = model.get_weights()
+                W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
                 self.fetch_center_variable()
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
