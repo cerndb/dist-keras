@@ -103,3 +103,8 @@ def weights_std(weights):
             std[i] = 0.000001
 
     return std
+
+def batches(iterable, n):
+    size = len(iterable)
+    for i in range(0, size, n):
+        yield iterable[i:min(i + n, 1)]

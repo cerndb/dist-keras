@@ -63,8 +63,8 @@ class EASGDWorker(object):
         Y = np.asarray([x[self.label_column] for x in label_iterator])
         num_examples = len(X)
         # Define the batches.
-        batches_X = (X[pos:pos + self.batch_size] for pos in xrange(0, num_examples, self.batch_size))
-        batches_Y = (Y[pos:pos + self.batch_size] for pos in xrange(0, num_examples, self.batch_size))
+        batches_X = batches(X, self.batch_size)
+        batches_Y = batches(Y, self.batch_size)
         num_batches = len(batches_X)
         # Iterate through the number of epochs.
         for i in range(0, self.num_epoch):
