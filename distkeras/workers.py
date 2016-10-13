@@ -201,7 +201,7 @@ class DOWNPOURWorker(object):
 class SingleTrainerWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
-                 batch_size=1000, num_epoch=1):
+                 batch_size=32, num_epoch=1):
         self.model = keras_model
         self.features_column = features_col
         self.loss = loss
@@ -219,6 +219,6 @@ class SingleTrainerWorker(object):
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         Y = np.asarray([x[self.label_column] for x in label_iterator])
         for i in range(0, self.num_epoch):
-            model.fit(X, Y, nb_epoch=self.num_epoch)
+            model.fit(X, Y, nb_epoch=self.num_epoch, batch_size=self.batch_size)
 
         return iter([serialize_keras_model(model)])

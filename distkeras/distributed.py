@@ -139,7 +139,7 @@ class Trainer(object):
 class SingleTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
-                 label_col="label", num_epoch=1, batch_size=1000):
+                 label_col="label", num_epoch=1, batch_size=32):
         super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.features_column = features_col
         self.label_column = label_col
