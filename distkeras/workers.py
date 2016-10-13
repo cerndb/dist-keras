@@ -55,25 +55,31 @@ class EASGDWorker(object):
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
-        try:
-            while True:
+        # Fetch all the data in the partition.
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        num_examples = len(X)
+        # Define the batches.
+        batches_X = (X[pos:pos + self.batch_size] for pos in xrange(0, num_examples, self.batch_size))
+        batches_Y = (Y[pos:pos + self.batch_size] for pos in xrange(0, num_examples, self.batch_size))
+        num_batches = len(batches_X)
+        # Iterate through the number of epochs.
+        for i in range(0, self.num_epoch):
+            for b_i in range(0, num_batches):
                 self.fetch_center_variable()
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                batch_X = batches_X[b_i]
+                batch_Y = batches_Y[b_i]
                 W1 = np.asarray(model.get_weights())
-                model.train_on_batch(X, Y)
+                model.train_on_batch(batch_X, batch_Y)
                 W2 = np.asarray(model.get_weights())
-                gradient = W2 - W1
                 self.master_send_variable(index, W2)
+                gradient = W2 - W1
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
                 model.set_weights(W)
                 while not self.master_is_ready():
                     time.sleep(0.2)
                 self.iteration += 1
-        except StopIteration:
-            pass
 
         return iter([])
 
