@@ -8,6 +8,8 @@ from pyspark.sql import Row
 
 from keras.models import model_from_json
 
+from itertools import izip_longest
+
 import numpy as np
 
 ## END Import. #################################################################

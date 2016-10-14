@@ -20,7 +20,7 @@ class EASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000,
-                 num_epoch=1):
+                 num_epoch=1, communication_period=500):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
@@ -66,23 +66,21 @@ class EASGDWorker(object):
         batches_Y = batches(Y, self.batch_size)
         num_batches = len(batches_X)
         # Iterate through the number of epochs.
-        for i in range(0, self.num_epoch):
-            batch_index = 0
-            while batch_index < num_batches:
-                batch_X = batches_X[batch_index]
-                batch_Y = batches_Y[batch_index]
-                batch_index += 1
-                W1 = np.asarray(model.get_weights())
-                model.fit(batch_X, batch_Y)
-                W2 = np.asarray(model.get_weights())
-                gradient = W2 - W1
-                self.master_send_variable(index, W2)
-                self.fetch_center_variable()
-                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
-                model.set_weights(W)
-                while not self.master_is_ready():
-                    time.sleep(0.2)
-                self.iteration += 1
+        while batch_index < num_batches:
+            batch_X = batches_X[batch_index]
+            batch_Y = batches_Y[batch_index]
+            batch_index += 1
+            W1 = np.asarray(model.get_weights())
+            model.fit(batch_X, batch_Y, nb_epoch=self.num_epoch)
+            W2 = np.asarray(model.get_weights())
+            gradient = W2 - W1
+            self.fetch_center_variable()
+            self.master_send_variable(index, W2)
+            W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+            model.set_weights(W)
+            while not self.master_is_ready():
+                time.sleep(0.2)
+            self.iteration += 1
 
         return iter([])
 
