@@ -65,6 +65,7 @@ class EASGDWorker(object):
         batches_X = batches(X, self.batch_size)
         batches_Y = batches(Y, self.batch_size)
         num_batches = len(batches_X)
+        batch_index = 0
         # Iterate through the number of epochs.
         while batch_index < num_batches:
             batch_X = batches_X[batch_index]
