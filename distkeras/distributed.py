@@ -433,7 +433,6 @@ class EASGD(SynchronizedDistributedTrainer):
         self.rho = rho
         self.learning_rate = learning_rate
         self.num_epoch = num_epoch
-        self.communication_period = communication_period
         # Initialize master server parameters.
         self.master_host = determine_host_address()
         self.master_port = master_port
