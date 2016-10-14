@@ -72,7 +72,7 @@ class EASGDWorker(object):
             batch_Y = batches_Y[batch_index]
             batch_index += 1
             W1 = np.asarray(model.get_weights())
-            model.fit(batch_X, batch_Y, nb_epoch=self.num_epoch)
+            model.fit(batch_X, batch_Y, nb_epoch=self.num_epoch, verbose=0)
             W2 = np.asarray(model.get_weights())
             gradient = W2 - W1
             self.fetch_center_variable()
