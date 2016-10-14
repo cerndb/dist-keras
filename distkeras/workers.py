@@ -20,7 +20,7 @@ class EASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000,
-                 num_epoch=1, communication_period=500):
+                 num_epoch=1):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
@@ -31,7 +31,6 @@ class EASGDWorker(object):
         self.master_port = master_port
         self.center_variable = None
         self.batch_size = batch_size
-        self.communication_period = int(communication_period / batch_size)
         self.rho = rho
         self.iteration = 1
         self.learning_rate = learning_rate
