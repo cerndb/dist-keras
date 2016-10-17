@@ -10,6 +10,9 @@ from distkeras.utils import *
 
 from itertools import tee
 
+from keras.engine.training import make_batches
+from keras.engine.training import slice_X
+
 import numpy as np
 
 import time
@@ -220,7 +223,13 @@ class SingleTrainerWorker(object):
         feature_iterator, label_iterator = tee(iterator, 2)
         X = np.asarray([x[self.features_column] for x in feature_iterator])
         Y = np.asarray([x[self.label_column] for x in label_iterator])
-        for i in range(0, self.num_epoch):
-            model.fit(X, Y, nb_epoch=self.num_epoch, batch_size=self.batch_size)
+        batches = make_batches(X, self.batch_size)
+        index_array = np.arange(len(X))
+        for batch_index, (batch_start, batch_end) in enumerate(batches):
+            batch_ids = index_array[batch_start:batch_end]
+            batch_X = slice_X(X, batch_ids)
+            batch_Y = slice_X(Y, batch_ids)
+            model.train_on_batch(batch_X, batch_Y)
+            #model.fit(X, Y, nb_epoch=self.num_epoch, batch_size=self.batch_size)
 
         return iter([serialize_keras_model(model)])
