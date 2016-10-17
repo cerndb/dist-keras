@@ -76,6 +76,7 @@ class EASGDWorker(object):
                 model.set_weights(W)
                 while not self.master_is_ready():
                     time.sleep(0.2)
+                    print("Waiting: " + `self.iteration`)
                 self.iteration += 1
         except StopIteration:
             pass
@@ -229,10 +230,5 @@ class SingleTrainerWorker(object):
                 model.train_on_batch(X, Y)
         except StopIteration:
             pass
-
-        # feature_iterator, label_iterator = tee(iterator, 2)
-        # X = np.asarray([x[self.features_column] for x in feature_iterator])
-        # Y = np.asarray([x[self.label_column] for x in label_iterator])
-        # model.fit(X, Y, shuffle=False, nb_epoch=self.num_epoch, batch_size=self.batch_size)
 
         return iter([serialize_keras_model(model)])
