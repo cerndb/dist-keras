@@ -76,7 +76,6 @@ class EASGDWorker(object):
                 model.set_weights(W)
                 while not self.master_is_ready():
                     time.sleep(0.2)
-                    print("Waiting: " + `self.iteration`)
                 self.iteration += 1
         except StopIteration:
             pass
