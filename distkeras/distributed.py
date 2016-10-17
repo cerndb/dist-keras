@@ -502,12 +502,12 @@ class EASGD(SynchronizedDistributedTrainer):
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
-                # Check if the gradients of all workers are available.
-                if num_variables == self.num_workers:
-                    self.process_variables()
-                    self.variables = {}
-                    self.set_ready(True)
-                    self.iteration += 1
+                    # Check if the gradients of all workers are available.
+                    if num_variables == self.num_workers:
+                        self.process_variables()
+                        self.variables = {}
+                        self.set_ready(True)
+                        self.iteration += 1
 
             return 'OK'
 
