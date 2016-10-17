@@ -377,6 +377,7 @@ class SynchronizedDistributedTrainer(Trainer):
         self.iteration = 1
         self.parameter_server = None
         self.mutex = Lock()
+        self.ready_mutex = Lock()
         self.model = None
 
     def set_ready(self, state):
@@ -385,7 +386,7 @@ class SynchronizedDistributedTrainer(Trainer):
 
     def get_ready(self):
         localReady = None
-        with self.mutex:
+        with self.ready_mutex:
             localReady = self.ready
 
         return localReady
