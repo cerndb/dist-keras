@@ -220,26 +220,19 @@ class SingleTrainerWorker(object):
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
-        try:
-            while True:
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                model.train_on_batch(X, Y)
-        except StopIteration:
-            pass
+        # try:
+        #     while True:
+        #         batch = [next(iterator) for _ in range(self.batch_size)]
+        #         feature_iterator, label_iterator = tee(batch, 2)
+        #         X = np.asarray([x[self.features_column] for x in feature_iterator])
+        #         Y = np.asarray([x[self.label_column] for x in label_iterator])
+        #         model.train_on_batch(X, Y)
+        # except StopIteration:
+        #     pass
 
-        # feature_iterator, label_iterator = tee(iterator, 2)
-        # X = np.asarray([x[self.features_column] for x in feature_iterator])
-        # Y = np.asarray([x[self.label_column] for x in label_iterator])
-        # batches = make_batches(X, self.batch_size)
-        # index_array = np.arange(len(X))
-        # for batch_index, (batch_start, batch_end) in enumerate(batches):
-        #     batch_ids = index_array[batch_start:batch_end]
-        #     batch_X = slice_X(X, batch_ids)
-        #     batch_Y = slice_X(Y, batch_ids)
-        #     model.train_on_batch(batch_X, batch_Y)
-        #     model.fit(X, Y, nb_epoch=self.num_epoch, batch_size=self.batch_size)
+        feature_iterator, label_iterator = tee(iterator, 2)
+        X = np.asarray([x[self.features_column] for x in feature_iterator])
+        Y = np.asarray([x[self.label_column] for x in label_iterator])
+        model.fit(X, Y, shuffle=False, nb_epoch=self.num_epoch, batch_size=self.batch_size)
 
         return iter([serialize_keras_model(model)])
