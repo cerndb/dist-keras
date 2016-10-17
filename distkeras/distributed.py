@@ -498,17 +498,18 @@ class EASGD(SynchronizedDistributedTrainer):
             worker_id = data['worker_id']
 
             self.set_ready(False)
+            print("Worker ID: " + `worker_id`)
             # Check if the variable update is the correct iteration.
             if iteration == self.iteration:
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
                     # Check if the gradients of all workers are available.
-                    if num_variables == self.num_workers:
-                        self.process_variables()
-                        self.variables = {}
-                        self.set_ready(True)
-                        self.iteration += 1
+                if num_variables == self.num_workers:
+                    self.process_variables()
+                    self.variables = {}
+                    self.set_ready(True)
+                    self.iteration += 1
 
             return 'OK'
 
