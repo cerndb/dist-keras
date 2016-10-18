@@ -466,7 +466,7 @@ class EASGD(SynchronizedDistributedTrainer):
         return worker
 
     def process_variables(self):
-        center_variable = self.model.get_weights()
+        center_variable = np.asarray(self.model.get_weights())
         temp = np.copy(center_variable)
         temp.fill(0.0)
 
