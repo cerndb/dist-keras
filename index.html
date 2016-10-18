@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Distributed Deep Learning with Apache Spark and Keras.">
+  <meta name="author" content="Joeri Hermans">
+  
+  <title>Distributed Keras</title>
+  
+
+  <link rel="shortcut icon" href="./img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="./css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="./css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="./css/highlight.css">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "None";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = "/";
+  </script>
+  
+  <script src="./js/jquery-2.1.1.min.js"></script>
+  <script src="./js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="./js/highlight.pack.js"></script>
+  <script src="./js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> Distributed Keras</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 current">
+        <a class="current" href=".">Home</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#distributed-keras">Distributed Keras</a></li>
+                
+                    <li><a class="toctree-l4" href="#installation">Installation</a></li>
+                
+                    <li><a class="toctree-l4" href="#getting-started">Getting Started</a></li>
+                
+                    <li><a class="toctree-l4" href="#support">Support</a></li>
+                
+                    <li><a class="toctree-l4" href="#references">References</a></li>
+                
+                    <li><a class="toctree-l4" href="#licensing">Licensing</a></li>
+                
+            
+            </ul>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="optimizers/">Optimizers</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="license/">License</a>
+        
+    </li>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">Distributed Keras</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Home</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/JoeriHermans/dist-keras" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="distributed-keras">Distributed Keras</h1>
+<p>Distributed Keras (DK) is a <strong>distributed deep learning framework</strong> built op top of Apache Spark and Keras with the goal to significantly reduce the training time using distributed machine learning algorithms. We designed the framework in such a way that a developer could implement a new distributed optimizer with ease, thus enabling a person to focus on research and model development.</p>
+<p>As mentioned above, most of our methods follow the data parallel approach as described in the paper on <a href="http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf">Large Scale Distributed Deep Networks</a>. In this paradigm, replicas of a model are distributed over several "trainers", and every model replica will be trained on a different partition of the dataset. The gradient (or all network weights, depending on the implementation details) will be communicated with the parameter server after every gradient update. The parameter server is responsible for handling the gradient updates of all workers and incorperating all gradient updates into a single master model which will be returned to the user after the training procedure is complete.</p>
+<h2 id="installation">Installation</h2>
+<p>We rely on <a href="https://keras.io">Keras</a> for the construction of models, and thus following the Keras dependencies. Furthermore, PySpark is also a dependency for this project since DK is using Apache Spark for the distribution of the data and the model replicas.</p>
+<h3 id="pip">Pip</h3>
+<p>You can use <code>pip</code> if you only need to DK framework without examples.</p>
+<pre><code class="bash">pip install git+https://github.com/JoeriHermans/dist-keras.git
+</code></pre>
+
+<h3 id="git">Git</h3>
+<p>However, if you would like to play with the examples and notebooks, simply install the framework using the approach described below.</p>
+<pre><code class="bash">git clone https://github.com/JoeriHermans/dist-keras
+cd dist-keras
+pip install -e .
+</code></pre>
+
+<h2 id="getting-started">Getting Started</h2>
+<p>We recommend starting with the <code>workflow</code> notebook located in the <code>examples</code> directory. This Python notebook will guide you through all general steps which should need to perform. This includes setting up a Spark Context, reading the data, applying preprocessing, training and evaluation of your model in a distributed way.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Running the <strong>workflow.ipyn</strong> notebook can be run on your local machine. However, we recommend running the notebook on a Spark cluster since the distributed trainers start to outperform the <em>SingleTrainer</em> when the number of workers (cores multiplied by executors) is usually higher than 10.</p>
+</div>
+<h2 id="support">Support</h2>
+<p>For issues, bugs, questions, and suggestions. Please use the appropriate channels on <a href="https://github.com/JoeriHermans/dist-keras/">GitHub</a>.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>
+<p>Zhang, S., Choromanska, A. E., &amp; LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693).</p>
+</li>
+<li>
+<p>Moritz, P., Nishihara, R., Stoica, I., &amp; Jordan, M. I. (2015). SparkNet: Training Deep Networks in Spark. arXiv preprint arXiv:1511.06051.</p>
+</li>
+<li>
+<p>Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... &amp; Ng, A. Y. (2012). Large scale distributed deep networks. In Advances in neural information processing systems (pp. 1223-1231).</p>
+</li>
+<li>
+<p>Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]</p>
+</li>
+</ul>
+<h2 id="licensing">Licensing</h2>
+<p><img alt="GPLv3" src="./images/gpl_v3.png" /> <img alt="CERN" src="./images/cern_logo.jpg" /></p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="optimizers/" class="btn btn-neutral float-right" title="Optimizers">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>Copyright (c) 2016 Joeri Hermans</p>
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/JoeriHermans/dist-keras" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+      
+        <span style="margin-left: 15px"><a href="optimizers/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 0.15.3
+Build Date UTC : 2016-10-18 15:36:15.429585
+-->
