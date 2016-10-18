@@ -22,13 +22,11 @@ import time
 class EASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000,
-                 num_epoch=1, communication_period=500):
+                 batch_size=32, rho=5, learning_rate=0.01, master_host="localhost", master_port=5000):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
         self.loss = loss
-        self.num_epoch = num_epoch
         self.label_column = label_col
         self.master_host = master_host
         self.master_port = master_port
@@ -68,7 +66,7 @@ class EASGDWorker(object):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 W1 = np.asarray(model.get_weights())
-                model.fit(X, Y, nb_epoch=1)
+                model.train_on_batch(X, Y)
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
                 self.master_send_variable(index, W2)
@@ -86,7 +84,7 @@ class AsynchronousEASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
                  batch_size=1000, rho=5.0, learning_rate=0.01, master_host="localhost",
-                 master_port=5000, communication_window=5, nb_epoch=1):
+                 master_port=5000, communication_window=5):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
@@ -100,7 +98,6 @@ class AsynchronousEASGDWorker(object):
         self.learning_rate = learning_rate
         self.alpha = self.learning_rate * self.rho
         self.communication_period = communication_window
-        self.nb_epoch = nb_epoch
         self.iteration = 1
 
     def master_send_ed(self, worker_id, variable):
@@ -145,7 +142,7 @@ class DOWNPOURWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
                  batch_size=1000, master_host="localhost", learning_rate=0.01,
-                 master_port=5000, communication_window=5, nb_epoch=1):
+                 master_port=5000, communication_window=5):
         self.model = keras_model
         self.features_column = features_col
         self.optimizer = worker_optimizer
@@ -156,7 +153,6 @@ class DOWNPOURWorker(object):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.communication_window = communication_window
-        self.nb_epoch = nb_epoch
         self.iteration = 1
         self.center_variable = None
 
@@ -206,14 +202,13 @@ class DOWNPOURWorker(object):
 class SingleTrainerWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, num_epoch=1):
+                 batch_size=32):
         self.model = keras_model
         self.features_column = features_col
         self.loss = loss
         self.optimizer = worker_optimizer
         self.label_column = label_col
         self.batch_size = batch_size
-        self.num_epoch = num_epoch
 
     def train(self, iterator):
         model = deserialize_keras_model(self.model)

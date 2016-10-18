@@ -133,7 +133,7 @@ class Trainer(object):
         self.loss = loss
         self.worker_optimizer = worker_optimizer
 
-    def train(self, data):
+    def train(self, data, shuffle=False):
         raise NotImplementedError
 
 class SingleTrainer(Trainer):
@@ -146,13 +146,19 @@ class SingleTrainer(Trainer):
         self.num_epoch = num_epoch
         self.batch_size = batch_size
 
-    def train(self, data):
-        worker = SingleTrainerWorker(keras_model=self.master_model, features_col=self.features_column,
-                                     label_col=self.label_column, num_epoch=self.num_epoch,
-                                     batch_size=self.batch_size, worker_optimizer=self.worker_optimizer,
-                                     loss=self.loss)
+    def train(self, data, shuffle=False):
         data = data.coalesce(1)
-        model = data.rdd.mapPartitions(worker.train).collect()
+        if shuffle:
+            data = shuffle(data)
+        # Fetch the master model.
+        model = self.master_model
+        for i in range(0, self.num_epoch):
+            # Allocate a worker.
+            worker = SingleTrainerWorker(keras_model=model, features_col=self.features_column,
+                                         label_col=self.label_column, batch_size=self.batch_size,
+                                         worker_optimizer=self.worker_optimizer, loss=self.loss)
+            # Fetch the trained model.
+            model = data.rdd.mapPartitions(worker.train).collect()
         model = deserialize_keras_model(model[0])
 
         return model
@@ -162,7 +168,7 @@ class SingleTrainer(Trainer):
 class AsynchronousDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
-                 features_col="features", label_col="label"):
+                 features_col="features", label_col="label", num_epoch=1):
         super(AsynchronousDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -171,7 +177,11 @@ class AsynchronousDistributedTrainer(Trainer):
         self.iteration = 1
         self.parameter_server = None
         self.mutex = Lock()
+        self.num_epoch = num_epoch
         self.model = None
+
+    def reset_variables(self):
+        self.iteration = 1
 
     def start_service(self):
         self.parameter_server = threading.Thread(target=self.service)
@@ -186,7 +196,7 @@ class AsynchronousDistributedTrainer(Trainer):
     def allocate_worker(self):
         raise NotImplementedError
 
-    def train(self, data):
+    def train(self, data, shuffle=False):
         # Start the communication service.
         self.start_service()
         # Allocate a worker program.
@@ -196,7 +206,11 @@ class AsynchronousDistributedTrainer(Trainer):
             data = data.coalesce(self.num_workers)
         else:
             data = data.repartition(self.num_workers)
-        data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        if shuffle:
+            data = shuffle(data)
+        for i in range(0, self.num_epoch):
+            self.reset_variables()
+            data.rdd.mapPartitionsWithIndex(worker.train).collect()
         self.stop_service()
 
         return self.model
@@ -205,11 +219,11 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=3,
-                 rho=0.01, learning_rate=0.01, master_port=5000):
+                 rho=0.01, learning_rate=0.01, master_port=5000, num_epoch=1):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
                                                 label_col=label_col, worker_optimizer=worker_optimizer,
-                                                loss=loss)
+                                                loss=loss, num_epoch=num_epoch)
         # Initialize the algorithm parameters.
         self.learning_rate = learning_rate
         self.rho = rho
@@ -221,7 +235,6 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
         self.initialize_variables()
 
     def initialize_variables(self):
-        self.iteration = 1
         self.model = deserialize_keras_model(self.master_model)
 
     def stop_service(self):
@@ -287,15 +300,14 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                  features_col="features", label_col="label", communication_window=5,
-                 master_port=5000, nb_epoch=1, learning_rate=0.01):
+                 master_port=5000, num_epoch=1, learning_rate=0.01):
         super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                        batch_size=batch_size, features_col=features_col,
                                        label_col=label_col, worker_optimizer=worker_optimizer,
-                                       loss=loss)
+                                       loss=loss, num_epoch=num_epoch)
         self.communication_window = communication_window
         self.master_host = determine_host_address()
         self.master_port = master_port
-        self.nb_epoch = nb_epoch
         self.learning_rate = learning_rate
         self.initialize_variables()
 
@@ -367,10 +379,11 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 class SynchronizedDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
-                 features_col="features", label_col="label"):
+                 features_col="features", label_col="label", num_epoch=1):
         super(SynchronizedDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
         self.batch_size = batch_size
+        self.num_epoch = num_epoch
         self.features_column = features_col
         self.label_column = label_col
         self.ready = False
@@ -379,6 +392,10 @@ class SynchronizedDistributedTrainer(Trainer):
         self.mutex = Lock()
         self.ready_mutex = Lock()
         self.model = None
+
+    def reset_variables(self):
+        self.iteration = 1
+        self.ready = False
 
     def set_ready(self, state):
         with self.mutex:
@@ -404,9 +421,12 @@ class SynchronizedDistributedTrainer(Trainer):
     def allocate_worker(self):
         raise NotImplementedError
 
-    def train(self, data):
+    def train(self, data, shuffle=False):
         # Start the communication service.
         self.start_service()
+        # Check if the data needs to be shuffled.
+        if shuffle:
+            data = shuffle(data)
         # Allocate a worker program.
         worker = self.allocate_worker()
         # Fetch the current number of partitions.
@@ -416,7 +436,8 @@ class SynchronizedDistributedTrainer(Trainer):
             data = data.coalesce(self.num_workers)
         else:
             data = data.repartition(self.num_workers)
-        data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        for i in range(0, self.num_epoch):
+            data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the communication service.
         self.stop_service()
 
@@ -429,11 +450,10 @@ class EASGD(SynchronizedDistributedTrainer):
         super(EASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                     batch_size=batch_size, features_col=features_col,
                                     label_col=label_col, worker_optimizer=worker_optimizer,
-                                    loss=loss)
+                                    loss=loss, num_epoch=num_epoch)
         # Initialize the algorithm parameters.
         self.rho = rho
         self.learning_rate = learning_rate
-        self.num_epoch = num_epoch
         self.beta = self.num_workers * (self.learning_rate * self.rho)
         # Initialize master server parameters.
         self.master_host = determine_host_address()
@@ -455,7 +475,6 @@ class EASGD(SynchronizedDistributedTrainer):
                              features_col=self.features_column,
                              label_col=self.label_column,
                              rho=self.rho,
-                             num_epoch=self.num_epoch,
                              learning_rate=self.learning_rate,
                              batch_size=self.batch_size,
                              master_host=self.master_host,
