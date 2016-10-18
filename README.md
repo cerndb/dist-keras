@@ -117,6 +117,7 @@ Predictors are utility classes which addsa prediction column to the DataFrame gi
     **Possible solutions:**
 
     a. Make sure that every partition has an equal amount of batches. For example, using a custom partitioner.
+
     b. Modify the optimizer in such a way that it does allow for timeouts from a worker.
 
 ## References
