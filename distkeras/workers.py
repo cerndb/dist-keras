@@ -71,7 +71,7 @@ class EASGDWorker(object):
                 model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
-                self.master_send_variable(index, W1)
+                self.master_send_variable(index, W2)
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
                 model.set_weights(W)
                 while not self.master_is_ready():
