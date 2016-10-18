@@ -134,7 +134,7 @@ class AsynchronousEASGDWorker(object):
                     model.set_weights(W)
                     # Sent the elastic difference back to the master.
                     self.master_send_ed(index, E)
-                model.fit(X, Y, nb_epoch=1)
+                model.train_on_batch(X, Y)
                 self.iteration += 1
         except StopIteration:
             pass
@@ -192,7 +192,7 @@ class DOWNPOURWorker(object):
                     self.fetch_center_variable()
                     model.set_weights(self.center_variable)
                 W1 = np.asarray(model.get_weights())
-                model.fit(X, Y, nb_epoch=1)
+                model.train_on_batch(X, Y)
                 W2 = np.asarray(model.get_weights())
                 # Update the distributed variable
                 gradient = (W2 - W1)
