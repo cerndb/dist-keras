@@ -434,6 +434,7 @@ class EASGD(SynchronizedDistributedTrainer):
         self.rho = rho
         self.learning_rate = learning_rate
         self.num_epoch = num_epoch
+        self.beta = self.num_workers * (self.learning_rate * self.rho)
         # Initialize master server parameters.
         self.master_host = determine_host_address()
         self.master_port = master_port
@@ -472,7 +473,9 @@ class EASGD(SynchronizedDistributedTrainer):
         # Iterate through all worker variables.
         for i in range(0, self.num_workers):
             temp += (self.rho * (self.variables[i] - center_variable))
-        temp *= self.learning_rate
+        temp /= self.num_workers
+        temp *= self.beta
+        center_variable *= (1.0 - self.beta)
         center_variable += temp
         # Update the center variable
         self.model.set_weights(center_variable)
