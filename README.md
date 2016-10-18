@@ -128,7 +128,15 @@ Predictors are utility classes which addsa prediction column to the DataFrame gi
 
 * Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... & Ng, A. Y. (2012). Large scale distributed deep networks. In Advances in neural information processing systems (pp. 1223-1231). [3]
 
-* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas. [4]
+<!-- @misc{pumperla2015, -->
+<!-- author = {Max Pumperla}, -->
+<!-- title = {elephas}, -->
+<!-- year = {2015}, -->
+<!-- publisher = {GitHub}, -->
+<!-- journal = {GitHub repository}, -->
+<!-- howpublished = {\url{https://github.com/maxpumperla/elephas}} -->
+<!-- } -->
+* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]
 
 ## Licensing
 
