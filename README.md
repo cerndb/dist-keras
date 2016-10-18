@@ -58,21 +58,13 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 
 ### Single Trainer
 
-A single trainer is in all simplicity a trainer which will use a single Spark executor to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers.
+A single trainer is in all simplicity a trainer which will use a single Spark thread to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers.
 
 ```python
 SingleTrainer(keras_model, num_epoch=1, batch_size=1000, features_col="features", label_col="label")
 ```
 
-### Ensemble Trainer
-
-This trainer will employ [ensemble learning](https://en.wikipedia.org/wiki/Ensemble_learning) to build a classifier. There are two modes, in the first mode, you will get a list of Keras models which have been trained on different partitions of the data. In the other mode, all the models will be merged by adding an averaging layer to the networks. The resulting model will thus have the same outputs as the specified Keras model, with the difference that the actual output is the averaged output of the parallely trained models.
-
-```python
-EnsembleTrainer(keras_model, num_models=2, merge_models=False, features_col="features", label_col="label")
-```
-
-### EASGD
+### EASGD (currently recommended, testing AEASGD)
 
 The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[1]](https://arxiv.org/pdf/1412.6651.pdf) .
 
