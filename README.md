@@ -108,6 +108,17 @@ A transformer is a utility class which takes a collection of columns (or just a 
 
 Predictors are utility classes which addsa prediction column to the DataFrame given a specified Keras model and its input features.
 
+## Known issues
+
+### Synchronous algorithms
+
+1. It is possible, depending on your `batch_size` and the size of your dataset, that there will be an unequal amount of batches distributed over the different worker partitions. Imagine having `n - 1` workers with `k` batches, and a worker with `k - 1` batches. In this case, the `n - 1` workers all wish to process batch `k`, however, the other worker (which has only `k - 1` batches) has already finished its process. This results in the endless "waiting" behaviour mentioned above.
+
+    **Possible solutions:**
+
+    a. Make sure that every partition has an equal amount of batches. For example, using a custom partitioner.
+    b. Modify the optimizer in such a way that it does allow for timeouts from a worker.
+
 ## References
 
 * Zhang, S., Choromanska, A. E., & LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693). [1]
