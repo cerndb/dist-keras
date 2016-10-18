@@ -466,7 +466,7 @@ class EASGD(SynchronizedDistributedTrainer):
         return worker
 
     def process_variables(self):
-        center_variable = np.asarray(self.model.get_weights())
+        center_variable = self.model.get_weights()
         temp = np.copy(center_variable)
         temp.fill(0.0)
 
@@ -475,7 +475,6 @@ class EASGD(SynchronizedDistributedTrainer):
             temp += self.variables[i]
         temp /= float(self.num_workers)
         temp *= self.beta
-        center_variable *= (1.0 - self.beta)
         center_variable += temp
         # Update the center variable
         self.model.set_weights(center_variable)
