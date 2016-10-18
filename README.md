@@ -112,7 +112,7 @@ Predictors are utility classes which addsa prediction column to the DataFrame gi
 
 ### Synchronous algorithms
 
-1. It is possible, depending on your `batch_size` and the size of your dataset, that there will be an unequal amount of batches distributed over the different worker partitions. Imagine having `n - 1` workers with `k` batches, and a worker with `k - 1` batches. In this case, the `n - 1` workers all wish to process batch `k`, however, the other worker (which has only `k - 1` batches) has already finished its process. This results in the endless "waiting" behaviour mentioned above.
+1. It is possible, depending on your `batch_size` and the size of your dataset, that there will be an unequal amount of batches distributed over the different worker partitions. Imagine having `n - 1` workers with `k` batches, and a worker with `k - 1` batches. In this case, the `n - 1` workers all wish to process batch `k`, however, the other worker (which has only `k - 1` batches) has already finished its process. This results in endless "waiting" behaviour, i.e., the `n - 1` workers are waiting for the last worker to publish its gradient. But this worker can't send its gradient of batch `k` to the parameter server since it does not have a batch `k`.
 
     **Possible solutions:**
 
