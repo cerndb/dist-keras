@@ -68,7 +68,7 @@ class EASGDWorker(object):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 W1 = np.asarray(model.get_weights())
-                model.train_on_batch(X, Y)
+                model.fit(X, Y, nb_epoch=1)
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
                 self.master_send_variable(index, W2)
