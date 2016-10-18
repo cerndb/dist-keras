@@ -6,6 +6,8 @@ Utils module.
 
 from pyspark.sql import Row
 
+from pyspark.sql.functions import rand
+
 from keras.models import model_from_json
 
 from itertools import izip_longest
@@ -105,6 +107,12 @@ def weights_std(weights):
             std[i] = 0.000001
 
     return std
+
+def shuffle(dataset):
+    dataset = dataset.orderBy(rand())
+    dataset.cache()
+
+    return dataset
 
 def batches(iterable, n):
     batch = []
