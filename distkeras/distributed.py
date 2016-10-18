@@ -424,9 +424,6 @@ class SynchronizedDistributedTrainer(Trainer):
     def train(self, data, shuffle=False):
         # Start the communication service.
         self.start_service()
-        # Check if the data needs to be shuffled.
-        if shuffle:
-            data = shuffle(data)
         # Allocate a worker program.
         worker = self.allocate_worker()
         # Fetch the current number of partitions.
@@ -436,6 +433,9 @@ class SynchronizedDistributedTrainer(Trainer):
             data = data.coalesce(self.num_workers)
         else:
             data = data.repartition(self.num_workers)
+        # Check if the data needs to be shuffled.
+        if shuffle:
+            data = shuffle(data)
         for i in range(0, self.num_epoch):
             data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the communication service.
