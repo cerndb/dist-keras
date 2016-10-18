@@ -472,8 +472,8 @@ class EASGD(SynchronizedDistributedTrainer):
 
         # Iterate through all worker variables.
         for i in range(0, self.num_workers):
-            temp += (self.rho * (self.variables[i] - center_variable))
-        temp /= self.num_workers
+            temp += self.variables[i]
+        temp /= float(self.num_workers)
         temp *= self.beta
         center_variable *= (1.0 - self.beta)
         center_variable += temp
