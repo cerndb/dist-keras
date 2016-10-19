@@ -238,6 +238,16 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
     def initialize_varialbes(self):
         self.model = deserialize_keras_model(self.master_model)
 
+    def stop_service(self):
+        rest_get_pint(self.master_host, self.master_port, '/shutdown')
+        self.parameter_server.join()
+
+    def allocate_worker(self):
+        raise NotImplementedError
+
+    def service(self):
+        raise NotImplementedError
+
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
