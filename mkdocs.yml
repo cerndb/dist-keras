@@ -9,7 +9,6 @@ pages:
 - Home: index.md
 - Optimizers: optimizers.md
 - License: license.md
-
 # Documentation and theme configuration
 theme: readthedocs
 docs_dir: 'docs'
@@ -17,7 +16,6 @@ markdown_extensions:
 - admonition
 extra:
     version: '0.1.0'
-    logo: 'images/logo.png'
     palette:
         primary: 'grey'
         accent: 'light blue'
