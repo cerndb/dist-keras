@@ -215,6 +215,29 @@ class AsynchronousDistributedTrainer(Trainer):
 
         return self.model
 
+class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", communication_window=10,
+                 rho=5.0, learning_rate=0.01, momentum=0.9, master_port=5000, num_epoch=1):
+        super(AsynchronousEAMSGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
+                                                 batch_size=batch_size, features_col=features_col,
+                                                 label_col=label_col, worker_optimizer=worker_optimizer,
+                                                 loss=loss, num_epoch=num_epoch)
+        # Initialize the algorithm parameters.
+        self.learning_rate = learning_rate
+        self.rho = rho
+        self.momentum = momentum
+        self.communication_window = communication_window
+        # Initialize the master server parameters.
+        self.master_host = determine_host_address()
+        self.master_port = master_port
+        # Initialize the default model parameters.
+        self.initialize_variables()
+
+    def initialize_varialbes(self):
+        self.model = deserialize_keras_model(self.master_model)
+
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
@@ -437,7 +460,7 @@ class SynchronizedDistributedTrainer(Trainer):
         if shuffle:
             data = shuffle(data)
         for i in range(0, self.num_epoch):
-            set.set_ready(False)
+            self.set_ready(False)
             data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the communication service.
         self.stop_service()
