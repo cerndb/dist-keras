@@ -167,7 +167,7 @@ class SingleTrainer(Trainer):
 
 class AsynchronousDistributedTrainer(Trainer):
 
-    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
         super(AsynchronousDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
@@ -217,9 +217,9 @@ class AsynchronousDistributedTrainer(Trainer):
 
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
-    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
-                 features_col="features", label_col="label", communication_window=3,
-                 rho=0.01, learning_rate=0.01, master_port=5000, num_epoch=1):
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", communication_window=10,
+                 rho=5.0, learning_rate=0.01, master_port=5000, num_epoch=1):
         super(AsynchronousEASGD, self).__init__(keras_model=keras_model, num_workers=num_workers,
                                                 batch_size=batch_size, features_col=features_col,
                                                 label_col=label_col, worker_optimizer=worker_optimizer,
@@ -298,7 +298,7 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
 
 class DOWNPOUR(AsynchronousDistributedTrainer):
 
-    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", communication_window=5,
                  master_port=5000, num_epoch=1, learning_rate=0.01):
         super(DOWNPOUR, self).__init__(keras_model=keras_model, num_workers=num_workers,
@@ -378,7 +378,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
 class SynchronizedDistributedTrainer(Trainer):
 
-    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
         super(SynchronizedDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
@@ -437,6 +437,7 @@ class SynchronizedDistributedTrainer(Trainer):
         if shuffle:
             data = shuffle(data)
         for i in range(0, self.num_epoch):
+            set.set_ready(False)
             data.rdd.mapPartitionsWithIndex(worker.train).collect()
         # Stop the communication service.
         self.stop_service()
