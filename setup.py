@@ -12,11 +12,11 @@ from setuptools import setup
 from setuptools import find_packages
 
 setup(name='dist-keras',
-      description='Deep learning on Apache Spark with Keras.',
+      description='Deep learning with Apache Spark with Keras.',
       url='https://github.com/JoeriHermans/dist-keras',
       author='Joeri Hermans',
       author_email='joeri@joerihermans.com',
-      license='MIT',
+      license='GPLv3',
       classifiers=[
           # How mature is this project? Common values are
           #   3 - Alpha
