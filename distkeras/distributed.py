@@ -268,9 +268,9 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
             with self.mutex:
                 center_variable = self.model.get_weights()
 
-                return pickle.dumps(center_variable, -1)
+            return pickle.dumps(center_variable, -1)
 
-        @app.route('/update', methods=['GET'])
+        @app.route('/update', methods=['POST'])
         def update():
             data = pickle.loads(request.data)
             variable = data['variable']
@@ -356,8 +356,6 @@ class AsynchronousEASGD(AsynchronousDistributedTrainer):
             iteration = data['iteration']
             worker_id = data['worker_id']
 
-            # The variable is equal to the elastic difference
-            # computed by the worker.
             with self.mutex:
                 center_variable = self.model.get_weights()
                 center_variable = center_variable + variable
