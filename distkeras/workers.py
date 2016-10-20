@@ -106,6 +106,7 @@ class AsynchronousEAMSGDWorker(object):
         data['worker_id'] = worker_id
         data['iteration'] = self.iteration
         data['variable'] = variable
+        print(`self.master_host` + " - " + `self.master_port`)
         rest_post(self.master_host, self.master_port, "/update", data)
 
     def fetch_center_variable(self):
