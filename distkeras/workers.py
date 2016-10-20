@@ -133,6 +133,7 @@ class AsynchronousEAMSGDWorker(object):
                     E = self.alpha * (W - self.center_variable)
                     W = W - E
                     model.set_weights(W)
+                    # Send the elastic difference to the master.
                     self.master_send_ed(index, E)
                 v_t = self.momentum * v
                 W_backup = np.asarray(model.get_weights())
@@ -142,7 +143,7 @@ class AsynchronousEAMSGDWorker(object):
                 model.train_on_batch(X, Y)
                 gradient = np.asarray(model.get_weights()) - W
                 v = v_t - self.learning_rate * gradient
-                W_backup += v
+                W_backup -= v
                 model.set_weights(W_backup)
                 self.iteration += 1
         except StopIteration:
@@ -196,10 +197,9 @@ class AsynchronousEASGDWorker(object):
                     W = np.asarray(model.get_weights())
                     # Compute the elastic difference.
                     E = self.alpha * (W - self.center_variable)
-                    # Update the model.
                     W = W - E
                     model.set_weights(W)
-                    # Sent the elastic difference back to the master.
+                    # Send the elastic difference to the master.
                     self.master_send_ed(index, E)
                 model.train_on_batch(X, Y)
                 self.iteration += 1
