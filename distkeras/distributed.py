@@ -246,7 +246,42 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
         raise NotImplementedError
 
     def service(self):
-        raise NotImplementedError
+        app = Flask(__name__)
+
+        ## BEGIN REST routes. ##################################################
+
+        @app.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+                return pickle.dumps(center_variable, -1)
+
+        @app.route('/update', methods=['GET'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            iteration = data['iteration']
+            worker_id = data['worker_id']
+
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
+                self.iteration += 1
+
+            return 'OK'
+
+        @app.route('/shutdown', methods=['GET'])
+        def shutdown():
+            f = request.environ.get('werkzeug.server.shutdown')
+            f()
+
+            return 'OK'
+
+        ## END REST routes. ####################################################
+
+        app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 class AsynchronousEASGD(AsynchronousDistributedTrainer):
 

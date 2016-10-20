@@ -80,10 +80,64 @@ class EASGDWorker(object):
 
         return iter([])
 
+class AsynchronousEAMSGDWorker(object):
+
+    def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
+                 label_col="label", batch_size=32, rho=5.0, learning_rate=0.01, master_host="localhost",
+                 master_port=5000, communication_window=10, momentum=0.95):
+        self.model = keras_model
+        self.features_column = features_col
+        self.label_column = label_col
+        self.optimizer = worker_optimizer
+        self.loss = loss
+        self.master_host = master_host
+        self.master_port = master_port
+        self.center_variable = None
+        self.batch_size = batch_size
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.momentum = momentum
+        self.iteration = 1
+        self.communication_window = communication_window
+        self.alpha = self.learning_rate * self.rho
+
+    def master_send_ed(self, worker_id, variable):
+        data = {}
+        data['worker_id'] = worker_id
+        data['iteration'] = self.iteration
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, "/update", data)
+
+    def fetch_center_variable(self):
+        c_v = rest_get(self.master_host, self.master_port, "/center_variable")
+        self.center_variable = np.asarray(c_v)
+
+    def train(self, index, iterator):
+        model = deserialize_keras_model(self.model)
+        model.compile(loss=self.loss,
+                      optimizer=self.optimizer,
+                      metrics=['accuracy'])
+        try:
+            while True:
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                if self.iteration % self.communication_window == 0:
+                    # TODO Implement.
+                    pass
+                # TODO Implement.
+                model.train_on_batch(X, Y)
+                self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
+
 class AsynchronousEASGDWorker(object):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features", label_col="label",
-                 batch_size=1000, rho=5.0, learning_rate=0.01, master_host="localhost",
+                 batch_size=32, rho=5.0, learning_rate=0.01, master_host="localhost",
                  master_port=5000, communication_window=5):
         self.model = keras_model
         self.features_column = features_col
@@ -131,7 +185,7 @@ class AsynchronousEASGDWorker(object):
                     model.set_weights(W)
                     # Sent the elastic difference back to the master.
                     self.master_send_ed(index, E)
-                model.fit(X, Y, nb_epoch=1)
+                model.train_on_batch(X, Y)
                 self.iteration += 1
         except StopIteration:
             pass
