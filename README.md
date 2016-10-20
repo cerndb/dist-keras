@@ -64,7 +64,7 @@ A single trainer is in all simplicity a trainer which will use a single Spark th
 SingleTrainer(keras_model, num_epoch=1, batch_size=1000, features_col="features", label_col="label")
 ```
 
-### EASGD (currently recommended, testing AEASGD)
+### EASGD
 
 The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[1]](https://arxiv.org/pdf/1412.6651.pdf) .
 
@@ -74,12 +74,22 @@ We want to note the basic version of EASGD is a synchronous algorithm, i.e., onc
 EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label")
 ```
 
-### Asynchronous EASGD
+### Asynchronous EASGD (currently recommended)
 
 In this section we propose the asynchronous version of [EASGD](#easgd). Instead of waiting on the synchronization of other trainers, this method communicates the elastic difference (as described in the paper), with the parameter server. The only synchronization mechanism that has been implemented, is to ensure no race-conditions occur when updating the center variable.
 
 ```python
 AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
+```
+
+## Asynchronous EAMSGD
+
+Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term.
+
+```python
+AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                  features_col="features", label_col="label", communication_window=10,
+                  rho=5.0, learning_rate=0.01, momentum=0.9, master_port=5000, num_epoch=1)
 ```
 
 ### DOWNPOUR

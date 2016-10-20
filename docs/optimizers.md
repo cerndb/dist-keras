@@ -50,7 +50,7 @@ TODO
 
 ## Asynchronous EAMSGD
 
-TODO
+Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term.
 
 ```python
 AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
