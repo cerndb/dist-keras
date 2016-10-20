@@ -235,7 +235,7 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
         # Initialize the default model parameters.
         self.initialize_variables()
 
-    def initialize_varialbes(self):
+    def initialize_variables(self):
         self.model = deserialize_keras_model(self.master_model)
 
     def stop_service(self):
