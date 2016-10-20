@@ -239,7 +239,7 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
         self.model = deserialize_keras_model(self.master_model)
 
     def stop_service(self):
-        rest_get_pint(self.master_host, self.master_port, '/shutdown')
+        rest_get_ping(self.master_host, self.master_port, '/shutdown')
         self.parameter_server.join()
 
     def allocate_worker(self):
