@@ -243,7 +243,20 @@ class AsynchronousEAMSGD(AsynchronousDistributedTrainer):
         self.parameter_server.join()
 
     def allocate_worker(self):
-        raise NotImplementedError
+        worker = AsynchronousEAMSGDWorker(keras_model=self.master_model,
+                                          features_col=self.features_column,
+                                          label_col=self.label_column,
+                                          rho=self.rho,
+                                          learning_rate=self.learning_rate,
+                                          communication_window=self.communication_window,
+                                          momentum=self.momentum,
+                                          batch_size=self.batch_size,
+                                          master_host=self.master_host,
+                                          master_port=self.master_port,
+                                          worker_optimizer=self.worker_optimizer,
+                                          loss=self.loss)
+
+        return worker
 
     def service(self):
         app = Flask(__name__)

@@ -48,6 +48,20 @@ AsynchronousEASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size
 
 TODO
 
+## Asynchronous EAMSGD
+
+TODO
+
+```python
+AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                  features_col="features", label_col="label", communication_window=10,
+                  rho=5.0, learning_rate=0.01, momentum=0.9, master_port=5000, num_epoch=1)
+```
+
+**Parameters**:
+
+TODO
+
 ## DOWNPOUR
 
 An asynchronous stochastic gradient descent procedure supporting a large number of model replicas and leverages adaptive learning rates. This implementation is based on the pseudocode provided by [Zhang et al.](https://arxiv.org/pdf/1412.6651.pdf)
