@@ -117,6 +117,9 @@ class AsynchronousEAMSGDWorker(object):
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
+        # Initialize the residual weight matrices.
+        v = np.asarray(model.get_weights())
+        v.fill(0.0)
         try:
             while True:
                 batch = [next(iterator) for _ in range(self.batch_size)]
@@ -124,10 +127,23 @@ class AsynchronousEAMSGDWorker(object):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 if self.iteration % self.communication_window == 0:
-                    # TODO Implement.
-                    pass
-                # TODO Implement.
+                    self.fetch_center_variable()
+                    W = np.asarray(model.get_weights())
+                    # Compute the elastic difference.
+                    E = self.alpha * (W - self.center_variable)
+                    W = W - E
+                    model.set_weights(W)
+                    self.master_send_ed(index, E)
+                v_t = self.momentum * v
+                W_backup = np.asarray(model.get_weights())
+                W = np.asarray(model.get_weights())
+                W += v_t
+                model.set_weights(W)
                 model.train_on_batch(X, Y)
+                gradient = np.asarray(model.get_weights()) - W
+                v = v_t - self.learning_rate * gradient
+                W_backup += v
+                model.set_weights(W_backup)
                 self.iteration += 1
         except StopIteration:
             pass
