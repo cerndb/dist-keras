@@ -407,7 +407,6 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 master_port=self.master_port,
                                 learning_rate=self.learning_rate,
                                 communication_window=self.communication_window,
-                                nb_epoch=self.nb_epoch,
                                 worker_optimizer=self.worker_optimizer,
                                 loss=self.loss)
 
