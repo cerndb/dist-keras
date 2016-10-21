@@ -75,6 +75,8 @@
                 
                     <li><a class="toctree-l4" href="#asynchronous-easgd">Asynchronous EASGD</a></li>
                 
+                    <li><a class="toctree-l4" href="#asynchronous-eamsgd">Asynchronous EAMSGD</a></li>
+                
                     <li><a class="toctree-l4" href="#downpour">DOWNPOUR</a></li>
                 
                     <li><a class="toctree-l4" href="#custom-distributed-optimizer">Custom distributed optimizer</a></li>
@@ -159,6 +161,15 @@
 <pre><code class="python">AsynchronousEASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=1000,
                   features_col=&quot;features&quot;, label_col=&quot;label&quot;, communication_window=3,
                   rho=0.01, learning_rate=0.01, master_port=5000, num_epoch=1)
+</code></pre>
+
+<p><strong>Parameters</strong>:</p>
+<p>TODO</p>
+<h2 id="asynchronous-eamsgd">Asynchronous EAMSGD</h2>
+<p>Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term.</p>
+<pre><code class="python">AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                  features_col=&quot;features&quot;, label_col=&quot;label&quot;, communication_window=10,
+                  rho=5.0, learning_rate=0.01, momentum=0.9, master_port=5000, num_epoch=1)
 </code></pre>
 
 <p><strong>Parameters</strong>:</p>
