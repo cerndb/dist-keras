@@ -38,14 +38,17 @@ class LabelVectorTransformer(Transformer):
         self.output_dim = output_dim
 
     def _transform(self, iterator):
+        rows = []
         try:
             for row in iterator:
                 label = row[self.input_column]
                 v = to_dense_vector(label, self.output_dim)
                 row.__dict__[self.output_column] = v
-                yield row
+                rows.append(row)
         except TypeError:
             pass
+
+        return iter(rows)
 
     def transform(self, data):
         return data.rdd.mapPartitions(self._transform)
