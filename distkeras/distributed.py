@@ -38,9 +38,9 @@ class LabelVectorTransformer(Transformer):
         self.output_dim = output_dim
 
     def _transform(self, row):
-        label = row[self.input_col]
+        label = row[self.input_columm]
         vector = to_dense_vector(label, self.output_dim)
-        row.__dict__[self.output_col] = vector
+        row.__dict__[self.output_column] = vector
 
         return row
 
