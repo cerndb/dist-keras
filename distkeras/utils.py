@@ -22,7 +22,7 @@ def to_dense_vector(value, n_dim=2):
     vector = np.zeros(n_dim)
     vector[value] = 1.0
 
-    return DenseVector(vector)
+    return DenseVector(vector.tolist())
 
 def new_dataframe_row(old_row, column_name, column_value):
 
