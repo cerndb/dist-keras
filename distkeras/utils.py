@@ -25,6 +25,7 @@ def to_dense_vector(value, n_dim=2):
     return DenseVector(vector)
 
 def new_dataframe_row(old_row, column_name, column_value):
+
     d = old_row.asDict(True)
     d[column_name] = column_value
     new_row = Row(**dict(d))

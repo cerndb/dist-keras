@@ -12,8 +12,6 @@ from distkeras.workers import *
 from flask import Flask, request
 
 from pyspark.mllib.linalg import DenseVector
-from pyspark.sql.functions import udf
-from pyspark.sql.types import *
 
 from threading import Lock
 
@@ -39,9 +37,15 @@ class LabelVectorTransformer(Transformer):
         self.output_column = output_col
         self.output_dim = output_dim
 
+    def _transform(self, row):
+        label = row[self.input_col]
+        vector = to_dense_vector(label, self.output_dim)
+        row.__dict__[self.output_col] = vector
+
+        return row
+
     def transform(self, data):
-        f = udf(to_dense_vector, ArrayType(DecimalType()))
-        return data.withColumn(self.output_column, f(self.input_column))
+        return data.rdd.map(self._transform)
 
 class LabelIndexTransformer(Transformer):
 
