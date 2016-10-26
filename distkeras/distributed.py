@@ -37,21 +37,13 @@ class LabelVectorTransformer(Transformer):
         self.output_column = output_col
         self.output_dim = output_dim
 
-    def _transform(self, iterator):
-        rows = []
-        try:
-            for row in iterator:
-                label = row[self.input_column]
-                v = DenseVector(to_vector(label, self.output_dim).tolist())
-                new_row = new_dataframe_row(row, self.output_column, v)
-                rows.append(new_row)
-        except TypeError:
-            pass
+    def _transform(self, value):
+        v = DenseVector(to_vector(value, self.output_dim).tolist())
 
-        return iter(rows)
+        return v
 
     def transform(self, data):
-        return data.rdd.mapPartitions(self._transform)
+        return data.withColumn(self.output_column, self._transform(self.input_column))
 
 class LabelIndexTransformer(Transformer):
 
