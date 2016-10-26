@@ -39,12 +39,9 @@ class LabelVectorTransformer(Transformer):
         self.output_column = output_col
         self.output_dim = output_dim
 
-    def _transform(self, value):
-        v = DenseVector(to_vector(value, self.output_dim))
-        return v
-
     def transform(self, data):
-        return data.withColumn(self.output_column, self._transform(self.input_column))
+        f = udf(to_dense_vector, StringType())
+        return data.withColumn(self.output_column, f(self.input_column))
 
 class LabelIndexTransformer(Transformer):
 

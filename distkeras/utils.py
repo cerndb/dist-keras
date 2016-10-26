@@ -7,6 +7,8 @@ Utils module.
 from pyspark.sql import Row
 
 from pyspark.sql.functions import rand
+from pyspark.sql.functions import udf
+from pyspark.sql.types import *
 
 from keras.models import model_from_json
 
@@ -16,11 +18,11 @@ import numpy as np
 
 ## END Import. #################################################################
 
-def to_vector(x, n_dim):
+def to_dense_vector(value, n_dim):
     vector = np.zeros(n_dim)
-    vector[x] = 1.0
+    vector[value] = 1.0
 
-    return vector
+    return DenseVector(vector)
 
 def new_dataframe_row(old_row, column_name, column_value):
     d = old_row.asDict(True)
