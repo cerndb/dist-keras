@@ -12,6 +12,7 @@ from distkeras.workers import *
 from flask import Flask, request
 
 from pyspark.mllib.linalg import DenseVector
+from pyspark.sql import Row
 
 from threading import Lock
 
@@ -38,13 +39,14 @@ class LabelVectorTransformer(Transformer):
         self.output_dim = output_dim
 
     def _transform(self, iterator):
+        # Row(row.__fields__ + ["day"])(row + (row.date_time.day, ))
         rows = []
         try:
             for row in iterator:
                 label = row[self.input_column]
                 v = to_dense_vector(label, self.output_dim)
-                row[self.output_column] = v
-                rows.append(row)
+                r = Row(row.__fields__ + [self.output_column])(row + (v, ))
+                rows.append(r)
         except TypeError:
             pass
 
