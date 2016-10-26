@@ -37,15 +37,18 @@ class LabelVectorTransformer(Transformer):
         self.output_column = output_col
         self.output_dim = output_dim
 
-    def _transform(self, row):
-        label = row[self.input_columm]
-        vector = to_dense_vector(label, self.output_dim)
-        row.__dict__[self.output_column] = vector
-
-        return row
+    def _transform(self, iterator):
+        try:
+            for row in iterator:
+                label = row[self.input_column]
+                v = to_dense_vector(label, self.output_dim)
+                row.__dict__[self.output_column] = v
+                yield row
+        except TypeError:
+            pass
 
     def transform(self, data):
-        return data.rdd.map(self._transform)
+        return data.rdd.mapPartitions(self._transform)
 
 class LabelIndexTransformer(Transformer):
 
