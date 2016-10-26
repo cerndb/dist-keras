@@ -5,7 +5,7 @@ Utils module.
 ## BEGIN Import. ###############################################################
 
 from pyspark.sql import Row
-
+from pyspark.mllib.linalg import DenseVector
 from pyspark.sql.functions import rand
 from pyspark.sql.functions import udf
 from pyspark.sql.types import *
