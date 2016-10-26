@@ -40,7 +40,7 @@ class LabelVectorTransformer(Transformer):
         self.output_dim = output_dim
 
     def transform(self, data):
-        f = udf(to_dense_vector, ArrayType())
+        f = udf(to_dense_vector, ArrayType(DecimalType()))
         return data.withColumn(self.output_column, f(self.input_column))
 
 class LabelIndexTransformer(Transformer):
