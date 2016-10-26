@@ -18,7 +18,7 @@ import numpy as np
 
 ## END Import. #################################################################
 
-def to_dense_vector(value, n_dim):
+def to_dense_vector(value, n_dim=2):
     vector = np.zeros(n_dim)
     vector[value] = 1.0
 
