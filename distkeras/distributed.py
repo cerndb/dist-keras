@@ -38,8 +38,7 @@ class LabelVectorTransformer(Transformer):
         self.output_dim = output_dim
 
     def _transform(self, value):
-        v = DenseVector(to_vector(value, self.output_dim)
-
+        v = DenseVector(to_vector(value, self.output_dim))
         return v
 
     def transform(self, data):
