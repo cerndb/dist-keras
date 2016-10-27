@@ -24,8 +24,8 @@ def to_dense_vector(value, n_dim=2):
 
     return DenseVector(vector)
 
-def new_dataframe_row_fast(old_row, column_name, column_value):
-    r = Row(old_row.__fields__ + [column_name])(old_row + (column_value, ))
+def new_dataframe_row_fast(old_row, column_name, column_value, value_type):
+    r = Row(old_row.__fields__ + [column_name])(old_row + (column_value, value_type))
 
     return r
 
