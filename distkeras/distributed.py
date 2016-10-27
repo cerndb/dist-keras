@@ -109,7 +109,7 @@ class ModelPredictor(Predictor):
         return iter(rows)
 
     def predict(self, data):
-        return data.rdd.mapPartitions(self._predict)
+        return data.rdd.mapPartitions(self._predict).toDF()
 
 ## END Predictors. #############################################################
 
