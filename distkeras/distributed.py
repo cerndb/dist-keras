@@ -41,7 +41,7 @@ class LabelVectorTransformer(Transformer):
     def _transform(self, row):
         label = row[self.input_column]
         v = to_dense_vector(label, self.output_dim)
-        new_row = new_dataframe_row_fast(row, self.output_column, v)
+        new_row = new_dataframe_row(row, self.output_column, v)
 
         return new_row
 
@@ -67,7 +67,7 @@ class LabelIndexTransformer(Transformer):
     def _transform(self, row):
         v = row[self.input_column]
         index = float(self.get_index(v))
-        new_row = new_dataframe_row_fast(row, self.output_column, index)
+        new_row = new_dataframe_row(row, self.output_column, index)
 
         return new_row
 

@@ -24,18 +24,10 @@ def to_dense_vector(value, n_dim=2):
 
     return DenseVector(vector)
 
-def new_dataframe_row_fast(old_row, column_name, column_value):
+def new_dataframe_row(old_row, column_name, column_value):
     r = Row(*(old_row.__fields__ + [column_name]))(*(old_row + (column_value, )))
 
     return r
-
-def new_dataframe_row(old_row, column_name, column_value):
-
-    d = old_row.asDict(True)
-    d[column_name] = column_value
-    new_row = Row(**dict(d))
-
-    return new_row
 
 def serialize_keras_model(model):
     d = {}
