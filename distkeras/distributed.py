@@ -46,7 +46,7 @@ class LabelVectorTransformer(Transformer):
         return new_row
 
     def transform(self, data):
-        return data.map(self._transform).toDF()
+        return data.rdd.map(self._transform).toDF()
 
 class LabelIndexTransformer(Transformer):
 
@@ -64,21 +64,15 @@ class LabelIndexTransformer(Transformer):
                 return index
         return self.default_index
 
-    def _transform(self, iterator):
-        rows = []
-        try:
-            for row in iterator:
-                output_vector = row[self.input_column]
-                index = float(self.get_index(output_vector))
-                new_row = new_dataframe_row(row, self.output_column, index)
-                rows.append(new_row)
-        except ValueError:
-            pass
+    def _transform(self, row):
+        v = row[self.input_column]
+        index = float(self.get_index(v))
+        new_row = new_dataframe_row_fast(row, self.output_column, index)
 
-        return iter(rows)
+        return new_row
 
     def transform(self, data):
-        return data.rdd.mapPartitions(self._transform)
+        return data.rdd.map(self._transform).toDF()
 
 ## END Transformers. ###########################################################
 
