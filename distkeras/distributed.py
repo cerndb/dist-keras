@@ -39,7 +39,7 @@ class LabelVectorTransformer(Transformer):
 
     def _transform(self, iterator):
         rows = []
-        for return ow in iterator:
+        for row in iterator:
             label = row[self.input_column]
             v = to_dense_vector(label, self.output_dim)
             new_row = new_dataframe_row(row, self.output_column, v)
