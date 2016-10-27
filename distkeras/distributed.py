@@ -63,7 +63,7 @@ class LabelVectorTransformerUDF(Transformer):
         v = to_dense_vector(label, self.output_dim)
         new_row = new_dataframe_row_fast(row, self.output_column, v)
 
-        return row
+        return new_row
 
     def transform(self, data):
         return data.map(self._transform).toDF()
