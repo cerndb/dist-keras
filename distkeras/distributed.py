@@ -51,6 +51,23 @@ class LabelVectorTransformer(Transformer):
     def transform(self, data):
         return data.rdd.mapPartitions(self._transform)
 
+class LabelVectorTransformerUDF(Transformer):
+
+    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
+        self.input_column = input_col
+        self.output_column = output_col
+        self.output_dim = output_dim
+
+    def _transform(self, row):
+        label = row[self.input_column]
+        v = to_dense_vector(label, self.output_dim)
+        new_row = new_dataframe_row_fast(row, self.output_column, v)
+
+        return row
+
+    def transform(self, data):
+        return data.map(self._transform).toDF()
+
 class LabelIndexTransformer(Transformer):
 
     def __init__(self, output_dim, input_col="prediction", output_col="predicted_index",
