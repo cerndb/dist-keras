@@ -94,19 +94,13 @@ class ModelPredictor(Predictor):
         self.output_column = output_col
 
     def _predict(self, iterator):
-        rows = []
         model = deserialize_keras_model(self.model)
-        try:
-            for row in iterator:
-                X = np.asarray([row[self.features_column]])
-                Y = model.predict(X)
-                v = DenseVector(Y[0])
-                new_row = new_dataframe_row(row, self.output_column, v)
-                rows.append(new_row)
-        except ValueError:
-            pass
-
-        return iter(rows)
+        for row in iterator:
+            X = np.asarray([row[self.features_column]])
+            Y = model.predict(X)
+            v = DenseVector(Y[0])
+            new_row = new_dataframe_row(row, self.output_column, v)
+            yield new_row
 
     def predict(self, data):
         return data.rdd.mapPartitions(self._predict).toDF()
