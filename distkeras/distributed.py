@@ -188,7 +188,7 @@ class AsynchronousDistributedTrainer(Trainer):
         if numPartitions > self.num_workers:
             data = data.coalesce(self.num_workers)
         else:
-            data = data.repartition(self.num_workers)
+            data = data.repartition(self.num_workers * 3)
         if shuffle:
             data = shuffle(data)
         for i in range(0, self.num_epoch):
