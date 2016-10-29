@@ -616,3 +616,9 @@ class EASGD(SynchronizedDistributedTrainer):
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 ## END Trainers. ###############################################################
+
+## BEGIN Research Trainers. ####################################################
+
+
+
+## END Research Trainers. ######################################################

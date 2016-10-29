@@ -120,3 +120,22 @@ def batches(iterable, n):
         batch.append(iterable[i:min(i + n, 1)])
 
     return np.asarray(batch)
+
+def get_weight_matrix_indices(model):
+    matrices = np.asarray(model.get_weights())
+    num_matrices = len(matrices)
+    indices = []
+    for i in range(0, num_matrices):
+        if matrices[i].any():
+            indices.append(i)
+
+    return indices
+
+def vectorize(model, weight_indices):
+    matrices = model.get_weights()
+    v = np.array([])
+    for i in weight_indices:
+        flat = matrices[i].flatten()
+        v = np.hstack((v, flat))
+
+    return v
