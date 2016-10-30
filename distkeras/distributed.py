@@ -116,6 +116,16 @@ class Trainer(object):
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
         self.worker_optimizer = worker_optimizer
+        self.history = []
+
+    def get_history():
+        return self.history
+
+    def has_history():
+        return len(self.history) > 0
+
+    def history_add(history):
+        self.history.append(history)
 
     def train(self, data, shuffle=False):
         raise NotImplementedError
@@ -616,9 +626,3 @@ class EASGD(SynchronizedDistributedTrainer):
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
 ## END Trainers. ###############################################################
-
-## BEGIN Research Trainers. ####################################################
-
-
-
-## END Research Trainers. ######################################################
