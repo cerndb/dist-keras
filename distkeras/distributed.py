@@ -5,7 +5,7 @@ methods.
 
 ## BEGIN Imports. ##############################################################
 
-from distkeras.networking import *
+from distkeras.networking import
 from distkeras.utils import *
 from distkeras.workers import *
 
@@ -25,90 +25,6 @@ import threading
 import time
 
 ## END Imports. ################################################################
-
-## BEGIN Transformers. #########################################################
-
-class Transformer(object):
-
-    def transform(self, data):
-        raise NotImplementedError
-
-class LabelVectorTransformer(Transformer):
-
-    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
-        self.input_column = input_col
-        self.output_column = output_col
-        self.output_dim = output_dim
-
-    def _transform(self, row):
-        label = row[self.input_column]
-        v = to_dense_vector(label, self.output_dim)
-        new_row = new_dataframe_row(row, self.output_column, v)
-
-        return new_row
-
-    def transform(self, data):
-        return data.rdd.map(self._transform).toDF()
-
-class LabelIndexTransformer(Transformer):
-
-    def __init__(self, output_dim, input_col="prediction", output_col="predicted_index",
-                 default_index=0, activation_threshold=0.55):
-        self.input_column = input_col
-        self.output_column = output_col
-        self.output_dim = output_dim
-        self.activation_threshold = activation_threshold
-        self.default_index = default_index
-
-    def get_index(self, vector):
-        for index in range(0, self.output_dim):
-            if vector[index] >= self.activation_threshold:
-                return index
-
-        return self.default_index
-
-    def _transform(self, row):
-        v = row[self.input_column]
-        index = float(self.get_index(v))
-        new_row = new_dataframe_row(row, self.output_column, index)
-
-        return new_row
-
-    def transform(self, data):
-        return data.rdd.map(self._transform).toDF()
-
-## END Transformers. ###########################################################
-
-## BEGIN Predictors. ###########################################################
-
-class Predictor(Transformer):
-
-    def __init__(self, keras_model):
-        self.model = serialize_keras_model(keras_model)
-
-    def predict(self, data):
-        raise NotImplementedError
-
-class ModelPredictor(Predictor):
-
-    def __init__(self, keras_model, features_col="features", output_col="prediction"):
-        super(ModelPredictor, self).__init__(keras_model)
-        self.features_column = features_col
-        self.output_column = output_col
-
-    def _predict(self, iterator):
-        model = deserialize_keras_model(self.model)
-        for row in iterator:
-            X = np.asarray([row[self.features_column]])
-            Y = model.predict(X)
-            v = DenseVector(Y[0])
-            new_row = new_dataframe_row(row, self.output_column, v)
-            yield new_row
-
-    def predict(self, data):
-        return data.rdd.mapPartitions(self._predict).toDF()
-
-## END Predictors. #############################################################
 
 ## BEGIN Trainers. #############################################################
 
@@ -142,7 +58,6 @@ class Trainer(object):
 
     def add_history(self, history):
         # Add every metric to the appropriate list.
-        print(history)
         self.history.append(history)
 
     def train(self, data, shuffle=False):
