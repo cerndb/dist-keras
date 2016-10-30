@@ -118,7 +118,7 @@ class Trainer(object):
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
         self.worker_optimizer = worker_optimizer
-        self.history = []
+        self.history = {}
         self.training_time_start = 0
         self.training_time_end = 0
         self.training_time = 0
@@ -140,8 +140,12 @@ class Trainer(object):
     def has_history():
         return len(self.history) > 0
 
-    def history_add(history):
-        self.history.append(history)
+    def add_history(history):
+        # Add every metric to the appropriate list.
+        for k in history:
+            if not k in self.history:
+                self.history[k] = []
+            self.history[k].append(history[k])
 
     def train(self, data, shuffle=False):
         raise NotImplementedError
@@ -609,12 +613,14 @@ class EASGD(SynchronizedDistributedTrainer):
             variable = data['variable']
             iteration = data['iteration']
             worker_id = data['worker_id']
+            history = data['history']
 
             self.set_ready(False)
             # Check if the variable update is the correct iteration.
             if iteration == self.iteration:
                 with self.mutex:
                     self.variables[worker_id] = variable
+                    self.add_history(history)
                     num_variables = len(self.variables)
                     # Check if the gradients of all workers are available.
                 if num_variables == self.num_workers:
