@@ -118,7 +118,7 @@ class Trainer(object):
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
         self.worker_optimizer = worker_optimizer
-        self.history = {}
+        self.history = []
         self.training_time_start = 0
         self.training_time_end = 0
         self.training_time = 0
@@ -134,18 +134,16 @@ class Trainer(object):
     def get_training_time(self):
         return self.training_time
 
-    def get_history():
+    def get_history(self):
         return self.history
 
-    def has_history():
+    def has_history(self):
         return len(self.history) > 0
 
     def add_history(self, history):
         # Add every metric to the appropriate list.
-        for k in history:
-            if not k in self.history:
-                self.history[k] = []
-            self.history[k].append(history[k])
+        print(history)
+        self.history.append(history)
 
     def train(self, data, shuffle=False):
         raise NotImplementedError
