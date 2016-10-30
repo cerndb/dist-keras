@@ -218,9 +218,11 @@ class AsynchronousDistributedTrainer(Trainer):
             data = data.repartition(self.num_workers * 3)
         if shuffle:
             data = shuffle(data)
+        self.record_training_start()
         for i in range(0, self.num_epoch):
             self.reset_variables()
             data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.record_training_end()
         self.stop_service()
 
         return self.model
@@ -524,9 +526,11 @@ class SynchronizedDistributedTrainer(Trainer):
         # Check if the data needs to be shuffled.
         if shuffle:
             data = shuffle(data)
+        self.record_training_start()
         for i in range(0, self.num_epoch):
             self.set_ready(False)
             data.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.record_training_end()
         # Stop the communication service.
         self.stop_service()
 
