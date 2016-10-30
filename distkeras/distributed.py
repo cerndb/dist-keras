@@ -11,9 +11,6 @@ from distkeras.workers import *
 
 from flask import Flask, request
 
-from pyspark.mllib.linalg import DenseVector
-from pyspark.sql.types import *
-
 from threading import Lock
 
 import cPickle as pickle
@@ -25,8 +22,6 @@ import threading
 import time
 
 ## END Imports. ################################################################
-
-## BEGIN Trainers. #############################################################
 
 class Trainer(object):
 
@@ -89,8 +84,6 @@ class SingleTrainer(Trainer):
         model = deserialize_keras_model(model[0])
 
         return model
-
-## BEGIN Asynchronous trainers. ################################################
 
 class AsynchronousDistributedTrainer(Trainer):
 
@@ -379,10 +372,6 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
 
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
 
-## END Asynchronous trainers. ##################################################
-
-## BEGIN Synchronous trainers. #################################################
-
 class SynchronizedDistributedTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
@@ -563,5 +552,3 @@ class EASGD(SynchronizedDistributedTrainer):
         ## END REST routes. ####################################################
 
         app.run(host='0.0.0.0', threaded=True, use_reloader=False)
-
-## END Trainers. ###############################################################
