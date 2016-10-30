@@ -52,7 +52,6 @@ class Trainer(object):
         return len(self.history) > 0
 
     def add_history(self, history):
-        # Add every metric to the appropriate list.
         self.history.append(history)
 
     def train(self, data, shuffle=False):
@@ -68,22 +67,31 @@ class SingleTrainer(Trainer):
         self.num_epoch = num_epoch
         self.batch_size = batch_size
 
-    def train(self, data, shuffle=False):
-        data = data.coalesce(1)
-        if shuffle:
-            data = shuffle(data)
-        # Fetch the master model.
-        model = self.master_model
-        for i in range(0, self.num_epoch):
-            # Allocate a worker.
-            worker = SingleTrainerWorker(keras_model=model, features_col=self.features_column,
+    def allocate_worker(self):
+        worker = SingleTrainerWorker(keras_model=self.master_model, features_col=self.features_column,
                                          label_col=self.label_column, batch_size=self.batch_size,
                                          worker_optimizer=self.worker_optimizer, loss=self.loss)
-            # Fetch the trained model.
-            model = data.rdd.mapPartitions(worker.train).collect()
-        model = deserialize_keras_model(model[0])
 
-        return model
+        return worker
+
+    def train(self, data, shuffle=False):
+        # Check if the data needs to be shuffled.
+        if shuffle:
+            data = shuffle(data)
+        # Collect all the data on a single worker node.
+        data = data.coalesce(1)
+        # Start recording training time.
+        self.record_training_start()
+        # Iterate through the number of records.
+        for i in range(0, self.num_epoch):
+            # Allocate a worker.
+            worker = self.allocate_worker()
+            # Fetch the trained model.
+            self.master_model = data.rdd.mapPartitions(worker.train).collect()[0]
+        # Stop recording of training time.
+        self.record_training_end()
+
+        return deserialize_keras_model(self.master_model)
 
 class AsynchronousDistributedTrainer(Trainer):
 
