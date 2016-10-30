@@ -140,7 +140,7 @@ class Trainer(object):
     def has_history():
         return len(self.history) > 0
 
-    def add_history(history):
+    def add_history(self, history):
         # Add every metric to the appropriate list.
         for k in history:
             if not k in self.history:
