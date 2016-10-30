@@ -10,6 +10,8 @@ import socket
 
 import urllib2
 
+import zlib as zl
+
 ## END Imports. ################################################################
 
 def determine_host_address():
@@ -17,18 +19,23 @@ def determine_host_address():
 
     return host_address
 
-def rest_post(host, port, endpoint, data):
+def rest_post(host, port, endpoint, data, compressed=False):
+    data = pickle.dumps(data, -1)
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
-                              pickle.dumps(data, -1),
-                              headers={'Content-Type': 'application/dist-keras'})
+                              data, headers={'Content-Type': 'application/dist-keras'})
+    if compressed:
+        data = zl.compress(data, zl.Z_BEST_COMPRESSION)
 
     return urllib2.urlopen(request).read()
 
-def rest_get(host, port, endpoint):
+def rest_get(host, port, endpoint, compressed=False):
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
                               headers={'Content-Type': 'application/dist-keras'})
+    data = pickle.loads(urllib2.urlopen(request).read())
+    if compressed:
+        data = zl.decompress(data)
 
-    return pickle.loads(urllib2.urlopen(request).read())
+    return data
 
 def rest_get_ping(host, port, endpoint):
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,

@@ -36,11 +36,12 @@ class EASGDWorker(object):
         self.iteration = 1
         self.learning_rate = learning_rate
 
-    def master_send_variable(self, worker_id, variable):
+    def master_send_variable(self, worker_id, variable, history):
         data = {}
         data['worker_id'] = worker_id
         data['iteration'] = self.iteration
         data['variable'] = variable
+        data['history'] = history
         rest_post(self.master_host, self.master_port, "/update", data)
 
     def master_is_ready(self):
@@ -66,10 +67,10 @@ class EASGDWorker(object):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 W1 = np.asarray(model.get_weights())
-                model.train_on_batch(X, Y)
+                history = model.train_on_batch(X, Y)
                 W2 = np.asarray(model.get_weights())
                 gradient = W2 - W1
-                self.master_send_variable(index, W2)
+                self.master_send_variable(index, W2, history)
                 W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
                 model.set_weights(W)
                 while not self.master_is_ready():
