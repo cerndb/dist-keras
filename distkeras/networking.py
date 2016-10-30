@@ -19,23 +19,18 @@ def determine_host_address():
 
     return host_address
 
-def rest_post(host, port, endpoint, data, compressed=False):
+def rest_post(host, port, endpoint, data):
     data = pickle.dumps(data, -1)
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
                               data, headers={'Content-Type': 'application/dist-keras'})
-    if compressed:
-        data = zl.compress(data, zl.Z_BEST_COMPRESSION)
 
     return urllib2.urlopen(request).read()
 
-def rest_get(host, port, endpoint, compressed=False):
+def rest_get(host, port, endpoint):
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
                               headers={'Content-Type': 'application/dist-keras'})
-    data = pickle.loads(urllib2.urlopen(request).read())
-    if compressed:
-        data = zl.decompress(data)
 
-    return data
+    return pickle.loads(urllib2.urlopen(request).read())
 
 def rest_get_ping(host, port, endpoint):
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,

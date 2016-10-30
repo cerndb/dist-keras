@@ -22,6 +22,8 @@ import numpy as np
 
 import threading
 
+import time
+
 ## END Imports. ################################################################
 
 ## BEGIN Transformers. #########################################################
@@ -117,6 +119,20 @@ class Trainer(object):
         self.loss = loss
         self.worker_optimizer = worker_optimizer
         self.history = []
+        self.training_time_start = 0
+        self.training_time_end = 0
+        self.training_time = 0
+
+    def record_training_start(self):
+        self.training_time = 0
+        self.training_time_start = time.time()
+
+    def record_training_end(self):
+        self.training_time_end = time.time()
+        self.training_time = self.training_time_start - self.training_time_end
+
+    def get_training_time(self):
+        return self.training_time
 
     def get_history():
         return self.history
