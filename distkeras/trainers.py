@@ -172,4 +172,10 @@ class EAMSGD(DistributedTrainer):
         return ps
 
     def allocate_worker(self):
-        raise NotImplementedError
+        # Allocate a EAMSGD REST worker.
+        w = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                         self.features_column, self.label_column, self.batch_size,
+                         self.master_host, self.master_port, self.rho, self.learning_rate,
+                         self.momentum, self.communication_window)
+
+        return w
