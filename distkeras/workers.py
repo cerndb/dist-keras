@@ -144,7 +144,7 @@ class EAMSGDWorker(NetworkWorker):
                 W += v_t
                 self.model.set_weights(W)
                 self.model.train_on_batch(X, Y)
-                gradient = np.asarray(model.get_weights()) - W
+                gradient = np.asarray(self.model.get_weights()) - W
                 v = v_t - self.learning_rate * gradient
                 W_copy -= v
                 self.model.set_weights(W_copy)
