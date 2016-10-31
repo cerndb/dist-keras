@@ -146,7 +146,7 @@ class DistributedTrainer(Trainer):
         self.record_training_start()
         # Iterate through the epochs.
         for i in range(0, self.num_epoch):
-            dataframe.rdd.mapPartitions(worker.train).collect()
+            dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
