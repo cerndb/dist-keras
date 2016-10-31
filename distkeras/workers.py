@@ -106,7 +106,7 @@ class AEASGDWorker(NetworkWorker):
     def send_elastic_difference(self, ed):
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['variable'] = variable
+        data['variable'] = ed
         rest_post(self.master_host, self.master_port, '/update', data)
 
     def train(self, worker_id, iterator):
