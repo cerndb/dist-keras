@@ -85,7 +85,6 @@ class AEASGDParameterServer(RESTParameterServer):
         super(AEASGDParameterServer, self).__init__(model, master_port)
         self.rho = rho
         self.learning_rate = learning_rate
-        self.momentum = momentum
         self.mutex = Lock()
 
     def initialize(self):
