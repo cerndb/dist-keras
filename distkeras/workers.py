@@ -123,8 +123,8 @@ class EAMSGDWorker(NetworkWorker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray(x[self.features_column] for x in feature_iterator)
-                Y = np.asarray(x[self.label_column] for x in label_iterator)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
                     # Update the local worker with the center variable.
