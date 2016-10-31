@@ -79,6 +79,76 @@ class RESTParameterServer(ParameterServer):
         # Tell the REST server to shutdown.
         rest_get_ping(self.master_host, self.master_port, '/shutdown')
 
+class EASGDParameterServer(RESTParameterServer):
+
+    def __init__(self, model, rho, learning_rate, master_port, num_workers):
+        super(EASGDParameterServer, self).__init__(model, master_port)
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.mutex = Lock()
+        self.num_workers = num_workers
+        self.ready_mutex = Lock()
+        self.variables = {}
+        self.ready = False
+        self.iteration = 1
+
+    def is_ready(self):
+        with self.ready_mutex:
+            ready = self.ready
+
+        return ready
+
+    def set_ready(self, ready):
+        with self.ready_mutex:
+            self.ready = ready
+
+    def process_variables(self):
+        center_variable = self.model.get_weights()
+        temp = np.copy(center_variable)
+        temp.fill(0.0)
+
+        for i in range(0, self.num_workers):
+            temp += (self.rho * (self.variables[i] - center_variable))
+        temp /= float(self.num_workers)
+        temp *= self.learning_rate
+        center_variable += temp
+        self.model.set_weights(center_variable)
+
+    def initialize(self):
+
+        ## BEGIN EASGD REST routes. ############################################
+
+        @self.server.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return pickle.dumps(center_variable, -1)
+
+        @self.server.route('/update', methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+            worker_id = data['worker_id']
+            iteration = data['iteration']
+
+            self.set_ready(False)
+            # Check if the variable update is within the correct iteration.
+            if iteration == self.iteration:
+                with self.mutex:
+                    self.variables[worker_id] = variable
+                    num_variables = len(self.variables)
+                # Check if all parameter updates are available.
+                if num_variables == self.num_workers:
+                    self.process_variables()
+                    self.variables = {}
+                    self.set_ready(True)
+                    self.iteration += 1
+
+            return 'OK'
+
+        ## END EASGD REST routes. ##############################################
+
 class AEASGDParameterServer(RESTParameterServer):
 
     def __init__(self, model, rho, learning_rate, master_port):

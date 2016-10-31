@@ -84,6 +84,69 @@ class NetworkWorker(Worker):
     def train(self, worker_id, iterator):
         raise NotImplementedError
 
+class EASGDWorker(NetworkWorker):
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
+                 learning_rate=0.01):
+        # Initialize the parent object.
+        super(EASGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                          batch_size, master_host, master_port)
+        # Initialize EASGD specific variables.
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.iteration = 1
+
+    def send_variable(self, variable):
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['variable'] = variable
+        data['iteration'] = self.iteration
+        rest_post(self.master_host, self.master_port, '/update', data)
+
+    def master_ready(self):
+        data = {}
+        data['iteration'] = self.iteration
+        master_ready = int(rest_post(self.master_host, self.master_port, '/ready', data))
+
+        return master_ready == 1
+
+    def fetch_center_variable(self):
+        cv = rest_get(self.master_host, self.master_port, '/center_variable')
+        self.center_variable = np.asarray(cv)
+
+    def train(self, worker_id, iterator):
+        # Prepare the model.
+        self.prepare_model()
+        # Set the worker id.
+        self.set_worker_id(worker_id)
+        # Start the epoch training.
+        try:
+            while True:
+                # Fetch the center variable.
+                self.fetch_center_variable()
+                # Fetch the next mini-batch.
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                # Extract the feature and label vector.
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                W1 = np.asarray(self.model.get_weights())
+                self.model.train_on_batch(X, Y)
+                W2 = np.asarray(self.model.get_weights())
+                gradient = W2 - W1
+                self.send_variable(W2)
+                W = W1 - self.learning_rate * (gradient + self.rho * (W1 - self.center_variable))
+                self.model.set_weights(W)
+                # Wait for the master to synchronize the workers.
+                while not self.master_ready():
+                    time.sleep(0.1)
+                self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
+
 class AEASGDWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",

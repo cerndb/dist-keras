@@ -154,6 +154,32 @@ class DistributedTrainer(Trainer):
 
         return self.parameter_server.get_model()
 
+class EASGD(DistributedTrainer):
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, rho=5.0, learning_rate=0.01):
+        super(EASGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                    batch_size, features_col, label_col, num_epoch)
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.master_host = determine_host_address()
+        self.master_port = 5000
+
+    def allocate_parameter_server(self):
+        # Allocate the EASGD parameter server.
+        ps = EASGDParameterServer(self.master_model, self.rho, self.learning_rate,
+                                  self.master_port, self.num_workers)
+
+        return ps
+
+    def allocate_worker(self):
+        # Allocate EASGD worker.
+        w = EASGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                        self.features_column, self.label_column, self.batch_size,
+                        self.master_host, self.master_port, self.rho, self.learning_rate)
+
+        return w
+
 class AEASGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
