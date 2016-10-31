@@ -47,7 +47,7 @@ class SingleTrainerWorker(Worker):
         self.prepare_model()
         try:
             while True:
-                # Fetch the next batch.
+                # Fetch the next mini-batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Retrieve the feature and label vectors.
                 feature_iterator, label_iterator = tee(batch, 2)
@@ -83,6 +83,60 @@ class NetworkWorker(Worker):
 
     def train(self, worker_id, iterator):
         raise NotImplementedError
+
+class AEASGDWorker(NetworkWorker):
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
+                 learning_rate=0.01, communication_window=10):
+        # Initialize the parent object.
+        super(AEASGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                           batch_size, master_host, master_port)
+        # Initialize AEASGD specific variables.
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.communication_window = communication_window
+        self.alpha = self.rho * self.learning_rate
+        self.iteration = 1
+
+    def fetch_center_variable(self):
+        cv = rest_get(self.master_host, self.master_port, '/center_variable')
+        self.center_variable = np.asarray(cv)
+
+    def send_elastic_difference(self, ed):
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['variable'] = variable
+        rest_post(self.master_host, self.master_port, '/update', data)
+
+    def train(self, worker_id, iterator):
+        # Prepare the model.
+        self.prepare_model()
+        # Set the worker id.
+        self.set_worker_id(worker_id)
+        # Start the epoch training.
+        try:
+            while True:
+                # Fetch the next mini-batch.
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                # Extract the feature and label vector.
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                # Check if we need to communicate with the parameter server.
+                if self.iteration % self.communication_window == 0:
+                    self.fetch_center_variable()
+                    W = np.asarray(self.model.get_weights())
+                    E = self.alpha * (W - self.center_variable)
+                    W = W - E
+                    self.model.set_weights(W)
+                    self.send_elastic_difference(E)
+                self.model.train_on_batch(X, Y)
+                self.iteration += 1
+        except StopIteration:
+            pass
+
+        return iter([])
 
 class EAMSGDWorker(NetworkWorker):
 
@@ -121,7 +175,7 @@ class EAMSGDWorker(NetworkWorker):
         # Start the epoch training.
         try:
             while True:
-                # Fetch the next batch.
+                # Fetch the next mini-batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)

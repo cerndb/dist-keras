@@ -154,6 +154,34 @@ class DistributedTrainer(Trainer):
 
         return self.parameter_server.get_model()
 
+class AEASGD(DistributedTrainer):
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=10,
+                 rho=5.0, learning_rate=0.01):
+        super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                     batch_size, features_col, label_col, num_epoch)
+        self.communication_window = communication_window
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.master_host = determine_host_address()
+        self.master_port = 5000
+
+    def allocate_parameter_server(self):
+        # Allocate the asynchronous EASGD parameter server.
+        ps = AEASGDParameterServer(self.master_model, self.rho, self.learning_rate, self.master_port)
+
+        return ps
+
+    def allocate_worker(self):
+        # Allocate a AEASGD worker.
+        w = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                         self.features_column, self.label_column, self.batch_size,
+                         self.master_host, self.master_port, self.rho, self.learning_rate,
+                         self.communication_window)
+
+        return w
+
 class EAMSGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
@@ -170,9 +198,8 @@ class EAMSGD(DistributedTrainer):
 
     def allocate_parameter_server(self):
         # Allocate the asynchronous EAMSGD parameter server.
-        ps = EAMSGDParameterServer(self.master_model, self.communication_window,
-                                   self.rho, self.learning_rate, self.momentum,
-                                   self.master_port)
+        ps = EAMSGDParameterServer(self.master_model, self.rho, self.learning_rate,
+                                   self.momentum, self.master_port)
 
         return ps
 

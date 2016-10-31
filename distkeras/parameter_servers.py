@@ -79,11 +79,45 @@ class RESTParameterServer(ParameterServer):
         # Tell the REST server to shutdown.
         rest_get_ping(self.master_host, self.master_port, '/shutdown')
 
+class AEASGDParameterServer(RESTParameterServer):
+
+    def __init__(self, model, rho, learning_rate, master_port):
+        super(AEASGDParameterServer, self).__init__(model, master_port)
+        self.rho = rho
+        self.learning_rate = learning_rate
+        self.momentum = momentum
+        self.mutex = Lock()
+
+    def initialize(self):
+
+        ## BEGIN AEASGD REST routes. ###########################################
+
+        @self.server.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return pickle.dumps(center_variable, -1)
+
+        @self.server.route('/update', methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
+                self.next_update()
+
+            return 'OK'
+
+        ## END AEASGD REST routes. #############################################
+
 class EAMSGDParameterServer(RESTParameterServer):
 
-    def __init__(self, model, communication_window, rho, learning_rate, momentum, master_port):
+    def __init__(self, model, rho, learning_rate, momentum, master_port):
         super(EAMSGDParameterServer, self).__init__(model, master_port)
-        self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
         self.momentum = momentum
@@ -104,7 +138,6 @@ class EAMSGDParameterServer(RESTParameterServer):
         def update():
             data = pickle.loads(request.data)
             variable = data['variable']
-            worker_id = data['worker_id']
 
             with self.mutex:
                 center_variable = self.model.get_weights()
