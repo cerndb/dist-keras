@@ -35,7 +35,7 @@ class Trainer(object):
 
     def record_training_end(self):
         self.training_time_end = time.time()
-        self.training_time = self.training_time_start - self.training_time_end
+        self.training_time = self.training_time_end - self.training_time_start
 
     def get_training_time(self):
         return self.training_time
@@ -155,7 +155,7 @@ class DistributedTrainer(Trainer):
 class EAMSGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", communication_window=10,
+                 features_col="features", label_col="label", num_epoch=1,  communication_window=10,
                  rho=5.0, learning_rate=0.01, momentum=0.9):
         super(EAMSGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                      batch_size, features_col, label_col, num_epoch)
