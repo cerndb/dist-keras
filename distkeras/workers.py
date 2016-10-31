@@ -10,6 +10,8 @@ from distkeras.utils import *
 
 from itertools import tee
 
+import time
+
 import numpy as np
 
 ## END Imports. ################################################################
