@@ -147,6 +147,15 @@ class EASGDParameterServer(RESTParameterServer):
 
             return 'OK'
 
+        @self.server.route('/ready', methods=['POST'])
+        def ready():
+            data = pickle.loads(request.data)
+            iteration = data['iteration']
+            ready = self.get_ready()
+            ready = (ready or iteration < self.iteration)
+
+            return str(int(ready))
+
         ## END EASGD REST routes. ##############################################
 
 class AEASGDParameterServer(RESTParameterServer):
