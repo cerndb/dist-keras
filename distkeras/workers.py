@@ -24,10 +24,6 @@ class Worker(object):
         self.features_column = features_col
         self.label_column = label_col
         self.batch_size = batch_size
-        self.iteration = 0
-
-    def next_iteration(self):
-        self.iteration += 1
 
     def prepare_model(self):
         # Deserialize the Keras model.
@@ -71,6 +67,13 @@ class NetworkWorker(Worker):
                                             label_col, batch_size)
         self.master_host = master_host
         self.master_port = master_port
+        self.worker_id = 0
+
+    def set_worker_id(self, worker_id):
+        self.worker_id = worker_id
+
+    def get_worker_id(self):
+        return self.worker_id
 
     def get_master_host(self):
         return self.master_host
@@ -94,6 +97,17 @@ class EAMSGDWorker(NetworkWorker):
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.communication_window = communication_window
+        self.alpha = self.learning_rate * self.rho
+
+    def fetch_center_variable(self):
+        cv = rest_get(self.master_host, self.master_port, '/center_variable')
+        self.center_variable = np.asarray(cv)
+
+    def send_elastic_difference(self, ed):
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['variable'] = ed
+        rest_post(self.master_host, self.master_port, '/update', data)
 
     def train(self, worker_id, iterator):
         # Prepare the model.

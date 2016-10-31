@@ -104,7 +104,6 @@ class EAMSGDParameterServer(RESTParameterServer):
         def update():
             data = pickle.loads(request.data)
             variable = data['variable']
-            update_number = data['update_number']
             worker_id = data['worker_id']
 
             with self.mutex:
