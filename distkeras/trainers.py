@@ -126,6 +126,8 @@ class DistributedTrainer(Trainer):
         self.parameter_server_thread.start()
 
     def train(self, dataframe, shuffle=False):
+        # Allocate the parameter server.
+        self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
         self.start_service()
         # Allocate a worker.
@@ -163,11 +165,14 @@ class EAMSGD(DistributedTrainer):
         self.rho = rho
         self.learning_rate = learning_rate
         self.momentum = momentum
+        self.master_host = determine_host_address()
+        self.master_port = 5000
 
     def allocate_parameter_server(self):
         # Allocate the asynchronous EAMSGD parameter server.
         ps = EAMSGDParameterServer(self.master_model, self.communication_window,
-                                   self.rho, self.learning_rate, self.momentum)
+                                   self.rho, self.learning_rate, self.momentum,
+                                   self.master_port)
 
         return ps
 

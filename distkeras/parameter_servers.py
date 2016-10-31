@@ -53,7 +53,6 @@ class RESTParameterServer(ParameterServer):
 
     def __init__(self, model, port):
         super(RESTParameterServer, self).__init__(model)
-        self.master_host = determine_host_address()
         self.master_port = port
         self.server = Flask(__name__)
 
@@ -82,8 +81,8 @@ class RESTParameterServer(ParameterServer):
 
 class EAMSGDParameterServer(RESTParameterServer):
 
-    def __init__(self, model, communication_window, rho, learning_rate, momentum):
-        super(EAMSGDParameterServer, self).__init__(model, 5000)
+    def __init__(self, model, communication_window, rho, learning_rate, momentum, master_port):
+        super(EAMSGDParameterServer, self).__init__(model, master_port)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
