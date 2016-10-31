@@ -23,7 +23,7 @@ class ParameterServer(object):
 
     def __init__(self, model):
         self.model = deserialize_keras_model(model)
-        self.num_updates = 0
+        self.num_updates = 1
 
     def initialize(self):
         raise NotImplementedError
@@ -79,6 +79,39 @@ class RESTParameterServer(ParameterServer):
         # Tell the REST server to shutdown.
         rest_get_ping(self.master_host, self.master_port, '/shutdown')
 
+class DOWNPOURParameterServer(RESTParameterServer):
+
+    def __init__(self, model, learning_rate, master_port):
+        super(DOWNPOURParameterServer, self).__init__(model, master_port)
+        self.learning_rate = learning_rate
+        self.mutex = Lock()
+
+    def initialize(self):
+
+        ## BEGIN DOWNPOUR REST routes. #########################################
+
+        @self.server.route('/center_variable', methods=['GET'])
+        def center_variable():
+            with self.mutex:
+                center_variable = self.model.get_weights()
+
+            return center_variable
+
+        @self.server.route('/update', methods=['POST'])
+        def update():
+            data = pickle.loads(request.data)
+            variable = data['variable']
+
+            with self.mutex:
+                center_variable = self.model.get_weights()
+                center_variable = center_variable + variable
+                self.model.set_weights(center_variable)
+                self.next_update()
+
+            return 'OK'
+
+        ## END DOWNPOUR REST routes. ###########################################
+
 class EASGDParameterServer(RESTParameterServer):
 
     def __init__(self, model, rho, learning_rate, master_port, num_workers):
@@ -90,7 +123,6 @@ class EASGDParameterServer(RESTParameterServer):
         self.ready_mutex = Lock()
         self.variables = {}
         self.ready = False
-        self.iteration = 1
 
     def is_ready(self):
         with self.ready_mutex:
@@ -134,7 +166,7 @@ class EASGDParameterServer(RESTParameterServer):
 
             self.set_ready(False)
             # Check if the variable update is within the correct iteration.
-            if iteration == self.iteration:
+            if self.num_updates == self.iteration:
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
@@ -143,7 +175,7 @@ class EASGDParameterServer(RESTParameterServer):
                     self.process_variables()
                     self.variables = {}
                     self.set_ready(True)
-                    self.iteration += 1
+                    self.next_update()
 
             return 'OK'
 

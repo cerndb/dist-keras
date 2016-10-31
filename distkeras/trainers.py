@@ -154,6 +154,24 @@ class DistributedTrainer(Trainer):
 
         return self.parameter_server.get_model()
 
+class DOWNPOUR(DistributedTrainer):
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
+                 communication_window=30):
+        super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                       batch_size, features_col, label_col, num_epoch)
+        self.learning_rate = learning_rate
+        self.communication_window = communication_window
+
+    def allocate_parameter_server(self):
+        # Allocate DOWNPOUR parameter server.
+        pass
+
+    def allocate_worker(self):
+        # Allocate DOWNPOUR worker.
+        pass
+
 class EASGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
