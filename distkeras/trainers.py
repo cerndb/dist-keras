@@ -95,7 +95,7 @@ class DistributedTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
-        super(DistributedTrainer, self).__init__(self, keras_model, loss, worker_optimizer)
+        super(DistributedTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.features_column = features_col
