@@ -113,6 +113,8 @@ class EAMSGDWorker(NetworkWorker):
     def train(self, worker_id, iterator):
         # Prepare the model.
         self.prepare_model()
+        # Set the worker identifier.
+        self.set_worker_id(worker_id)
         # Initialize the momentum residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
@@ -136,7 +138,7 @@ class EAMSGDWorker(NetworkWorker):
                     # Update the local replica.
                     self.model.set_weights(W)
                     # Send the elastic difference to the master.
-                    self.send_elastic_difference(worker_id, E)
+                    self.send_elastic_difference(E)
                 # Update the momentum residual.
                 v_t = self.momentum * v
                 W_copy = np.asarray(self.model.get_weights())
