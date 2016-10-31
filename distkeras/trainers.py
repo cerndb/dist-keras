@@ -68,7 +68,7 @@ class SingleTrainer(Trainer):
     def allocate_worker(self):
         worker = SingleTrainerWorker(keras_model=self.master_model, features_col=self.features_column,
                                      label_col=self.label_column, batch_size=self.batch_size,
-                                     worker_optimizer=self.worker_optimizer, loss=self.loss)
+                                     optimizer=self.worker_optimizer, loss=self.loss)
 
         return worker
 
