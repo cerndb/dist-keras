@@ -98,6 +98,7 @@ class EAMSGDWorker(NetworkWorker):
         self.momentum = momentum
         self.communication_window = communication_window
         self.alpha = self.learning_rate * self.rho
+        self.iteration = 1
 
     def fetch_center_variable(self):
         cv = rest_get(self.master_host, self.master_port, '/center_variable')
@@ -147,7 +148,7 @@ class EAMSGDWorker(NetworkWorker):
                 v = v_t - self.learning_rate * gradient
                 W_copy -= v
                 self.model.set_weights(W_copy)
-                self.next_update()
+                self.iteration += 1
         except StopIteration:
             pass
 
