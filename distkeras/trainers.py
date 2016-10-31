@@ -150,7 +150,7 @@ class DistributedTrainer(Trainer):
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
-        self.stop_service
+        self.stop_service()
 
         return self.parameter_server.get_model()
 
