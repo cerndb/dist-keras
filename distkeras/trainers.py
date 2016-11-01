@@ -166,11 +166,18 @@ class DOWNPOUR(DistributedTrainer):
 
     def allocate_parameter_server(self):
         # Allocate DOWNPOUR parameter server.
-        pass
+        ps = DOWNPOURParameterServer(self.master_model, self.learning_rate, self.master_port)
+
+        return ps
 
     def allocate_worker(self):
         # Allocate DOWNPOUR worker.
-        pass
+        w = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
+                           self.features_column, self.label_column, self.batch_size,
+                           self.master_host, self.master_port, self.learning_rate,
+                           self.communication_window)
+
+        return w
 
 class EASGD(DistributedTrainer):
 
