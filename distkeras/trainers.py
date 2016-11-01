@@ -163,6 +163,8 @@ class DOWNPOUR(DistributedTrainer):
                                        batch_size, features_col, label_col, num_epoch)
         self.learning_rate = learning_rate
         self.communication_window = communication_window
+        self.master_host = determine_host_address()
+        self.master_port = 5000
 
     def allocate_parameter_server(self):
         # Allocate DOWNPOUR parameter server.
