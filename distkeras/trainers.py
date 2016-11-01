@@ -154,7 +154,46 @@ class DistributedTrainer(Trainer):
 
         return self.parameter_server.get_model()
 
-class DOWNPOUR(DistributedTrainer):
+class AsynchronousDistributedTrainer(DistributedTrainer):
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1):
+        super(AsynchronousDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer,
+                                                             num_workers, batch_size, features_col,
+                                                             label_col, num_epoch)
+        # Initialize asynchronous methods variables.
+        self.parallelism = 3 * num_workers
+
+    def train(self, dataframe, shuffle=False):
+        # Allocate the parameter server.
+        self.parameter_server = self.allocate_parameter_server()
+        # Start the communication service.
+        self.start_service()
+        # Allocate a worker.
+        worker = self.allocate_worker()
+        # Repartition in order to fit the number of workers.
+        num_partitions = dataframe.rdd.getNumPartitions()
+        # Check if the dataframe needs to be shuffled before training.
+        if shuffle:
+            dataframe = shuffle(dataframe)
+        # Check if we need to repartition the dataframe.
+        if num_partitions > self.parallelism:
+            dataframe = dataframe.coalesce(self.parallelism)
+        else:
+            dataframe = dataframe.repartition(self.parallelism)
+        # Start the training procedure.
+        self.record_training_start()
+        # Iterate through the epochs.
+        for i in range(0, self.num_epoch):
+            dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
+        # End the training procedure.
+        self.record_training_end()
+        # Stop the communication service.
+        self.stop_service()
+
+        return self.parameter_server.get_model()
+
+class DOWNPOUR(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
@@ -207,7 +246,7 @@ class EASGD(DistributedTrainer):
 
         return w
 
-class AEASGD(DistributedTrainer):
+class AEASGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
@@ -235,7 +274,7 @@ class AEASGD(DistributedTrainer):
 
         return w
 
-class EAMSGD(DistributedTrainer):
+class EAMSGD(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1,  communication_window=32,
