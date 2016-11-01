@@ -184,7 +184,7 @@ class EASGDParameterServer(RESTParameterServer):
             data = pickle.loads(request.data)
             iteration = data['iteration']
             ready = self.is_ready()
-            ready = (ready or iteration < self.iteration)
+            ready = (ready or iteration < self.num_updates)
 
             return str(int(ready))
 
