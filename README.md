@@ -50,7 +50,7 @@ export PYTHONPATH="$SPARK_HOME/python/:$SPARK_HOME/python/lib/py4j-0.9-src.zip:$
 
 ## Running an example
 
-TODO
+We would like to refer the reader to the `workflow.ipynb` notebook in the examples folder. This will you a complete introduction to the problem of distributed deep learning, and will guide you through the steps that have to be executed.
 
 ### Spark 2.0
 
@@ -63,7 +63,8 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 A single trainer is in all simplicity a trainer which will use a single Spark thread to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers.
 
 ```python
-SingleTrainer(keras_model, num_epoch=1, batch_size=1000, features_col="features", label_col="label")
+SingleTrainer(keras_model, worker_optimizer, loss, features_col="features",
+              label_col="label", num_epoch=1, batch_size=32)
 ```
 
 ### EASGD
@@ -73,7 +74,8 @@ The distinctive idea of EASGD is to allow the local workers to perform more expl
 We want to note the basic version of EASGD is a synchronous algorithm, i.e., once a worker is done processing a batch of the data, it will wait until all other workers have submitted their variables (this includes the weight parameterization, iteration number, and worker id) to the parameter server before starting the next data batch.
 
 ```python
-EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label")
+EASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+      features_col="features", label_col="label", num_epoch=1, rho=5.0, learning_rate=0.01)
 ```
 
 ### Asynchronous EASGD (currently recommended)
@@ -81,7 +83,9 @@ EASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, 
 In this section we propose the asynchronous version of [EASGD](#easgd). Instead of waiting on the synchronization of other trainers, this method communicates the elastic difference (as described in the paper), with the parameter server. The only synchronization mechanism that has been implemented, is to ensure no race-conditions occur when updating the center variable.
 
 ```python
-AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch_size=1000, features_col="features", label_col="label", communcation_window=5)
+AEASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+       features_col="features", label_col="label", num_epoch=1, communication_window=32,
+       rho=5.0, learning_rate=0.01)
 ```
 
 ## Asynchronous EAMSGD
@@ -89,9 +93,9 @@ AsynchronousEASGD(keras_model, num_workers=2, rho=5.0, learning_rate=0.01, batch
 Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term.
 
 ```python
-AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                  features_col="features", label_col="label", communication_window=10,
-                  rho=5.0, learning_rate=0.01, momentum=0.9, master_port=5000, num_epoch=1)
+EAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+       features_col="features", label_col="label", num_epoch=1,  communication_window=32,
+       rho=5.0, learning_rate=0.01, momentum=0.9)
 ```
 
 ### DOWNPOUR
@@ -99,7 +103,9 @@ AsynchornousEAMSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_siz
 An asynchronous stochastic gradient descent procedure supporting a large number of model replicas and leverages adaptive learning rates. This implementation is based on the pseudocode provided by [1] .
 
 ```python
-DOWNPOUR(keras_model, learning_rate=0.01, num_workers=2, batch_size=1000, features_col="features", label_col="label", communication_window=5)
+DOWNPOUR(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+         features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
+         communication_window=3)
 ```
 
 ## Utility classes
@@ -123,6 +129,16 @@ Predictors are utility classes which addsa prediction column to the DataFrame gi
     a. Make sure that every partition has an equal amount of batches. For example, using a custom partitioner.
 
     b. Modify the optimizer in such a way that it does allow for timeouts from a worker.
+
+## TODO's
+
+This list below is of all the features that still have to be implemented in order to have a production-ready environment.
+
+- Spark SparseVector and Numpy compatibility.
+- Improve efficiency of EASGD synchronization.
+- Compression / decompression of network transmissions.
+- Monitoring of loss and training.
+- Stop on target loss.
 
 ## References
 
