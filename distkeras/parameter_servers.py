@@ -77,7 +77,7 @@ class RESTParameterServer(ParameterServer):
 
     def stop(self):
         # Tell the REST server to shutdown.
-        rest_get_ping(self.master_host, self.master_port, '/shutdown')
+        rest_get_ping('localhost', self.master_port, '/shutdown')
 
 class DOWNPOURParameterServer(RESTParameterServer):
 
