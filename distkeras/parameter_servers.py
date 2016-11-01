@@ -195,7 +195,7 @@ class AEASGDParameterServer(RESTParameterServer):
             with self.mutex:
                 center_variable = self.model.get_weights()
             # Compress the center variable.
-            center_variable = compress(pickle.dumps(center_variable), -1)
+            center_variable = compress(pickle.dumps(center_variable, -1))
 
             return center_variable
 
