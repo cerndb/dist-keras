@@ -232,14 +232,14 @@ class AEASGDWorker(NetworkWorker):
         self.iteration = 1
 
     def fetch_center_variable(self):
-        cv = rest_get_decompress(self.master_host, self.master_port, '/center_variable')
+        cv = rest_get(self.master_host, self.master_port, '/center_variable')
         self.center_variable = np.asarray(cv)
 
     def send_elastic_difference(self, ed):
         data = {}
         data['worker_id'] = self.get_worker_id()
         data['variable'] = ed
-        rest_post_compress(self.master_host, self.master_port, '/update', data)
+        rest_post(self.master_host, self.master_port, '/update', data)
 
     def train(self, worker_id, iterator):
         # Prepare the model.
