@@ -139,6 +139,7 @@ This list below is of all the features that still have to be implemented in orde
 - Compression / decompression of network transmissions.
 - Monitoring of loss and training.
 - Stop on target loss.
+- Multiple parameter servers for large Deep Networks.
 
 ## References
 
