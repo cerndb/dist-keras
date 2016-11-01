@@ -201,7 +201,7 @@ class AEASGDParameterServer(RESTParameterServer):
 
         @self.server.route('/update', methods=['POST'])
         def update():
-            data = pickle.loads(decompress(request.data))
+            data = pickle.loads(request.data)
             variable = data['variable']
 
             with self.mutex:
