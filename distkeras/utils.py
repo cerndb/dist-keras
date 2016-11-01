@@ -16,7 +16,15 @@ from itertools import izip_longest
 
 import numpy as np
 
+import zlib
+
 ## END Import. #################################################################
+
+def compress(data):
+    return zlib.compress(data)
+
+def decompress(data):
+    return zlib.decompress(data)
 
 def to_dense_vector(value, n_dim=2):
     vector = np.zeros(n_dim)

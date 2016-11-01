@@ -17,6 +17,8 @@ import cPickle as pickle
 
 import numpy as np
 
+import zlib
+
 ## END Imports. ################################################################
 
 class ParameterServer(object):
@@ -192,12 +194,14 @@ class AEASGDParameterServer(RESTParameterServer):
         def center_variable():
             with self.mutex:
                 center_variable = self.model.get_weights()
+            # Compress the center variable.
+            center_variable = compress(pickle.dumps(center_variable), -1)
 
-            return pickle.dumps(center_variable, -1)
+            return center_variable
 
         @self.server.route('/update', methods=['POST'])
         def update():
-            data = pickle.loads(request.data)
+            data = pickle.loads(decompress(request.data))
             variable = data['variable']
 
             with self.mutex:
