@@ -158,7 +158,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
-        super(AsynchronousDistributedTrainer, self).__init__(keras_model, loss, worker_optimizer,
+        super(AsynchronousDistributedTrainer, self).__init__(keras_model, worker_optimizer, loss,
                                                              num_workers, batch_size, features_col,
                                                              label_col, num_epoch)
         # Initialize asynchronous methods variables.
