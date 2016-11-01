@@ -158,7 +158,7 @@ class DOWNPOUR(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
-                 communication_window=30):
+                 communication_window=3):
         super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                        batch_size, features_col, label_col, num_epoch)
         self.learning_rate = learning_rate
@@ -201,7 +201,7 @@ class EASGD(DistributedTrainer):
 class AEASGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=10,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=32,
                  rho=5.0, learning_rate=0.01):
         super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                      batch_size, features_col, label_col, num_epoch)
@@ -229,7 +229,7 @@ class AEASGD(DistributedTrainer):
 class EAMSGD(DistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1,  communication_window=10,
+                 features_col="features", label_col="label", num_epoch=1,  communication_window=32,
                  rho=5.0, learning_rate=0.01, momentum=0.9):
         super(EAMSGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                      batch_size, features_col, label_col, num_epoch)

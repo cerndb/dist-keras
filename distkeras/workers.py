@@ -89,7 +89,8 @@ class NetworkWorker(Worker):
 class DOWNPOURWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01):
+                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
+                 communication_window=3):
         # Initialize the parent object.
         super(DOWNPOURWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                              batch_size, master_host, master_port)
@@ -154,7 +155,7 @@ class EASGDWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
-                 learning_rate=0.01, communication_window=30):
+                 learning_rate=0.01):
         # Initialize the parent object.
         super(EASGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                           batch_size, master_host, master_port)
@@ -217,7 +218,7 @@ class AEASGDWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
-                 learning_rate=0.01, communication_window=10):
+                 learning_rate=0.01, communication_window=32):
         # Initialize the parent object.
         super(AEASGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                            batch_size, master_host, master_port)
@@ -271,7 +272,7 @@ class EAMSGDWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
-                 learning_rate=0.01, momentum=0.9, communication_window=10):
+                 learning_rate=0.01, momentum=0.9, communication_window=32):
         # Initialize the parent object.
         super(EAMSGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                            batch_size, master_host, master_port)
