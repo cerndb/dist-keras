@@ -122,17 +122,6 @@ class EASGDParameterServer(RESTParameterServer):
         self.num_workers = num_workers
         self.ready_mutex = Lock()
         self.variables = {}
-        self.ready = False
-
-    def is_ready(self):
-        with self.ready_mutex:
-            ready = self.ready
-
-        return ready
-
-    def set_ready(self, ready):
-        with self.ready_mutex:
-            self.ready = ready
 
     def process_variables(self):
         center_variable = self.model.get_weights()
@@ -164,18 +153,16 @@ class EASGDParameterServer(RESTParameterServer):
             worker_id = data['worker_id']
             iteration = data['iteration']
 
-            self.set_ready(False)
             # Check if the variable update is within the correct iteration.
             if self.num_updates == iteration:
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
-                    # Check if all parameter updates are available.
-                    if num_variables == self.num_workers:
-                        self.process_variables()
-                        self.variables = {}
-                        self.set_ready(True)
-                        self.next_update()
+                # Check if all parameter updates are available.
+                if num_variables == self.num_workers:
+                    self.process_variables()
+                    self.variables = {}
+                    self.next_update()
 
             return 'OK'
 
@@ -183,8 +170,7 @@ class EASGDParameterServer(RESTParameterServer):
         def ready():
             data = pickle.loads(request.data)
             iteration = data['iteration']
-            ready = self.is_ready()
-            ready = (ready or iteration < self.num_updates)
+            ready = (iteration < self.num_updates)
 
             return str(int(ready))
 
