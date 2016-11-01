@@ -206,7 +206,7 @@ class EASGDWorker(NetworkWorker):
                 self.model.set_weights(W)
                 # Wait for the master to synchronize the workers.
                 while not self.master_ready():
-                    time.sleep(0.1)
+                    time.sleep(0.2)
                 self.iteration += 1
         except StopIteration:
             pass

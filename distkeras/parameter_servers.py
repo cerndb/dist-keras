@@ -170,12 +170,12 @@ class EASGDParameterServer(RESTParameterServer):
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
-                # Check if all parameter updates are available.
-                if num_variables == self.num_workers:
-                    self.process_variables()
-                    self.variables = {}
-                    self.set_ready(True)
-                    self.next_update()
+                    # Check if all parameter updates are available.
+                    if num_variables == self.num_workers:
+                        self.process_variables()
+                        self.variables = {}
+                        self.set_ready(True)
+                        self.next_update()
 
             return 'OK'
 
