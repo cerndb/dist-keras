@@ -166,7 +166,7 @@ class EASGDParameterServer(RESTParameterServer):
 
             self.set_ready(False)
             # Check if the variable update is within the correct iteration.
-            if self.num_updates == self.iteration:
+            if self.num_updates == iteration:
                 with self.mutex:
                     self.variables[worker_id] = variable
                     num_variables = len(self.variables)
