@@ -185,7 +185,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
-        if num_partitions > self.parallelism:
+        if num_partitions > parallelism:
             dataframe = dataframe.coalesce(parallelism)
         else:
             dataframe = dataframe.repartition(parallelism)
