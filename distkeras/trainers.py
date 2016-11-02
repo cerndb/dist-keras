@@ -162,7 +162,13 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                                                              num_workers, batch_size, features_col,
                                                              label_col, num_epoch)
         # Initialize asynchronous methods variables.
-        self.parallelism = 3 * num_workers
+        self.parallelism_factor = 3
+
+    def set_parallelism_factor(self, factor):
+        self.parallelism_factor = factor
+
+    def get_parallelism_factor(self):
+        return self.parallelism_factor
 
     def train(self, dataframe, shuffle=False):
         # Allocate the parameter server.
@@ -176,11 +182,13 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
             dataframe = shuffle(dataframe)
+        # Indicate the parallelism (number of worker times parallelism factor).
+        parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
         if num_partitions > self.parallelism:
-            dataframe = dataframe.coalesce(self.parallelism)
+            dataframe = dataframe.coalesce(parallelism)
         else:
-            dataframe = dataframe.repartition(self.parallelism)
+            dataframe = dataframe.repartition(parallelism)
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
