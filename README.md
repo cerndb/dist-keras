@@ -118,6 +118,10 @@ A transformer is a utility class which takes a collection of columns (or just a 
 
 Predictors are utility classes which addsa prediction column to the DataFrame given a specified Keras model and its input features.
 
+### Evaluators
+
+As the name suggest, an evaluator will evaluate the statistical performance of a Keras model on a dataset. Of course, one could use the MLlib evaluation metrics, but the availability of some metrics in different Spark versions might be limited. For this reason, we implemented our own evaluation functions.
+
 ## Known issues
 
 ### Synchronous algorithms
