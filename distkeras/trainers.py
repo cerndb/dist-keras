@@ -162,7 +162,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                                                              num_workers, batch_size, features_col,
                                                              label_col, num_epoch)
         # Initialize asynchronous methods variables.
-        self.parallelism_factor = 3
+        self.parallelism_factor = 2
 
     def set_parallelism_factor(self, factor):
         self.parallelism_factor = factor
