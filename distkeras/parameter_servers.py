@@ -97,7 +97,7 @@ class DOWNPOURParameterServer(RESTParameterServer):
             with self.mutex:
                 center_variable = self.model.get_weights()
 
-            return center_variable
+            return pickle.dumps(center_variable, -1)
 
         @self.server.route('/update', methods=['POST'])
         def update():
