@@ -118,6 +118,7 @@ def weights_std(weights):
 
 def shuffle(dataset):
     dataset = dataset.orderBy(rand())
+    dataset.cache()
 
     return dataset
 
