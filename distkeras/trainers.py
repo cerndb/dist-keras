@@ -120,8 +120,14 @@ class DistributedTrainer(Trainer):
     def stop_service(self):
         self.parameter_server.stop()
         self.parameter_server_thread.join()
+        self.parameter_server_thread = None
 
     def start_service(self):
+        # Check if a parameter server thread is already allocated.
+        if not self.parameter_server_thread == None:
+            # Stop the parameter server service.
+            self.stop_service()
+        # Allocate a new parameter service thread.
         self.parameter_server_thread = threading.Thread(target=self.service)
         self.parameter_server_thread.start()
 
