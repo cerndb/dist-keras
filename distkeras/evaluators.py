@@ -29,7 +29,7 @@ class AccuracyEvaluator(Evaluator):
 
     def __init__(self, label_col="label", prediction_col="prediction"):
         # Initialize the parent structure.
-        super(AccuracyEvaluator, self).__init__(features_col, label_col, prediction_col)
+        super(AccuracyEvaluator, self).__init__(label_col, prediction_col)
 
     def _evaluate(self, row):
         """Filters the correct predictions."""
