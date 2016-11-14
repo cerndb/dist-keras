@@ -1,6 +1,7 @@
 """Evaluation module.
 
-An evaluator will evaluate a dataframe according to specific requirements."""
+An evaluator will evaluate a dataframe according to specific requirements.
+"""
 
 ## BEGIn Imports. ##############################################################
 
