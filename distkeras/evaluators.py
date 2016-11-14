@@ -35,7 +35,7 @@ class AccuracyEvaluator(Evaluator):
         # Count the total number of instances.
         num_instances = dataframe.count()
         # Extract the matching indexes.
-        df = dataframe.where(dataframe[self.prediction_col] == dataframe[self.label_col])
+        df = dataframe.where(dataframe[self.prediction_column] == dataframe[self.label_column])
         # Fetch the number of correctly guessed instances.
         validated_instances = df.count()
 
