@@ -60,25 +60,16 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 
 ### Single Trainer
 
-A single trainer is in all simplicity a trainer which will use a single Spark thread to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers.
+A single trainer is in all simplicity a trainer which will use a single Spark thread to train a model. This trainer is usually used as a baseline metrics for new distributed optimizers. However, one could also use this trainer if the dataset is too big to fit in memory.
 
 ```python
 SingleTrainer(keras_model, worker_optimizer, loss, features_col="features",
               label_col="label", num_epoch=1, batch_size=32)
 ```
 
-### EASGD
+### Asynchronous EASGD (currently recommended)
 
 The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[1]](https://arxiv.org/pdf/1412.6651.pdf) .
-
-We want to note the basic version of EASGD is a synchronous algorithm, i.e., once a worker is done processing a batch of the data, it will wait until all other workers have submitted their variables (this includes the weight parameterization, iteration number, and worker id) to the parameter server before starting the next data batch.
-
-```python
-EASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-      features_col="features", label_col="label", num_epoch=1, rho=5.0, learning_rate=0.01)
-```
-
-### Asynchronous EASGD (currently recommended)
 
 In this section we propose the asynchronous version of [EASGD](#easgd). Instead of waiting on the synchronization of other trainers, this method communicates the elastic difference (as described in the paper), with the parameter server. The only synchronization mechanism that has been implemented, is to ensure no race-conditions occur when updating the center variable.
 
