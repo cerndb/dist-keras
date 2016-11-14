@@ -64,6 +64,7 @@ def main():
     while True:
         print("Iteration " + str(iteration) + ".")
         produce(producer, 'Machine_Learning', data)
+        iteration += 1
         time.sleep(5)
 
 if __name__ == "__main__":
