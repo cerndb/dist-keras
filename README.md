@@ -79,7 +79,7 @@ AEASGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
        rho=5.0, learning_rate=0.01)
 ```
 
-## Asynchronous EAMSGD
+### Asynchronous EAMSGD
 
 Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term.
 
