@@ -4,15 +4,17 @@ Utils module.
 
 ## BEGIN Import. ###############################################################
 
-from pyspark.sql import Row
+from itertools import izip_longest
+
+from keras.models import model_from_json
+
 from pyspark.mllib.linalg import DenseVector
+from pyspark.sql import Row
 from pyspark.sql.functions import rand
 from pyspark.sql.functions import udf
 from pyspark.sql.types import *
 
-from keras.models import model_from_json
-
-from itertools import izip_longest
+import json
 
 import numpy as np
 
