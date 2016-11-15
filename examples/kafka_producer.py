@@ -40,8 +40,10 @@ def read_data():
             del row['EventId']
             del row['Weight']
             del row['Label']
+            # Convert to floats.
+            new = [float(x) for x in row if x != '']
             # Append processed data.
-            data.append(row)
+            data.append(new)
 
     return data
 
