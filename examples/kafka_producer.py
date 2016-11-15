@@ -8,7 +8,7 @@ from kafka import *
 
 import sys
 
-import csv
+import pandas
 
 import time
 
@@ -31,19 +31,13 @@ def allocate_producer(bootstrap_server):
 def read_data():
     path = 'data/atlas_higgs.csv'
     data = []
-    # Start processing the CSV file.
-    with open(path, 'r') as file:
-        reader = csv.DictReader(file, delimiter=',')
-        # Iterate through the rows.
-        for row in reader:
-            # Remove features.
-            del row['EventId']
-            del row['Weight']
-            del row['Label']
-            # Convert to floats.
-            new = [float(x) for x in row if x != '']
-            # Append processed data.
-            data.append(new)
+    # Use Pandas to infer the types.
+    data = pandas.read_csv(path)
+    # Remove the unneeded columns.
+    del data['Label']
+    del data['Weight']
+    # Convert the data to a list of dictionaries.
+    data = data.transpose().to_dict().values()
 
     return data
 
