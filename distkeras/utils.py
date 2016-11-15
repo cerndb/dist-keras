@@ -37,6 +37,12 @@ def new_dataframe_row(old_row, column_name, column_value):
 
     return r
 
+def json_to_dataframe_row(s):
+    d = json.loads(s)
+    r = Row(**d)
+
+    return r
+
 def serialize_keras_model(model):
     d = {}
     d['model'] = model.to_json()
