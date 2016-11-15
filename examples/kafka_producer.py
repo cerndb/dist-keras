@@ -1,4 +1,5 @@
-"""This example will be used as a Kafka producer to generate dummy
+"""
+This example will be used as a Kafka producer to generate dummy
 data for our Spark Streaming example.
 """
 
@@ -21,7 +22,7 @@ def usage():
     print("")
     print("Usage:")
     print("python kafka_producer.py [bootstrap_server]")
-    exit()
+    exit(0)
 
 def allocate_producer(bootstrap_server):
     producer = KafkaProducer(bootstrap_servers=[bootstrap_server])
