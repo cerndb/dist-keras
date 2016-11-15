@@ -115,15 +115,9 @@ As the name suggest, an evaluator will evaluate the statistical performance of a
 
 ## Known issues
 
-### Synchronous algorithms
+### List of short issues
 
-1. It is possible, depending on your `batch_size` and the size of your dataset, that there will be an unequal amount of batches distributed over the different worker partitions. Imagine having `n - 1` workers with `k` batches, and a worker with `k - 1` batches. In this case, the `n - 1` workers all wish to process batch `k`, however, the other worker (which has only `k - 1` batches) has already finished its process. This results in endless "waiting" behaviour, i.e., the `n - 1` workers are waiting for the last worker to publish its gradient. But this worker can't send its gradient of batch `k` to the parameter server since it does not have a batch `k`.
-
-    **Possible solutions:**
-
-    a. Make sure that every partition has an equal amount of batches. For example, using a custom partitioner.
-
-    b. Modify the optimizer in such a way that it does allow for timeouts from a worker.
+- Python 3 compatibility.
 
 ## TODO's
 
@@ -134,6 +128,7 @@ This list below is of all the features that still have to be implemented in orde
 - Monitoring of loss and training.
 - Stop on target loss.
 - Multiple parameter servers for large Deep Networks.
+- Python 3 compatibility.
 
 ## References
 
