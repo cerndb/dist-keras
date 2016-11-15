@@ -130,7 +130,6 @@ As the name suggest, an evaluator will evaluate the statistical performance of a
 This list below is of all the features that still have to be implemented in order to have a production-ready environment.
 
 - Spark SparseVector and Numpy compatibility.
-- Improve efficiency of EASGD synchronization.
 - Compression / decompression of network transmissions.
 - Monitoring of loss and training.
 - Stop on target loss.
