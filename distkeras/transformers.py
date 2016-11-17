@@ -17,9 +17,9 @@ class Transformer(object):
         raise NotImplementedError
 
 class OneHotTransformer(Transformer):
-    """Transformer which will transform an integer label into a vector using one-hot-encoding."""
+    """Transformer which will transform an integer index into a vector using one-hot-encoding."""
 
-    def __init__(self, output_dim, input_col="label", output_col="label_vectorized"):
+    def __init__(self, output_dim, input_col, output_col):
         self.input_column = input_col
         self.output_column = output_col
         self.output_dimensionality = output_dim
