@@ -145,7 +145,7 @@ If you use this software in your work, please cite us.
 ```
 @misc{distributed_keras,
   author       = {Joeri Hermans},
-  title        = {Distributed Keras: Distributed Deep Learning with Apache Spark & Keras},
+  title        = {Distributed Keras: Distributed Deep Learning with Apache Spark and Keras},
   month        = nov,
   year         = 2016,
   doi          = {10.5281/zenodo.167573},
