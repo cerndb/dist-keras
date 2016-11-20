@@ -138,6 +138,21 @@ This list below is of all the features that still have to be implemented in orde
 - Stop on target loss.
 - Multiple parameter servers for large Deep Networks.
 
+## Citing
+
+If you use this software in your work, please cite us.
+
+```
+@misc{distributed_keras,
+  author       = {Joeri Hermans},
+  title        = {Distributed Keras: Distributed Deep Learning with Apache Spark \& Keras},
+  month        = nov,
+  year         = 2016,
+  doi          = {10.5281/zenodo.167573},
+  url          = {https://doi.org/10.5281/zenodo.167573}
+}
+```
+
 ## References
 
 * Zhang, S., Choromanska, A. E., & LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693). [1]
