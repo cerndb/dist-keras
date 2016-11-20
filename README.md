@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/64122944.svg)](https://zenodo.org/badge/latestdoi/64122944)
+
 # Distributed Keras
 
 Distributed Deep Learning with Apache Spark and Keras.
