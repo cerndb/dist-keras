@@ -9,6 +9,8 @@ a column to a dataframe based on a collection of specified values.
 
 from distkeras.utils import *
 
+from pyspark.mllib.linalg import DenseVector
+
 ## END Imports. ################################################################
 
 class Transformer(object):
@@ -25,7 +27,7 @@ class DenseTransformer(Transformer):
 
     def _transform(self, row):
         sparse_vector = row[self.input_column]
-        dense_vector = sparse_vector.toArray()
+        dense_vector = DenseVector(sparse_vector.toArray())
         new_row = new_dataframe_row(row, self.output_column, dense_vector)
 
         return new_row
