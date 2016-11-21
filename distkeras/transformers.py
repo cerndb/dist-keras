@@ -21,10 +21,12 @@ class Transformer(object):
 class MinMaxTransformer(Transformer):
     """Will transform every feature of an instance between a specified range."""
 
-    def __init__(self, min, max, input_col, output_col):
+    def __init__(self, min, max, s_min, s_max, input_col, output_col):
         self.min = min
         self.max = max
-        self.scale = self.max - self.min
+        self.s_min = s_min
+        self.s_max = s_max
+        self.scale = (self.s_max - self.s_min) / (self.max - self.min)
         self.input_column = input_col
         self.output_column = output_col
 
@@ -44,7 +46,7 @@ class MinMaxTransformer(Transformer):
         x' = \frac{x - min}{max - min}
         """
         v = row[self.input_column].toArray()
-        v = v / self.scale
+        v = self.scale * (v - self.max) + self.s_max
         # Convert to a DenseVector.
         dense_vector = DenseVector(v)
         # Construct a new row with the normalized vector.
