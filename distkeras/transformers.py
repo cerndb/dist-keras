@@ -45,8 +45,10 @@ class MinMaxTransformer(Transformer):
         """
         v = row[self.input_column].toArray()
         v = v / self.scale
+        # Convert to a DenseVector.
+        dense_vector = DenseVector(v)
         # Construct a new row with the normalized vector.
-        new_row = new_dataframe_row(row, self.output_column, v)
+        new_row = new_dataframe_row(row, self.output_column, dense_vector)
 
         return new_row
 
