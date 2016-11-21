@@ -22,6 +22,10 @@ class MinMaxTransformer(Transformer):
     """Will transform every feature of an instance between a specified range."""
 
     def __init__(self, min, max, s_min, s_max, input_col, output_col):
+        """
+        New range: [min; max]
+        Old range: [s_min; s_max]
+        """
         self.min = min
         self.max = max
         self.s_min = s_min
