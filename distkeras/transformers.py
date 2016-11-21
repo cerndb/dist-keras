@@ -18,6 +18,41 @@ class Transformer(object):
     def transform(self, dataframe):
         raise NotImplementedError
 
+class MinMaxTransformer(Transformer):
+    """Will transform every feature of an instance between a specified range."""
+
+    def __init__(self, min, max, input_col, output_col):
+        self.min = min
+        self.max = max
+        self.scale = self.max - self.min
+        self.input_column = input_col
+        self.output_column = output_col
+
+    def get_scale(self):
+        return self.scale
+
+    def get_min(self):
+        return self.min
+
+    def get_max(self):
+        return self.max
+
+    def transform(self, row):
+        """
+        Rescale every instance like this:
+
+        x' = \frac{x - min}{max - min}
+        """
+        v = row[self.input_column].toArray()
+        v = v / self.scale
+        # Construct a new row with the normalized vector.
+        new_row = new_dataframe_row(row, self.output_column, v)
+
+        return new_row
+
+    def transform(self, dataframe):
+        return dataframe.rdd.map(self._transform).toDF()
+
 class DenseTransformer(Transformer):
     """Transformes sparse vectors into dense vectors."""
 
