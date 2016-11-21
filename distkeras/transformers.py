@@ -37,7 +37,7 @@ class MinMaxTransformer(Transformer):
     def get_max(self):
         return self.max
 
-    def transform(self, row):
+    def _transform(self, row):
         """
         Rescale every instance like this:
 
