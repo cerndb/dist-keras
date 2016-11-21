@@ -16,40 +16,6 @@ class Transformer(object):
     def transform(self, dataframe):
         raise NotImplementedError
 
-class DenseTransformer(Transformer):
-    """Transformes sparse vectors into dense vectors."""
-
-    def __init__(self, input_col, output_col):
-        self.input_column = input_col
-        self.output_column = output_col
-
-    def _transform(self, row):
-        sparse_vector = row[self.input_column]
-        dense_vector = sparse_vector.toDense()
-        new_row = new_dataframe_row(row, self.output_column, dense_vector)
-
-        return new_row
-
-    def transform(self, dataframe):
-        return dataframe.rdd.map(self._transform).toDF()
-
-class SparseTransformer(Transformer):
-    """Transformes dense vectors into sparse vectors."""
-
-    def __init__(self, input_col, output_col):
-        self.input_column = input_col
-        self.output_column = output_col
-
-    def _transform(self, row):
-        dense_vector = row[self.input_column]
-        sparse_vector = dense_vector.toSparse()
-        new_row = new_dataframe_row(row, self.output_column, sparse_vector)
-
-        return new_row
-
-    def transform(self, dataframe):
-        return dataframe.rdd.map(self._transform).toDF()
-
 class OneHotTransformer(Transformer):
     """Transformer which will transform an integer index into a vector using one-hot-encoding."""
 
