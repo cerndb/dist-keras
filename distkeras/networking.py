@@ -77,7 +77,7 @@ def recvall(socket, n):
 def recv_data(socket):
     data = ''
     # Fetch the serialized data length.
-    ength = int(recvall(conn, 20))
+    ength = int(recvall(socket, 20))
     # Fetch the serialized data.
     serialized_data = recvall(socket, length)
     # Deserialize the data.
