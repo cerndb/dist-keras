@@ -92,7 +92,7 @@ class NetworkWorker(Worker):
 
 class DOWNPOURSocketWorker(NetworkWorker):
 
-    def __init__(self, model, optimizer, loss, features_co="features", label_col="label",
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
                  communication_window=3):
         # Initialize the parent object.
