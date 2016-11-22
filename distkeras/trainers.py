@@ -262,8 +262,8 @@ class DOWNPOURSocket(AsynchronousDistributedTrainer):
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
                  communication_window=3):
-        super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, num_workers,
-                                       batch_size, features_col, label_col, num_epoch)
+        super(DOWNPOURSocket, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                             batch_size, features_col, label_col, num_epoch)
         self.learning_rate = learning_rate
         self.communication_window = communication_window
         self.master_host = determine_host_address()
