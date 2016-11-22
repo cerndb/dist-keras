@@ -105,7 +105,7 @@ class DOWNPOURSocketWorker(NetworkWorker):
         self.socket = None
 
     def connect(self):
-        self.socket = socket.socket(socket.AF_INET, socket.AF_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
 
     def pull(self):
