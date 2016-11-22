@@ -203,7 +203,7 @@ class DOWNPOURSocketParameterServer(SocketParameterServer):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the delta from the dictionary.
-        delta = data['variable']
+        delta = data['delta']
 
         # Update the center variable with the delta.
         with self.mutex:
