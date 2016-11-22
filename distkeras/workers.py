@@ -121,11 +121,11 @@ class DOWNPOURWorker(NetworkWorker):
         # Prepare the gradient residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
+        # Fetch the center variable.
+        self.fetch_center_variable()
         # Start the epoch training process.
         try:
             while True:
-                # Fetch the center variable.
-                self.fetch_center_variable()
                 # Fetch the next mini-batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.

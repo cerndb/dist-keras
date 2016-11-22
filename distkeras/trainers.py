@@ -54,6 +54,30 @@ class Trainer(object):
     def train(self, dataframe, shuffle=False):
         raise NotImplementedError
 
+class ModelAveragingTrainer(Trainer):
+
+    def __init__(self, keras_model, loss, worker_optimizer, num_workers,
+                 features_col="features", label_col="label", num_epoch=1, batch_size=32):
+        super(ModelAveragingTrainer, self).__init__(keras_model, loss, worker_optimizer)
+        self.features_column = features_col
+        self.label_column = label_col
+        self.num_epoch = num_epoch
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def train(self, dataframe, shuffle=False):
+        # Check if the data needs to be shuffled.
+        if shuffle:
+            dataframe = shuffle(dataframe)
+        # Repartition the dataframe.
+        dataframe = dataframe.repartition(self.num_workers * 10)
+        # Start recording training time.
+        self.record_training_start()
+        # Implement training procedure.
+        raise NotImplementedError
+        # Stop recording of training time.
+        self.record_training_end()
+
 class SingleTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
