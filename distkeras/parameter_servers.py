@@ -151,9 +151,11 @@ class SocketParameterServer(ParameterServer):
 
     def stop(self):
         self.running = False
-        self.socket.close()
-        self.cleanup_connections()
-        self.socket = None
+        # Check if a socket is allocated.
+        if self.socket:
+            self.socket.close()
+            self.cleanup_connections()
+            self.socket = None
         self.connections = {}
 
     def cleanup_connections(self):
