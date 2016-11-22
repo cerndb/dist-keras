@@ -81,6 +81,78 @@ class RESTParameterServer(ParameterServer):
         # Tell the REST server to shutdown.
         rest_get_ping('localhost', self.master_port, '/shutdown')
 
+class SocketParameterServer(ParameterServer):
+
+    def __init__(self, model, port):
+        super(SocketParameterServer, self).__init__(model, port)
+        self.socket = None
+        self.running = False
+        self.connections = {}
+
+    def initialize(self):
+        # Prepare a socket.
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('*', self.master_port))
+        # Assign the socket.
+        self.socket = s
+
+    def handle_commit(self, conn, addr):
+        raise NotImplementedError
+
+    def handle_pull(self, conn, addr):
+        raise NotImplementedError
+
+    def handle_connection(self, conn, addr):
+        """
+        A parameter server has two main functionalities. Nodes are able to
+        pull (p) the current state, or 'commit' a state. This is implemented
+        in the following functionality. Classis which implement these interfaces
+        should not worry about connection handling.
+        """
+        while self.running:
+            # Fetch the current action.
+            action = conn.recv(1)
+            # Check if the action is a commit (most of the cases).
+            if action == 'c':
+                # Handle the commit.
+                self.handle_commit(conn, addr)
+            else:
+                # Handle the pull.
+                self.handle_pull(conn, addr)
+
+    def start(self):
+        # Listen to the socket.
+        self.socket.listen(5)
+        # Set the running flag.
+        self.running = True
+
+    def run(self):
+        # Listen for incoming connections.
+        while self.running:
+            # Accept incoming connections.
+            conn, addr = self.socket.accept()
+            # Handle the connection.
+            t = threading.Thread(target=self.handle_connection, args=(conn, addr))
+            t.start()
+            # Store the connection in the dictionary.
+            self.connections[addr] = t
+
+    def stop(self):
+        self.running = False
+        self.socket.close()
+        self.cleanup_connections()
+        self.socket = None
+        self.connections = {}
+
+    def cleanup_connections(self):
+        # Iterate over all connections.
+        for key in self.connections:
+            # Fetch the thread object.
+            t = self.connections[key]
+            t.join()
+            # Clean up the connections hashmap.
+            del self.connections[key]
+
 class DOWNPOURParameterServer(RESTParameterServer):
 
     def __init__(self, model, learning_rate, master_port):
@@ -113,26 +185,6 @@ class DOWNPOURParameterServer(RESTParameterServer):
             return 'OK'
 
         ## END DOWNPOUR REST routes. ###########################################
-
-class DOWNPOURSocketParameterServer(ParameterServer):
-
-    def __init__(self, model, learning_rate, master_port):
-        super(DOWNPOURSocketParameterServer, self).__init__(model, master_port)
-        self.learning_rate = learning_rate
-        self.mutex = Lock()
-        self.socket = None
-
-    def initialize(self):
-        raise NotImplementedError
-
-    def start(self):
-        raise NotImplementedError
-
-    def run(self):
-        raise NotImplementedError
-
-    def stop(self):
-        raise NotImplementedError
 
 class AEASGDParameterServer(RESTParameterServer):
 
