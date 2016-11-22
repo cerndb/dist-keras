@@ -127,9 +127,12 @@ class SocketParameterServer(ParameterServer):
             if action == 'c':
                 # Handle the commit.
                 self.handle_commit(conn, addr)
-            else:
+            elif action == 'p':
                 # Handle the pull.
                 self.handle_pull(conn, addr)
+            else:
+                # Stop the server.
+                self.running = False
 
     def start(self):
         # Set the running flag.
