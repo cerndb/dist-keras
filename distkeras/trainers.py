@@ -9,6 +9,8 @@ from distkeras.parameter_servers import *
 from distkeras.utils import *
 from distkeras.workers import *
 
+from threading import Lock
+
 import numpy as np
 
 import threading

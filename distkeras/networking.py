@@ -64,7 +64,7 @@ def recvall(socket, n):
     # Iterate until we received all data.
     while buffer_size < n:
         # Fetch the next frame from the network.
-        data = socket.recv(bytes_left).decode()
+        data = socket.recv(bytes_left)
         # Compute the size of the frame.
         delta = len(data)
         buffer_size += delta
@@ -77,7 +77,7 @@ def recvall(socket, n):
 def recv_data(socket):
     data = ''
     # Fetch the serialized data length.
-    ength = int(recvall(socket, 20))
+    length = int(recvall(socket, 20).decode())
     # Fetch the serialized data.
     serialized_data = recvall(socket, length)
     # Deserialize the data.
@@ -93,6 +93,6 @@ def send_data(socket, data):
     serialized_length = str(length).zfill(20)
     # Send the data over the provided socket.
     socket.sendall(serialized_length.encode())
-    socket.sendall(serialized_data.encode())
+    socket.sendall(serialized_data)
 
 ## END Networking Utility Functions. ###########################################

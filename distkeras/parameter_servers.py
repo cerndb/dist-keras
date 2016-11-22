@@ -1,23 +1,25 @@
-"""Several parameter server implementations.
+"""
+Several parameter server implementations.
 
 A parameter server is a process which will aggregate all the incoming gradient
 or parameter updates of the workers and incorperate it into a single center variable.
-This center variable will eventually be the produced model of the trainer."""
+This center variable will eventually be the produced model of the trainer.
+"""
 
 ## BEGIN Imports. ##############################################################
 
 from distkeras.networking import *
 from distkeras.utils import *
 
-from flask import *
-
 from threading import Lock
+
+from flask import *
 
 import cPickle as pickle
 
 import numpy as np
 
-import zlib
+import threading
 
 ## END Imports. ################################################################
 
