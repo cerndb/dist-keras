@@ -96,6 +96,8 @@ class SocketParameterServer(ParameterServer):
         # Disable Nagle's algorithm.
         s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         s.bind(('0.0.0.0', self.master_port))
+        # Listen to the socket.
+        s.listen(5)
         # Assign the socket.
         self.socket = s
 
@@ -128,8 +130,6 @@ class SocketParameterServer(ParameterServer):
                 self.handle_pull(conn, addr)
 
     def start(self):
-        # Listen to the socket.
-        self.socket.listen(5)
         # Set the running flag.
         self.running = True
 
