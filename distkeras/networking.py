@@ -16,6 +16,8 @@ import zlib
 
 ## END Imports. ################################################################
 
+## BEGIN Networking Utility Functions. #########################################
+
 def determine_host_address():
     host_address = socket.gethostbyname(socket.gethostname())
 
@@ -54,3 +56,5 @@ def rest_get_ping(host, port, endpoint):
     request = urllib2.Request("http://" + host + ":" + `port` + endpoint,
                               headers={'Content-Type': 'application/dist-keras'})
     urllib2.urlopen(request)
+
+## END Networking Utility Functions. ###########################################

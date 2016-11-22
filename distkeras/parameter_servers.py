@@ -114,6 +114,26 @@ class DOWNPOURParameterServer(RESTParameterServer):
 
         ## END DOWNPOUR REST routes. ###########################################
 
+class DOWNPOURSocketParameterServer(ParameterServer):
+
+    def __init__(self, model, learning_rate, master_port):
+        super(DOWNPOURSocketParameterServer, self).__init__(model, master_port)
+        self.learning_rate = learning_rate
+        self.mutex = Lock()
+        self.socket = None
+
+    def initialize(self):
+        raise NotImplementedError
+
+    def start(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
+    def stop(self):
+        raise NotImplementedError
+
 class AEASGDParameterServer(RESTParameterServer):
 
     def __init__(self, model, rho, learning_rate, master_port):
