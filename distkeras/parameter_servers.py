@@ -94,7 +94,7 @@ class SocketParameterServer(ParameterServer):
         # Prepare a socket.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Disable Nagle's algorithm.
-        s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         s.bind(('*', self.master_port))
         # Assign the socket.
         self.socket = s
