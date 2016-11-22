@@ -84,7 +84,8 @@ class RESTParameterServer(ParameterServer):
 class SocketParameterServer(ParameterServer):
 
     def __init__(self, model, port):
-        super(SocketParameterServer, self).__init__(model, port)
+        super(SocketParameterServer, self).__init__(model)
+        self.master_port = port
         self.socket = None
         self.running = False
         self.connections = {}
