@@ -90,7 +90,7 @@ class SocketParameterServer(ParameterServer):
         self.master_port = port
         self.socket = None
         self.running = False
-        self.connections = {}
+        self.connections = []
 
     def initialize(self):
         # Prepare a socket.
@@ -122,7 +122,7 @@ class SocketParameterServer(ParameterServer):
         """
         while self.running:
             # Fetch the current action.
-            action = conn.recv(1)
+            action = conn.recv(1).decode()
             # Check if the action is a commit (most of the cases).
             if action == 'c':
                 # Handle the commit.
@@ -130,9 +130,6 @@ class SocketParameterServer(ParameterServer):
             elif action == 'p':
                 # Handle the pull.
                 self.handle_pull(conn, addr)
-            else:
-                # Stop the server.
-                self.running = False
 
     def start(self):
         # Set the running flag.
@@ -147,7 +144,7 @@ class SocketParameterServer(ParameterServer):
             t = threading.Thread(target=self.handle_connection, args=(conn, addr))
             t.start()
             # Store the connection in the dictionary.
-            self.connections[addr] = t
+            self.connections.append(t)
 
     def stop(self):
         self.running = False
@@ -156,16 +153,14 @@ class SocketParameterServer(ParameterServer):
             self.socket.close()
             self.cleanup_connections()
             self.socket = None
-        self.connections = {}
+        self.connections = []
 
     def cleanup_connections(self):
         # Iterate over all connections.
-        for key in self.connections:
+        for t in self.connections:
             # Fetch the thread object.
-            t = self.connections[key]
             t.join()
-            # Clean up the connections hashmap.
-            del self.connections[key]
+            del t
 
 class DOWNPOURParameterServer(RESTParameterServer):
 
