@@ -92,6 +92,8 @@ class SocketParameterServer(ParameterServer):
     def initialize(self):
         # Prepare a socket.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Disable Nagle's algorithm.
+        s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
         s.bind(('*', self.master_port))
         # Assign the socket.
         self.socket = s
@@ -100,13 +102,17 @@ class SocketParameterServer(ParameterServer):
         raise NotImplementedError
 
     def handle_pull(self, conn, addr):
-        raise NotImplementedError
+        # Fetch the raw center variables.
+        with self.mutex:
+            center_variable = self.model.get_weights()
+        # Send the data over the socket.
+        send_data(conn, center_variable)
 
     def handle_connection(self, conn, addr):
         """
         A parameter server has two main functionalities. Nodes are able to
         pull (p) the current state, or 'commit' a state. This is implemented
-        in the following functionality. Classis which implement these interfaces
+        in the following functionality. Classes which implement these interfaces
         should not worry about connection handling.
         """
         while self.running:
@@ -185,6 +191,28 @@ class DOWNPOURParameterServer(RESTParameterServer):
             return 'OK'
 
         ## END DOWNPOUR REST routes. ###########################################
+
+class DOWNPOURSocketParameterServer(SocketParameterServer):
+
+    def __init__(self, model, learning_rate, master_port):
+        super(DOWNPOURSocketParameterServer, self).__init__(model, master_port)
+        self.learning_rate = learning_rate
+        self.mutex = Lock()
+
+    def handle_commit(self, conn, addr):
+        # Receive the parameters from the remote node.
+        data = recv_data(conn)
+        # Extract the delta from the dictionary.
+        delta = data['variable']
+
+        # Update the center variable with the delta.
+        with self.mutex:
+            # Fetch the center variable.
+            center_variable = self.model.get_weights()
+            center_variable = center_variable + delta
+            # Set the new parameters of the model.
+            self.model.set_weights(center_variable)
+            self.next_update()
 
 class AEASGDParameterServer(RESTParameterServer):
 

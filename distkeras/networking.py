@@ -57,4 +57,42 @@ def rest_get_ping(host, port, endpoint):
                               headers={'Content-Type': 'application/dist-keras'})
     urllib2.urlopen(request)
 
+def recvall(socket, n):
+    buffer = ''
+    buffer_size = 0
+    bytes_left = n
+    # Iterate until we received all data.
+    while buffer_size < n:
+        # Fetch the next frame from the network.
+        data = socket.recv(bytes_left).decode()
+        # Compute the size of the frame.
+        delta = len(data)
+        buffer_size += delta
+        bytes_left -= delta
+        # Append the data to the buffer.
+        buffer += data
+
+    return buffer
+
+def recv_data(socket):
+    data = ''
+    # Fetch the serialized data length.
+    ength = int(recvall(conn, 20))
+    # Fetch the serialized data.
+    serialized_data = recvall(socket, length)
+    # Deserialize the data.
+    data = pickle.loads(serialized_data)
+
+    return data
+
+def send_data(socket, data):
+    # Serialize the data.
+    serialized_data = pickle.dumps(data, -1)
+    length = len(serialized_data)
+    # Serialize the number of bytes in the data.
+    serialized_length = str(length).zfill(20)
+    # Send the data over the provided socket.
+    socket.sendall(serialized_length.encode())
+    socket.sendall(serialized_data.encode())
+
 ## END Networking Utility Functions. ###########################################
