@@ -193,6 +193,8 @@ class DOWNPOURSocketWorker(NetworkWorker):
     def train(self, worker_id, iterator):
         # Prepare the model.
         self.prepare_model()
+        # Uniformily initialize the replica with random weights.
+        uniform_weights(self.model)
         # Connect to the parameter server.
         self.connect()
         # Set the worker id.
