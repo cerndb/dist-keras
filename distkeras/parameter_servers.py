@@ -230,7 +230,7 @@ class DOWNPOURSocketParameterServer(SocketParameterServer):
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
-            center_variable = self.model.get_weights()
+            center_variable = np.asarray(self.model.get_weights())
             center_variable = center_variable + delta
             # Set the new parameters of the model.
             self.model.set_weights(center_variable)
