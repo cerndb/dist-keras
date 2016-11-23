@@ -165,6 +165,8 @@ class DOWNPOURSocketWorker(NetworkWorker):
             pass
         # Commit the last residual.
         self.commit(v)
+        # Close the socket.
+        self.socket.close()
 
         return iter([])
 

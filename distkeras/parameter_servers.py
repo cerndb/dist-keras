@@ -115,6 +115,19 @@ class SocketParameterServer(ParameterServer):
         # Send the data over the socket.
         send_data(conn, center_variable)
 
+    def cancel_accept(self):
+        """
+        This method will cancel the accept procedure. The method
+        is meant to be executed by the stop() procedure.
+        """
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            # Connect to the listening socket to cancel the accept.
+            s.connect(("localhost", self.master_port))
+            s.close()
+        except Exception:
+            pass
+
     def handle_connection(self, conn, addr):
         """
         A parameter server has two main functionalities. Nodes are able to
@@ -140,13 +153,16 @@ class SocketParameterServer(ParameterServer):
     def run(self):
         # Listen for incoming connections.
         while self.running:
-            # Accept incoming connections.
-            conn, addr = self.socket.accept()
-            # Handle the connection.
-            t = threading.Thread(target=self.handle_connection, args=(conn, addr))
-            t.start()
-            # Store the connection in the dictionary.
-            self.connections.append(t)
+            try:
+                # Accept incoming connections.
+                conn, addr = self.socket.accept()
+                # Handle the connection.
+                t = threading.Thread(target=self.handle_connection, args=(conn, addr))
+                t.start()
+                # Store the connection in the dictionary.
+                self.connections.append(t)
+            except Exception:
+                pass
 
     def stop(self):
         self.running = False
@@ -154,6 +170,7 @@ class SocketParameterServer(ParameterServer):
         if self.socket:
             self.cleanup_connections()
             self.socket.close()
+            self.cancel_accept()
             self.socket = None
         self.connections = []
 
