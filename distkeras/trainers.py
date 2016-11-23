@@ -145,9 +145,7 @@ class DistributedTrainer(Trainer):
 
     def stop_service(self):
         self.parameter_server.stop()
-        print("Waiting for parameter server to stop")
         self.parameter_server_thread.join()
-        print("Parameter server stopped")
         self.parameter_server_thread = None
 
     def start_service(self):
