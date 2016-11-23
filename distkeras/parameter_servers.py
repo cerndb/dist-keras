@@ -93,6 +93,8 @@ class SocketParameterServer(ParameterServer):
         self.connections = []
 
     def initialize(self):
+        # Reset the running flag.
+        self.running = True
         # Prepare a socket.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Disable Nagle's algorithm.
@@ -150,8 +152,8 @@ class SocketParameterServer(ParameterServer):
         self.running = False
         # Check if a socket is allocated.
         if self.socket:
-            self.socket.close()
             self.cleanup_connections()
+            self.socket.close()
             self.socket = None
         self.connections = []
 

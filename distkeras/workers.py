@@ -163,6 +163,8 @@ class DOWNPOURSocketWorker(NetworkWorker):
             self.iteration += 1
         except StopIteration:
             pass
+        # Commit the last residual.
+        self.commit(v)
 
         return iter([])
 

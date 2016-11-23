@@ -139,6 +139,7 @@ class DistributedTrainer(Trainer):
         return self.parameter_server.num_updates()
 
     def service(self):
+        self.parameter_server.start()
         self.parameter_server.initialize()
         self.parameter_server.run()
 
