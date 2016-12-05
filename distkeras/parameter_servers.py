@@ -184,7 +184,7 @@ class SocketParameterServer(ParameterServer):
 class DOWNPOURParameterServer(SocketParameterServer):
 
     def __init__(self, model, learning_rate, master_port):
-        super(DOWNPOURSocketParameterServer, self).__init__(model, master_port)
+        super(DOWNPOURParameterServer, self).__init__(model, master_port)
         self.learning_rate = learning_rate
         self.mutex = Lock()
 
