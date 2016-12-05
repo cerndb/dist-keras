@@ -126,8 +126,6 @@ class DOWNPOURWorker(NetworkWorker):
         # Start the epoch training process.
         try:
             while True:
-                # Fetch the center variable.
-                self.fetch_center_variable()
                 # Fetch the next mini-batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
@@ -234,71 +232,6 @@ class DOWNPOURSocketWorker(NetworkWorker):
         self.commit(v)
         # Close the socket.
         self.socket.close()
-
-        return iter([])
-
-class DOWNPOURRESTWorker(NetworkWorker):
-
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
-                 communication_window=3):
-        # Initialize the parent object.
-        super(DOWNPOURRESTWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                                 batch_size, master_host, master_port)
-        # Initialize DOWNPOUR specific variables.
-        self.learning_rate = learning_rate
-        self.communication_window = communication_window
-        self.iteration = 1
-
-    def fetch_center_variable(self):
-        cv = rest_get(self.master_host, self.master_port, '/center_variable')
-        self.center_variable = np.asarray(cv)
-
-    def send_residual(self, v):
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['variable'] = v
-        rest_post(self.master_host, self.master_port, '/update', data)
-
-    def train(self, worker_id, iterator):
-        # Prepare the model.
-        self.prepare_model()
-        # Set the worker id.
-        self.set_worker_id(worker_id)
-        # Uniformily initialize the replica with random weights.
-        uniform_weights(self.model)
-        # Prepare the gradient residual matrix.
-        v = np.asarray(self.model.get_weights())
-        v.fill(0.0)
-        # Fetch the center variable.
-        self.fetch_center_variable()
-        # Start the epoch training process.
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    # Send the residual to the master.
-                    self.send_residual(v)
-                    # Clear the residual
-                    v.fill(0.0)
-                    # Update the local variable.
-                    self.fetch_center_variable()
-                    # Update the local replica.
-                    self.model.set_weights(self.center_variable)
-                W1 = np.asarray(self.model.get_weights())
-                self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
-                gradient = W2 - W1
-                v += gradient
-                self.iteration += 1
-        except StopIteration:
-            pass
 
         return iter([])
 
