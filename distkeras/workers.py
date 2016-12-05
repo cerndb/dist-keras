@@ -116,8 +116,8 @@ class DOWNPOURWorker(SocketWorker):
                  batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
                  communication_window=3):
         # Initialize the parent object.
-        super(DOWNPOURSocketWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                                   batch_size, master_host, master_port)
+        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                             batch_size, master_host, master_port)
         # Initialize DOWNPOUR parameters.
         self.learning_rate = learning_rate
         self.communication_window = communication_window
