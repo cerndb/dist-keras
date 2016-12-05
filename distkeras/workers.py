@@ -126,8 +126,6 @@ class DOWNPOURWorker(NetworkWorker):
         # Start the epoch training process.
         try:
             while True:
-                # Fetch the center variable.
-                self.fetch_center_variable()
                 # Fetch the next mini-batch.
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
