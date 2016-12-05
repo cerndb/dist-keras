@@ -185,22 +185,36 @@ class AEASGDWorker(NetworkWorker):
         self.communication_window = communication_window
         self.alpha = self.rho * self.learning_rate
         self.iteration = 1
+        self.socket = None
 
-    def fetch_center_variable(self):
-        cv = rest_get(self.master_host, self.master_port, '/center_variable')
-        self.center_variable = np.asarray(cv)
+    def connect(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.master_host, self.master_port))
 
-    def send_elastic_difference(self, ed):
+    def pull(self):
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the central variable from the parameter server.
+        center_variable = recv_data(self.socket)
+        self.center_variable = np.asarray(center_variable)
+
+    def commit(self, delta):
+        # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['variable'] = ed
-        rest_post(self.master_host, self.master_port, '/update', data)
+        data['delta'] = delta
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the parameter server.
+        send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
         # Prepare the model.
         self.prepare_model()
         # Set the worker id.
         self.set_worker_id(worker_id)
+        # Connect to the parameter server.
+        self.connect()
         # Start the epoch training.
         try:
             while True:
@@ -212,16 +226,18 @@ class AEASGDWorker(NetworkWorker):
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
-                    self.fetch_center_variable()
+                    self.pull()
                     W = np.asarray(self.model.get_weights())
                     E = self.alpha * (W - self.center_variable)
                     W = W - E
                     self.model.set_weights(W)
-                    self.send_elastic_difference(E)
+                    self.commit(E)
                 self.model.train_on_batch(X, Y)
                 self.iteration += 1
         except StopIteration:
             pass
+        # Close the connection with master.
+        self.socket.close()
 
         return iter([])
 
