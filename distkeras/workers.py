@@ -90,59 +90,54 @@ class NetworkWorker(Worker):
     def train(self, worker_id, iterator):
         raise NotImplementedError
 
-class SocketWorker(NetworkWorker):
-
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000):
-        super(SocketWorker, self).__init__(model, optimizer, loss, features_col,
-                                           label_col, batch_size, master_host, master_port)
-
-    def connect_to_master(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.master_host, self.master_port))
-
-    def close_connection(self):
-        self.socket.close()
-
-    def get_socket(self):
-        return self.socket
-
-    def train(self, worker_id, iterator):
-        raise NotImplementedError
-
-class DOWNPOURWorker(SocketWorker):
+class DOWNPOURWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
                  communication_window=3):
         # Initialize the parent object.
-        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                             batch_size, master_host, master_port)
+        super(DOWNPOURSocketWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                                   batch_size, master_host, master_port)
         # Initialize DOWNPOUR parameters.
         self.learning_rate = learning_rate
         self.communication_window = communication_window
         self.iteration = 1
         self.socket = None
 
+    def connect(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.master_host, self.master_port))
+
     def pull(self):
+        # Request a pull from the parameter server.
         self.socket.sendall(b'p')
+        # Fetch the central variable from the parameter server.
         center_variable = recv_data(self.socket)
         self.center_variable = np.asarray(center_variable)
 
     def commit(self, delta):
+        # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
         data['delta'] = delta
+        # Request a commit from the parameter server.
         self.socket.sendall(b'c')
+        # Send the data to the parameter server.
         send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
+        # Prepare the model.
         self.prepare_model()
+        # Uniformily initialize the replica with random weights.
         uniform_weights(self.model)
+        # Connect to the parameter server.
+        self.connect()
+        # Set the worker id.
         self.set_worker_id(worker_id)
-        self.connect_to_master()
+        # Prepare the gradient residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
+        # Start the epoch training process
         try:
             while True:
                 # Fetch the next mini-batch.
@@ -171,11 +166,12 @@ class DOWNPOURWorker(SocketWorker):
             pass
         # Commit the last residual.
         self.commit(v)
-        self.close_connection()
+        # Close the socket.
+        self.socket.close()
 
         return iter([])
 
-class AEASGDWorker(SocketWorker):
+class AEASGDWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
@@ -190,22 +186,22 @@ class AEASGDWorker(SocketWorker):
         self.alpha = self.rho * self.learning_rate
         self.iteration = 1
 
-    def pull(self):
-        self.socket.sendall(b'p')
-        center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
+    def fetch_center_variable(self):
+        cv = rest_get(self.master_host, self.master_port, '/center_variable')
+        self.center_variable = np.asarray(cv)
 
-    def commit(self, delta):
+    def send_elastic_difference(self, ed):
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['delta'] = delta
-        self.socket.sendall(b'c')
-        send_data(self.socket, data)
+        data['variable'] = ed
+        rest_post(self.master_host, self.master_port, '/update', data)
 
     def train(self, worker_id, iterator):
+        # Prepare the model.
         self.prepare_model()
+        # Set the worker id.
         self.set_worker_id(worker_id)
-        self.connect_to_master()
+        # Start the epoch training.
         try:
             while True:
                 # Fetch the next mini-batch.
@@ -216,12 +212,12 @@ class AEASGDWorker(SocketWorker):
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
-                    self.pull()
+                    self.fetch_center_variable()
                     W = np.asarray(self.model.get_weights())
                     E = self.alpha * (W - self.center_variable)
                     W = W - E
                     self.model.set_weights(W)
-                    self.commit(E)
+                    self.send_elastic_difference(E)
                 self.model.train_on_batch(X, Y)
                 self.iteration += 1
         except StopIteration:
