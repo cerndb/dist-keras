@@ -1,24 +1,29 @@
-"""
-Workers module. This module contains all workers for the distributed
-optimizers.
+"""Workers module.
+
+This module contains all worker specific implementations for different optimization
+algorithms.
 """
 
 ## BEGIN Imports. ##############################################################
 
-from distkeras.networking import *
-from distkeras.utils import *
-
 from itertools import tee
-
-import time
 
 import socket
 
 import numpy as np
 
+from distkeras.networking import send_data
+from distkeras.networking import recv_data
+from distkeras.utils import serialize_keras_model
+from distkeras.utils import deserialize_keras_model
+
 ## END Imports. ################################################################
 
 class Worker(object):
+    """Abstract class of a worker.
+
+    This class provides basic functionality and properties all workers share.
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32):
@@ -30,15 +35,27 @@ class Worker(object):
         self.batch_size = batch_size
 
     def prepare_model(self):
+        """Prepares the model for training."""
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
         # Compile the model with the specified loss and optimizer.
         self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
 
     def train(self, worker_id, iterator):
+        """Training procedure for the worker node.
+
+        # Arguments
+            worker_id: int. Partition index provided by Spark. Can be used as a worker_id.
+            iterator: iterator. Data iterator.
+        """
         raise NotImplementedError
 
+
 class SingleTrainerWorker(Worker):
+    """Worker implementation for the `SingleTrainer` optimizer.
+
+    Will train a model on a single worker node.
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32):
@@ -47,6 +64,11 @@ class SingleTrainerWorker(Worker):
                                                   label_col, batch_size)
 
     def train(self, worker_id, iterator):
+        """Training procedure of the `SingleTrainer` optimizer.
+
+        # Returns
+            Trained serialized Keras model.
+        """
         # Prepare the model.
         self.prepare_model()
         try:
@@ -63,7 +85,9 @@ class SingleTrainerWorker(Worker):
 
         return iter([serialize_keras_model(self.model)])
 
+
 class NetworkWorker(Worker):
+    """Abstract class of a worker who shares the variables using the network."""
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000):
@@ -74,21 +98,38 @@ class NetworkWorker(Worker):
         self.worker_id = 0
 
     def set_worker_id(self, worker_id):
+        """Sets the worker id.
+
+        # Arguments
+            worker_id: int. Worker identifier.
+        """
         self.worker_id = worker_id
 
     def get_worker_id(self):
+        """Returns the worker id."""
         return self.worker_id
 
     def get_master_host(self):
+        """Returns the host address of the master parameter server."""
         return self.master_host
 
     def get_master_port(self):
+        """Returns the port of the master parameter server."""
         return self.master_port
 
     def train(self, worker_id, iterator):
+        """Abstract training procedure of a network based trainer.
+
+        See: distkeras.workers.Worker.train
+        """
         raise NotImplementedError
 
 class DOWNPOURWorker(NetworkWorker):
+    """Implements the training procedure for the distributed DOWNPOUR optimizer.
+
+    Introduced by Dean et al.
+    http://static.googleusercontent.com/media/research.google.com/en//archive/large_deep_networks_nips2012.pdf
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
@@ -101,12 +142,15 @@ class DOWNPOURWorker(NetworkWorker):
         self.communication_window = communication_window
         self.iteration = 1
         self.socket = None
+        self.center_variable = None
 
     def connect(self):
+        """Connects with the parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
 
     def pull(self):
+        """Requests the center variable from the parameter server."""
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the central variable from the parameter server.
@@ -114,6 +158,7 @@ class DOWNPOURWorker(NetworkWorker):
         self.center_variable = np.asarray(center_variable)
 
     def commit(self, delta):
+        """Commits the delta to the parameter server."""
         # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
@@ -124,6 +169,7 @@ class DOWNPOURWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
+        """Specific training procedure for DOWNPOUR."""
         # Prepare the model.
         self.prepare_model()
         # Uniformily initialize the replica with random weights.
@@ -169,7 +215,13 @@ class DOWNPOURWorker(NetworkWorker):
 
         return iter([])
 
+
 class AEASGDWorker(NetworkWorker):
+    """Implementation of asynchronous EASGD worker.
+
+    Introduced by Zhang et al.
+    https://arxiv.org/pdf/1412.6651.pdf
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
@@ -184,12 +236,15 @@ class AEASGDWorker(NetworkWorker):
         self.alpha = self.rho * self.learning_rate
         self.iteration = 1
         self.socket = None
+        self.center_variable = None
 
     def connect(self):
+        """Connects with the parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
 
     def pull(self):
+        """Requests the center variable from the parameter server."""
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the central variable from the parameter server.
@@ -197,6 +252,7 @@ class AEASGDWorker(NetworkWorker):
         self.center_variable = np.asarray(center_variable)
 
     def commit(self, delta):
+        """Sends the delta to the parameter server."""
         # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
@@ -207,6 +263,7 @@ class AEASGDWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
+        """Specific training procedure for AEASGD."""
         # Prepare the model.
         self.prepare_model()
         # Set the worker id.
@@ -239,7 +296,13 @@ class AEASGDWorker(NetworkWorker):
 
         return iter([])
 
+
 class EAMSGDWorker(NetworkWorker):
+    """Worker implementation of Asynchronous EA Momentum SGD.
+
+    Introduced by Zhang et al.
+    https://arxiv.org/pdf/1412.6651.pdf
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
@@ -254,12 +317,16 @@ class EAMSGDWorker(NetworkWorker):
         self.communication_window = communication_window
         self.alpha = self.learning_rate * self.rho
         self.iteration = 1
+        self.socket = None
+        self.center_variable = None
 
     def connect(self):
+        """Connects with the remote parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
 
     def pull(self):
+        """Fetches the center variable from the parameter server."""
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the central variable from the parameter server.
@@ -267,6 +334,7 @@ class EAMSGDWorker(NetworkWorker):
         self.center_variable = np.asarray(center_variable)
 
     def commit(self, delta):
+        """Sends the delta to the parameter server."""
         # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
@@ -277,6 +345,7 @@ class EAMSGDWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
+        """Specific training procedure of asynchronous EAMSGD."""
         # Prepare the model.
         self.prepare_model()
         # Set the worker identifier.

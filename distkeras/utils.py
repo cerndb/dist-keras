@@ -1,66 +1,75 @@
-"""
-Utils module.
-"""
+"""Utility functions used throughout Distributed Keras."""
 
 ## BEGIN Import. ###############################################################
 
-from itertools import izip_longest
+import json
+
+import numpy as np
 
 from keras.models import model_from_json
 
 from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
-from pyspark.sql.functions import udf
-from pyspark.sql.types import *
-
-import json
-
-import numpy as np
-
-import zlib
 
 ## END Import. #################################################################
 
-def compress(data):
-    return zlib.compress(data)
-
-def decompress(data):
-    return zlib.decompress(data)
-
 def to_dense_vector(value, n_dim=2):
+    """Converts the value to a one-hot encoded vector.
+
+    # Arguments
+        value: float. Value of the single "hot" value.
+        n_dim: int. Dimension of the output vector.
+    """
     vector = np.zeros(n_dim)
     vector[value] = 1.0
 
     return DenseVector(vector)
 
+
 def new_dataframe_row(old_row, column_name, column_value):
-    r = Row(*(old_row.__fields__ + [column_name]))(*(old_row + (column_value, )))
+    """Constructs a new Spark Row based on the old row, and a new column name and value."""
+    row = Row(*(old_row.__fields__ + [column_name]))(*(old_row + (column_value, )))
 
-    return r
+    return row
 
-def json_to_dataframe_row(s):
-    d = json.loads(s)
-    r = Row(**d)
 
-    return r
+def json_to_dataframe_row(string):
+    """Converts a JSON String to a Spark Dataframe row."""
+    dictionary = json.loads(string)
+    row = Row(**dictionary)
+
+    return row
+
 
 def serialize_keras_model(model):
-    d = {}
-    d['model'] = model.to_json()
-    d['weights'] = model.get_weights()
+    """Serializes the specified Keras model into a dictionary."""
+    dictionary = {}
+    dictionary['model'] = model.to_json()
+    dictionary['weights'] = model.get_weights()
 
-    return d
+    return dictionary
 
-def deserialize_keras_model(d):
-    architecture = d['model']
-    weights = d['weights']
+
+def deserialize_keras_model(dictionary):
+    """Deserialized the Keras model using the specified dictionary."""
+    architecture = dictionary['model']
+    weights = dictionary['weights']
     model = model_from_json(architecture)
     model.set_weights(weights)
 
     return model
 
+
 def uniform_weights(model, constraints=[-0.5, 0.5]):
+    """Initializes the parameters of the specified Keras model with uniform
+    weights between the specified ranges.
+
+    # Arguments
+        model: Keras model.
+        constraints: array. An array with two elements which defines the range
+                     of the uniform initalization.
+    """
     # We assume the following: Keras will return a list of weight matrices.
     # All layers, even the activiation layers, will be randomly initialized.
     weights = model.get_weights()
@@ -81,78 +90,29 @@ def uniform_weights(model, constraints=[-0.5, 0.5]):
     # Set the new weights in the model.
     model.set_weights(weights)
 
-def weights_mean(weights):
-    assert(weights.shape[0] > 1)
-
-    return np.mean(weights, axis=0)
-
-def weights_mean_vector(weights):
-    num_weights = weights.shape[0]
-
-    # Check if the precondition has been met.
-    assert(num_weights > 1)
-
-    w = []
-    for weight in weights:
-        flat = np.asarray([])
-        for layer in weight:
-            layer = layer.flatten()
-            flat = np.hstack((flat, layer))
-        w.append(flat)
-    w = np.asarray(w)
-
-    return np.mean(w, axis=0)
-
-def weights_std(weights):
-    num_weights = weights.shape[0]
-
-    # Check if the precondition has been met.
-    assert(num_weights > 1)
-
-    w = []
-    for weight in weights:
-        flat = np.asarray([])
-        for layer in weight:
-            layer = layer.flatten()
-            flat = np.hstack((flat, layer))
-        w.append(flat)
-    w = np.asarray(w)
-    std = np.std(w, axis=0)
-    for i in range(0, std.shape[0]):
-        if std[i] == 0.0:
-            std[i] = 0.000001
-
-    return std
 
 def shuffle(dataset):
+    """Shuffles the rows in the specified Spark Dataframe.
+
+    # Arguments
+        dataset: dataframe. A Spark Dataframe.
+    """
     dataset = dataset.orderBy(rand())
     dataset.cache()
 
     return dataset
 
-def batches(iterable, n):
+
+def batches(iterable, batch_size):
+    """Creates batches out of the specified iterator.
+
+    # Arguments
+        iterable: iterator. Data iterator.
+        batch_size: int. Batch size.
+    """
     batch = []
     size = len(iterable)
-    for i in range(0, size, n):
-        batch.append(iterable[i:min(i + n, 1)])
+    for i in range(0, size, batch_size):
+        batch.append(iterable[i:min(i + batch_size, 1)])
 
     return np.asarray(batch)
-
-def get_weight_matrix_indices(model):
-    matrices = np.asarray(model.get_weights())
-    num_matrices = len(matrices)
-    indices = []
-    for i in range(0, num_matrices):
-        if matrices[i].any():
-            indices.append(i)
-
-    return indices
-
-def vectorize(model, weight_indices):
-    matrices = model.get_weights()
-    v = np.array([])
-    for i in weight_indices:
-        flat = matrices[i].flatten()
-        v = np.hstack((v, flat))
-
-    return v

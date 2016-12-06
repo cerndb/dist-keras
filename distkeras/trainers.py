@@ -1,25 +1,35 @@
-"""Distributed module. This module will contain all distributed classes and
-methods.
-"""
+"""Model optimizers. Depending on the implementation, these classes will optimize the
+Keras model in a distributed manner (with exception of the SingleTrainer)."""
 
 ## BEGIN Imports. ##############################################################
-
-from distkeras.networking import *
-from distkeras.parameter_servers import *
-from distkeras.utils import *
-from distkeras.workers import *
-
-from threading import Lock
-
-import numpy as np
 
 import threading
 
 import time
 
+from distkeras.parameter_servers import DeltaParameterServer
+from distkeras.utils import deserialize_keras_model
+from distkeras.utils import serialize_keras_model
+from distkeras.networking import determine_host_address
+from distkeras.workers import SingleTrainerWorker
+from distkeras.workers import AEASGDWorker
+from distkeras.workers import DOWNPOURWorker
+from distkeras.workers import EAMSGDWorker
+
+
 ## END Imports. ################################################################
 
 class Trainer(object):
+    """Abstract trainer class. This class provides all base functionality which
+    all optimizers need to implement.
+
+    # Arguments
+        keras_model: Keras model.
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+    """
 
     def __init__(self, keras_model, loss, worker_optimizer):
         self.master_model = serialize_keras_model(keras_model)
@@ -31,32 +41,64 @@ class Trainer(object):
         self.training_time = 0
 
     def record_training_start(self):
+        """Records the start of the training.
+
+        This private function is called when the training process starts.
+        """
         self.training_time = 0
         self.training_time_start = time.time()
 
     def record_training_end(self):
+        """Records the end of the traing.
+
+        This private function is called when the training process is terminated.
+        """
         self.training_time_end = time.time()
         self.training_time = self.training_time_end - self.training_time_start
 
     def get_training_time(self):
+        """Returns the told training time."""
         return self.training_time
 
     def get_history(self):
+        """Returns all history object aggregated during training."""
         return self.history
 
-    def set_history(self, history):
-        self.history = history
-
     def has_history(self):
+        """Check if there is any history available."""
         return len(self.history) > 0
 
     def add_history(self, history):
+        """Adds an history object to the history list."""
         self.history.append(history)
 
     def train(self, dataframe, shuffle=False):
+        """Trains the specified model using the specified dataframe.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
         raise NotImplementedError
 
+
 class SingleTrainer(Trainer):
+    """An optimizer which will train a network on a single machine.
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
                  label_col="label", num_epoch=1, batch_size=32):
@@ -67,6 +109,10 @@ class SingleTrainer(Trainer):
         self.batch_size = batch_size
 
     def allocate_worker(self):
+        """Allocates a worker for the Single Trainer instance.
+
+        Only for internal use.
+        """
         worker = SingleTrainerWorker(model=self.master_model, features_col=self.features_column,
                                      label_col=self.label_column, batch_size=self.batch_size,
                                      optimizer=self.worker_optimizer, loss=self.loss)
@@ -74,6 +120,15 @@ class SingleTrainer(Trainer):
         return worker
 
     def train(self, dataframe, shuffle=False):
+        """See distkeras.trainers.Trainer.train
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
         # Check if the data needs to be shuffled.
         if shuffle:
             dataframe = shuffle(dataframe)
@@ -92,7 +147,22 @@ class SingleTrainer(Trainer):
 
         return deserialize_keras_model(self.master_model)
 
+
 class DistributedTrainer(Trainer):
+    """Abstract class which describes the properties of a distributed optimizer.
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
@@ -104,31 +174,46 @@ class DistributedTrainer(Trainer):
         self.num_epoch = num_epoch
         self.parameter_server = None
         self.parameter_server_thread = None
+        self.master_host = determine_host_address()
+        self.master_port = 5000
 
     def allocate_worker(self):
+        """Allocates the worker implementation.
+
+        Implement this method in subclasses.
+        """
         raise NotImplementedError
 
     def allocate_parameter_server(self):
-        ps = DeltaParameterServer(self.master_model, self.master_port)
+        """Allocates the parameter server.
 
-        return ps
+        If an other type of parameter server is required, you can overwrite
+        this implementation.
+        """
+        parameter_server = DeltaParameterServer(self.master_model, self.master_port)
+
+        return parameter_server
 
     def num_updates(self):
+        """Returns the number of model updates the parameter server performed."""
         return self.parameter_server.num_updates()
 
     def service(self):
+        """Executes the parameter server service."""
         self.parameter_server.start()
         self.parameter_server.initialize()
         self.parameter_server.run()
 
     def stop_service(self):
+        """Stops the parameter server service."""
         self.parameter_server.stop()
         self.parameter_server_thread.join()
         self.parameter_server_thread = None
 
     def start_service(self):
+        """Starts the parameter server service."""
         # Check if a parameter server thread is already allocated.
-        if not self.parameter_server_thread == None:
+        if not self.parameter_server_thread is None:
             # Stop the parameter server service.
             self.stop_service()
         # Allocate a new parameter service thread.
@@ -136,6 +221,15 @@ class DistributedTrainer(Trainer):
         self.parameter_server_thread.start()
 
     def train(self, dataframe, shuffle=False):
+        """Training procedure of a distributed optimization process.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
         # Allocate the parameter server.
         self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
@@ -164,7 +258,35 @@ class DistributedTrainer(Trainer):
 
         return self.parameter_server.get_model()
 
+
 class AsynchronousDistributedTrainer(DistributedTrainer):
+    """Abstract class for an asynchronous distributed trainer.
+
+    This trainer also allows us to set a parallelism factor. This parallelism factor allows
+    us to further parallelize the Spark job. For example, imagine having n machines optimizing
+    a model in an asynchronous distributed setting. If for some, but likely reason, some machines
+    are performing worse compared to others. It will cause the complete learning procedure to be
+    stuck on this one particular machine since every machine will be assigned a single partition.
+    In order to resolve this, we added a parallelization factor. This factor indicates the ratio
+    of the number of jobs per machine (executor). For small datasets, we recommend that this factor
+    is set to 1. However, this effect really is prominent when the dataset is large. In this case
+    we recommend that the ratio is 2 or 3.
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+
+    # Note
+        By default, the parallelization factor is set to 2.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1):
@@ -174,13 +296,35 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Initialize asynchronous methods variables.
         self.parallelism_factor = 2
 
+    def allocate_worker(self):
+        """Allocates the worker implementation.
+
+        Implement this method in subclasses.
+        """
+        raise NotImplementedError
+
     def set_parallelism_factor(self, factor):
+        """Sets the parallelization factor.
+
+        # Arguments
+            factor: int. The new parallelization factor.
+        """
         self.parallelism_factor = factor
 
     def get_parallelism_factor(self):
+        """Returns the parallelization factor."""
         return self.parallelism_factor
 
     def train(self, dataframe, shuffle=False):
+        """Training procedure of an asynchronous distributed optimization process.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
         # Allocate the parameter server.
         self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
@@ -211,68 +355,143 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
 
         return self.parameter_server.get_model()
 
+
 class DOWNPOUR(AsynchronousDistributedTrainer):
+    """DOWNPOUR Optimizer.
+
+    Asynchronous data-parallel optimizer introduced by Dean et al.
+    http://static.googleusercontent.com/media/research.google.com/en/archive/large_deep_networks_nips2012.pdf
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+        communication_window: int. Staleness parameter.
+                              This parameter describes the number of mini-batches that will be
+                              computed before updating the center variable. For DOWNPOUR we
+                              recommend small communication windows.
+        learning_rate: float. Learning rate.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, learning_rate=0.01,
-                 communication_window=3):
+                 features_col="features", label_col="label", num_epoch=1, learning_rate=0.1,
+                 communication_window=5):
         super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                        batch_size, features_col, label_col, num_epoch)
         self.learning_rate = learning_rate
         self.communication_window = communication_window
-        self.master_host = determine_host_address()
-        self.master_port = 5000
 
     def allocate_worker(self):
+        """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
-        w = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
-                           self.features_column, self.label_column, self.batch_size,
-                           self.master_host, self.master_port, self.learning_rate,
-                           self.communication_window)
+        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
+                                self.features_column, self.label_column, self.batch_size,
+                                self.master_host, self.master_port, self.learning_rate,
+                                self.communication_window)
 
-        return w
+        return worker
+
 
 class AEASGD(AsynchronousDistributedTrainer):
+    """Asynchronous Elastic Averaging SGD optimizer.
+
+    Introduced by Zhang et al.
+    https://arxiv.org/pdf/1412.6651.pdf
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+        communication_window: int. Staleness parameter.
+                              This parameter describes the number of mini-batches that will be
+                              computed before updating the center variable. For EASGD based
+                              algorithms we recommend large communication windows.
+        learning_rate: float. Learning rate.
+        rho: float. Elastic "exploration" variable.
+                    Higher values mean that the model is allowed to "explore" its surroundings.
+                    Smaller values are correlated with less exploration. We use the value
+                    recommend by the authors.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
-                 rho=5.0, learning_rate=0.01):
+                 rho=5.0, learning_rate=0.1):
         super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                      batch_size, features_col, label_col, num_epoch)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
-        self.master_host = determine_host_address()
-        self.master_port = 5000
 
     def allocate_worker(self):
+        """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
-        w = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss,
-                         self.features_column, self.label_column, self.batch_size,
-                         self.master_host, self.master_port, self.rho, self.learning_rate,
-                         self.communication_window)
+        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                              self.features_column, self.label_column, self.batch_size,
+                              self.master_host, self.master_port, self.rho, self.learning_rate,
+                              self.communication_window)
 
-        return w
+        return worker
+
 
 class EAMSGD(AsynchronousDistributedTrainer):
+    """Asynchronous Elastic Averaging w/ Momentum SGD optimizer.
+
+    Introduced by Zhang et al.
+    https://arxiv.org/pdf/1412.6651.pdf
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+        communication_window: int. Staleness parameter.
+                              This parameter describes the number of mini-batches that will be
+                              computed before updating the center variable. For EASGD based
+                              algorithms we recommend large communication windows.
+        learning_rate: float. Learning rate.
+        rho: float. Elastic "exploration" variable.
+                    Higher values mean that the model is allowed to "explore" its surroundings.
+                    Smaller values are correlated with less exploration. We use the value
+                    recommend by the authors.
+        momentum: float. Momentum term.
+    """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1,  communication_window=32,
-                 rho=5.0, learning_rate=0.01, momentum=0.9):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=32,
+                 rho=5.0, learning_rate=0.1, momentum=0.9):
         super(EAMSGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                      batch_size, features_col, label_col, num_epoch)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
         self.momentum = momentum
-        self.master_host = determine_host_address()
-        self.master_port = 5000
 
     def allocate_worker(self):
+        """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
-        w = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss,
-                         self.features_column, self.label_column, self.batch_size,
-                         self.master_host, self.master_port, self.rho, self.learning_rate,
-                         self.momentum, self.communication_window)
+        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                              self.features_column, self.label_column, self.batch_size,
+                              self.master_host, self.master_port, self.rho, self.learning_rate,
+                              self.momentum, self.communication_window)
 
-        return w
+        return worker

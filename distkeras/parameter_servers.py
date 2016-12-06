@@ -1,5 +1,4 @@
-"""
-Several parameter server implementations.
+"""Parameter servers.
 
 A parameter server is a process which will aggregate all the incoming gradient
 or parameter updates of the workers and incorperate it into a single center variable.
@@ -8,50 +7,78 @@ This center variable will eventually be the produced model of the trainer.
 
 ## BEGIN Imports. ##############################################################
 
-from distkeras.networking import *
-from distkeras.utils import *
-
-from threading import Lock
-
-import cPickle as pickle
-
-import numpy as np
+import socket
 
 import threading
+
+from distkeras.networking import recv_data
+from distkeras.networking import send_data
+from distkeras.utils import deserialize_keras_model
 
 ## END Imports. ################################################################
 
 class ParameterServer(object):
+    """Abstract class which provides basic attributed and methods for all
+       parameter servers.
+
+    # Arguments
+        model: string. Serialized Keras model.
+               See: distkeras.utils.serialize_keras_model
+    """
 
     def __init__(self, model):
         self.model = deserialize_keras_model(model)
         self.num_updates = 1
 
     def initialize(self):
+        """Initializes the parameter server.
+
+        This method is called after self.start().
+        """
         raise NotImplementedError
 
     def start(self):
+        """Starts the parameter server in a new thread."""
         raise NotImplementedError
 
     def run(self):
+        """Main event loop of the parameter server."""
         raise NotImplementedError
 
     def stop(self):
+        """Notifies the parameter server thread to stop."""
         raise NotImplementedError
 
     def get_model(self):
+        """Returns the Keras model which will be trained by the workers."""
         return self.model
 
     def next_update(self):
+        """Increments the number of model updates by 1."""
         self.num_updates += 1
 
     def reset_update_counter(self):
+        """Resets the model update counter."""
         self.num_updates = 0
 
-    def num_updates(self):
+    def get_num_updates(self):
+        """Returns the number of model updates the parameter server has performed."""
         return self.num_updates
 
+
 class SocketParameterServer(ParameterServer):
+    """Abstract class of a parameter server which is based on a socket implementation.
+
+    This means that this parameter server accepts multiple TCP connections from multiple
+    workers, and uses a costum protocol to transmit and receive the model parameters. This
+    is done by implementing a custom protocol. Which is fully described in the
+    distkeras.networking module.
+
+    # Arguments
+        model: string. Serialized Keras model.
+               See: distkeras.utils.serialize_keras_model
+        port: int. Listing port number.
+    """
 
     def __init__(self, model, port):
         super(SocketParameterServer, self).__init__(model)
@@ -59,24 +86,39 @@ class SocketParameterServer(ParameterServer):
         self.socket = None
         self.running = False
         self.connections = []
+        self.mutex = threading.Lock()
 
     def initialize(self):
+        """Sets up the listing port."""
         # Reset the running flag.
         self.running = True
         # Prepare a socket.
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        file_descriptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Disable Nagle's algorithm.
-        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        s.bind(('0.0.0.0', self.master_port))
+        file_descriptor.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        file_descriptor.bind(('0.0.0.0', self.master_port))
         # Listen to the socket.
-        s.listen(5)
+        file_descriptor.listen(5)
         # Assign the socket.
-        self.socket = s
+        self.socket = file_descriptor
 
     def handle_commit(self, conn, addr):
+        """Handles parameter updates coming from the workers.
+
+        # Arguments:
+            conn: socket. The opened connection.
+            addr: addr. Address of the remote host.
+        """
         raise NotImplementedError
 
     def handle_pull(self, conn, addr):
+        """Handles parameter requests coming from the workers. This will
+        actually send the model parameters to the requesting host.
+
+        # Arguments:
+            conn: socket. The opened connection.
+            addr: addr. Address of the remote host.
+        """
         # Fetch the raw center variables.
         with self.mutex:
             center_variable = self.model.get_weights()
@@ -84,15 +126,14 @@ class SocketParameterServer(ParameterServer):
         send_data(conn, center_variable)
 
     def cancel_accept(self):
-        """
-        This method will cancel the accept procedure. The method
+        """This method will cancel the accept procedure. The method
         is meant to be executed by the stop() procedure.
         """
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        file_descriptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             # Connect to the listening socket to cancel the accept.
-            s.connect(("localhost", self.master_port))
-            s.close()
+            file_descriptor.connect(("localhost", self.master_port))
+            file_descriptor.close()
         except Exception:
             pass
 
@@ -115,24 +156,27 @@ class SocketParameterServer(ParameterServer):
                 self.handle_pull(conn, addr)
 
     def start(self):
+        """Starts the parameter server."""
         # Set the running flag.
         self.running = True
 
     def run(self):
+        """Main event loop of the parameter server."""
         # Listen for incoming connections.
         while self.running:
             try:
                 # Accept incoming connections.
                 conn, addr = self.socket.accept()
                 # Handle the connection.
-                t = threading.Thread(target=self.handle_connection, args=(conn, addr))
-                t.start()
+                thread = threading.Thread(target=self.handle_connection, args=(conn, addr))
+                thread.start()
                 # Store the connection in the dictionary.
-                self.connections.append(t)
+                self.connections.append(thread)
             except Exception:
                 pass
 
     def stop(self):
+        """Stop the parameter server. This will also cleanup all existing connections."""
         self.running = False
         # Check if a socket is allocated.
         if self.socket:
@@ -143,17 +187,25 @@ class SocketParameterServer(ParameterServer):
         self.connections = []
 
     def cleanup_connections(self):
+        """Clean all existing connections up."""
         # Iterate over all connections.
-        for t in self.connections:
+        for thread in self.connections:
             # Fetch the thread object.
-            t.join()
-            del t
+            thread.join()
+            del thread
+
 
 class DeltaParameterServer(SocketParameterServer):
+    """A parameter server which integrates all incoming deltas into the model.
+
+    # Arguments
+        model: string. Serialized Keras model.
+               See: distkeras.utils.serialize_keras_model
+        master_port: int. Port number of the parameter server.
+    """
 
     def __init__(self, model, master_port):
         super(DeltaParameterServer, self).__init__(model, master_port)
-        self.mutex = Lock()
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
