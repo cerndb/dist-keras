@@ -101,18 +101,3 @@ def shuffle(dataset):
     dataset.cache()
 
     return dataset
-
-
-def batches(iterable, batch_size):
-    """Creates batches out of the specified iterator.
-
-    # Arguments
-        iterable: iterator. Data iterator.
-        batch_size: int. Batch size.
-    """
-    batch = []
-    size = len(iterable)
-    for i in range(0, size, batch_size):
-        batch.append(iterable[i:min(i + batch_size, 1)])
-
-    return np.asarray(batch)

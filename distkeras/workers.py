@@ -14,7 +14,6 @@ import numpy as np
 
 from distkeras.networking import send_data
 from distkeras.networking import recv_data
-from distkeras.utils import batches
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import shuffle
