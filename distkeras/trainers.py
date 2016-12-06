@@ -56,30 +56,6 @@ class Trainer(object):
     def train(self, dataframe, shuffle=False):
         raise NotImplementedError
 
-class ModelAveragingTrainer(Trainer):
-
-    def __init__(self, keras_model, loss, worker_optimizer, num_workers,
-                 features_col="features", label_col="label", num_epoch=1, batch_size=32):
-        super(ModelAveragingTrainer, self).__init__(keras_model, loss, worker_optimizer)
-        self.features_column = features_col
-        self.label_column = label_col
-        self.num_epoch = num_epoch
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-
-    def train(self, dataframe, shuffle=False):
-        # Check if the data needs to be shuffled.
-        if shuffle:
-            dataframe = shuffle(dataframe)
-        # Repartition the dataframe.
-        dataframe = dataframe.repartition(self.num_workers * 10)
-        # Start recording training time.
-        self.record_training_start()
-        # Implement training procedure.
-        raise NotImplementedError
-        # Stop recording of training time.
-        self.record_training_end()
-
 class SingleTrainer(Trainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
@@ -133,7 +109,9 @@ class DistributedTrainer(Trainer):
         raise NotImplementedError
 
     def allocate_parameter_server(self):
-        raise NotImplementedError
+        ps = DeltaParameterServer(self.master_model, self.master_port)
+
+        return ps
 
     def num_updates(self):
         return self.parameter_server.num_updates()
@@ -245,12 +223,6 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         self.master_host = determine_host_address()
         self.master_port = 5000
 
-    def allocate_parameter_server(self):
-        # Allocate DOWNPOUR parameter server.
-        ps = DOWNPOURParameterServer(self.master_model, self.learning_rate, self.master_port)
-
-        return ps
-
     def allocate_worker(self):
         # Allocate DOWNPOUR worker.
         w = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
@@ -272,12 +244,6 @@ class AEASGD(AsynchronousDistributedTrainer):
         self.learning_rate = learning_rate
         self.master_host = determine_host_address()
         self.master_port = 5000
-
-    def allocate_parameter_server(self):
-        # Allocate the asynchronous EASGD parameter server.
-        ps = AEASGDParameterServer(self.master_model, self.rho, self.learning_rate, self.master_port)
-
-        return ps
 
     def allocate_worker(self):
         # Allocate a AEASGD worker.
@@ -301,13 +267,6 @@ class EAMSGD(AsynchronousDistributedTrainer):
         self.momentum = momentum
         self.master_host = determine_host_address()
         self.master_port = 5000
-
-    def allocate_parameter_server(self):
-        # Allocate the asynchronous EAMSGD parameter server.
-        ps = EAMSGDParameterServer(self.master_model, self.rho, self.learning_rate,
-                                   self.momentum, self.master_port)
-
-        return ps
 
     def allocate_worker(self):
         # Allocate a EAMSGD REST worker.

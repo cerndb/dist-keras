@@ -13,8 +13,6 @@ from distkeras.utils import *
 
 from threading import Lock
 
-from flask import *
-
 import cPickle as pickle
 
 import numpy as np
@@ -52,36 +50,6 @@ class ParameterServer(object):
 
     def num_updates(self):
         return self.num_updates
-
-class RESTParameterServer(ParameterServer):
-
-    def __init__(self, model, port):
-        super(RESTParameterServer, self).__init__(model)
-        self.master_port = port
-        self.server = Flask(__name__)
-
-    def start(self):
-        pass
-
-    def run(self):
-
-        ## BEGIN Additional REST routes. #######################################
-
-        @self.server.route('/shutdown', methods=['GET'])
-        def shutdown():
-            f = request.environ.get('werkzeug.server.shutdown')
-            f()
-
-            return 'OK'
-
-        ## END Additional REST routes. #########################################
-
-        # Run the REST API server.
-        self.server.run(host='0.0.0.0', threaded=True, use_reloader=False)
-
-    def stop(self):
-        # Tell the REST server to shutdown.
-        rest_get_ping('localhost', self.master_port, '/shutdown')
 
 class SocketParameterServer(ParameterServer):
 
@@ -181,11 +149,10 @@ class SocketParameterServer(ParameterServer):
             t.join()
             del t
 
-class DOWNPOURParameterServer(SocketParameterServer):
+class DeltaParameterServer(SocketParameterServer):
 
-    def __init__(self, model, learning_rate, master_port):
-        super(DOWNPOURParameterServer, self).__init__(model, master_port)
-        self.learning_rate = learning_rate
+    def __init__(self, model, master_port):
+        super(DeltaParameterServer, self).__init__(model, master_port)
         self.mutex = Lock()
 
     def handle_commit(self, conn, addr):
@@ -193,7 +160,6 @@ class DOWNPOURParameterServer(SocketParameterServer):
         data = recv_data(conn)
         # Extract the delta from the dictionary.
         delta = data['delta']
-
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
@@ -201,60 +167,5 @@ class DOWNPOURParameterServer(SocketParameterServer):
             center_variable = center_variable + delta
             # Set the new parameters of the model.
             self.model.set_weights(center_variable)
-            self.next_update()
-
-class AEASGDParameterServer(SocketParameterServer):
-
-    def __init__(self, model, rho, learning_rate, master_port):
-        super(AEASGDParameterServer, self).__init__(model, master_port)
-        self.rho = rho
-        self.learning_rate = learning_rate
-        self.mutex = Lock()
-
-    def handle_commit(self, conn, addr):
-        # Receive the parameters from the remote node.
-        data = recv_data(conn)
-        # Extract the delta from the dictionary.
-        delta = data['delta']
-
-        # Update the center variable.
-        with self.mutex:
-            center_variable = self.model.get_weights()
-            center_variable = center_variable + delta
-            self.model.set_weights(center_variable)
-            self.next_update()
-
-class EAMSGDParameterServer(RESTParameterServer):
-
-    def __init__(self, model, rho, learning_rate, momentum, master_port):
-        super(EAMSGDParameterServer, self).__init__(model, master_port)
-        self.rho = rho
-        self.learning_rate = learning_rate
-        self.momentum = momentum
-        self.mutex = Lock()
-
-    def initialize(self):
-
-        ## BEGIN EAMSGD REST routes. ###########################################
-
-        @self.server.route('/center_variable', methods=['GET'])
-        def center_variable():
-            with self.mutex:
-                center_variable = self.model.get_weights()
-
-            return pickle.dumps(center_variable, -1)
-
-        @self.server.route('/update', methods=['POST'])
-        def update():
-            data = pickle.loads(request.data)
-            variable = data['variable']
-
-            with self.mutex:
-                center_variable = self.model.get_weights()
-                center_variable = center_variable + variable
-                self.model.set_weights(center_variable)
-                self.next_update()
-
-            return 'OK'
-
-        ## END EAMSGD REST routes. #############################################
+        # Next iteration.
+        self.next_update()

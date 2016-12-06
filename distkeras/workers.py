@@ -16,8 +16,6 @@ import socket
 
 import numpy as np
 
-import zlib
-
 ## END Imports. ################################################################
 
 class Worker(object):
@@ -236,7 +234,7 @@ class AEASGDWorker(NetworkWorker):
                 self.iteration += 1
         except StopIteration:
             pass
-        # Close the connection with master.
+        # Close the connection with the parameter server.
         self.socket.close()
 
         return iter([])
@@ -257,21 +255,34 @@ class EAMSGDWorker(NetworkWorker):
         self.alpha = self.learning_rate * self.rho
         self.iteration = 1
 
-    def fetch_center_variable(self):
-        cv = rest_get(self.master_host, self.master_port, '/center_variable')
-        self.center_variable = np.asarray(cv)
+    def connect(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.master_host, self.master_port))
 
-    def send_elastic_difference(self, ed):
+    def pull(self):
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the central variable from the parameter server.
+        center_variable = recv_data(self.socket)
+        self.center_variable = np.asarray(center_variable)
+
+    def commit(self, delta):
+        # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['variable'] = ed
-        rest_post(self.master_host, self.master_port, '/update', data)
+        data['delta'] = delta
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the parameter server.
+        send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
         # Prepare the model.
         self.prepare_model()
         # Set the worker identifier.
         self.set_worker_id(worker_id)
+        # Connect to the parameter server.
+        self.connect()
         # Initialize the momentum residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
@@ -286,16 +297,12 @@ class EAMSGDWorker(NetworkWorker):
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
-                    # Update the local worker with the center variable.
-                    self.fetch_center_variable()
+                    self.pull()
                     W = np.asarray(self.model.get_weights())
-                    # Compute the elastic difference.
                     E = self.alpha * (W - self.center_variable)
                     W = W - E
-                    # Update the local replica.
                     self.model.set_weights(W)
-                    # Send the elastic difference to the master.
-                    self.send_elastic_difference(E)
+                    self.commit(E)
                 # Update the momentum residual.
                 v_t = self.momentum * v
                 W_copy = np.asarray(self.model.get_weights())
@@ -310,5 +317,7 @@ class EAMSGDWorker(NetworkWorker):
                 self.iteration += 1
         except StopIteration:
             pass
+        # Close the connection with the parameter server.
+        self.socket.close()
 
         return iter([])
