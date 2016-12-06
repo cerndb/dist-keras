@@ -47,7 +47,7 @@ class MinMaxTransformer(Transformer):
         self.o_max = o_max
         self.n_min = n_min
         self.n_max = n_max
-        self.scale = (self.o_max - self.o_min) / (self.n_max - self.n_min)
+        self.scale = (self.n_max - self.n_min) / (self.o_max - self.o_min)
         self.input_column = input_col
         self.output_column = output_col
 
@@ -57,7 +57,7 @@ class MinMaxTransformer(Transformer):
         x' = \frac{x - min}{max - min}
         """
         vector = row[self.input_column].toArray()
-        vector = self.scale * (vector - self.n_max) + self.o_max
+        vector = self.scale * (vector - self.o_max) + self.n_max
         # Convert to a DenseVector.
         dense_vector = DenseVector(vector)
         # Construct a new row with the normalized vector.
