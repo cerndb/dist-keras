@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/64122944.svg)](https://zenodo.org/badge/latestdoi/64122944)
+
 # Distributed Keras
 
 Distributed Deep Learning with Apache Spark and Keras.
@@ -60,7 +62,7 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 
 ### Single Trainer
 
-This optimizer follows the traditional scheme of training a model, i.e., it uses sequential gradient updates to optimize the parameters. It does this by employing a single Spark executor to train a Keras model.
+This optimizer follows the traditional scheme of training a model, i.e., it uses sequential gradient updates to optimize the parameters. It does this by executing the training procedure on a single Spark executor.
 
 ```python
 SingleTrainerWorker(model, features_col, label_col, batch_size, optimizer, loss)
@@ -89,7 +91,7 @@ DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
          features_col, label_col, num_epoch, learning_rate, communication_window)
 ```
 
-### EnsembleTrainer
+### Ensemble Training
 
 ```python
 EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
