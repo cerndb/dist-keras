@@ -148,6 +148,50 @@ class SingleTrainer(Trainer):
         return deserialize_keras_model(self.master_model)
 
 
+class EnsembleTrainer(Trainer):
+    """Utility trainer which will train ensemble methods in parallel.
+
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_ensembles: int. Number of ensembles to train.
+    # Note
+        This will note employ a data-parallell approach for the ensembles.
+    """
+
+    def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
+                 label_col="label", num_epoch=1, batch_size=32, num_ensembles=2):
+        super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer)
+        self.features_column = features_col
+        self.label_column = label_col
+        self.num_epoch = num_epoch
+        self.batch_size = batch_size
+        self.num_ensembles = num_ensembles
+
+    def allocate_worker(self):
+        """Allocates the EnsembleWorker for internal use."""
+        raise NotImplementedError
+
+    def train(self, dataframe, shuffle=False):
+        """Trains the specified number of ensemble models using the specified dataframe.
+
+        # Arguments
+            dataframe: dataframe: A Spark Dataframe containing the dataset.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
+        raise NotImplementedError
+
+
 class DistributedTrainer(Trainer):
     """Abstract class which describes the properties of a distributed optimizer.
 
