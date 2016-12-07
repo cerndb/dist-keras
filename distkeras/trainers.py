@@ -148,6 +148,50 @@ class SingleTrainer(Trainer):
         return deserialize_keras_model(self.master_model)
 
 
+class AveragingTrainer(Trainer):
+    """A trainer which implements a data parallel technique using model averaging.
+
+    In this implementation, the model replicas are averages after every epoch.
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of model replicas to train in parallel.
+    """
+
+    def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
+                 label_col="label", num_epoch=1, batch_size=32, num_workers=2):
+        super(AveragingTrainer, self).__init__(keras_model, loss, worker_optimizer)
+        self.features_column = features_col
+        self.label_column = label_col
+        self.num_epoch = num_epoch
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def allocate_worker(self):
+        """Allocates the AveragingWorker for internal use."""
+        raise NotImplementedError
+
+    def train(self, dataframe, shuffle=False):
+        """Applies model averaging to the model replicas distributed over the specified
+        number of Spark executors.
+
+        # Arguments
+            dataframe: dataframe: A Spark Dataframe containing the dataset.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
+                     Warning: this will tell Spark to shuffle all partitions over
+                     the network. It is recommended to shuffle the dataset before
+                     training and store it.
+        """
+        raise NotImplementedError
+
+
 class EnsembleTrainer(Trainer):
     """Utility trainer which will train ensemble methods in parallel.
 

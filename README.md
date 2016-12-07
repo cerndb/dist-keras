@@ -70,6 +70,11 @@ SingleTrainerWorker(model, features_col, label_col, batch_size, optimizer, loss)
 
 ### Asynchronous Elastic Averaging SGD (AEASGD)
 
+The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[2]](https://arxiv.org/pdf/1412.6651.pdf) .
+
+In this section we show the asynchronous version of EASGD. Instead of waiting on the synchronization of other trainers, this method communicates the elastic difference (as described in the paper), with the parameter server. The only synchronization mechanism that has been implemented, is to ensure no race-conditions occur when updating the center variable.
+
+
 ```python
 AEASGD(keras_model, worker_optimizer, loss, num_workers, batch_size, features_col,
        label_col, num_epoch, communication_window, rho, learning_rate)
@@ -77,6 +82,7 @@ AEASGD(keras_model, worker_optimizer, loss, num_workers, batch_size, features_co
 
 ### Asynchronous Elastic Averaging Momentum SGD (AEAMSGD)
 
+Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term [[2]](https://arxiv.org/pdf/1412.6651.pdf) .
 
 ```python
 EAMSGD(keras_model, worker_optimizer, loss, num_workers, batch_size,
@@ -86,6 +92,8 @@ EAMSGD(keras_model, worker_optimizer, loss, num_workers, batch_size,
 
 ### DOWNPOUR
 
+An asynchronous stochastic gradient descent procedure introduced by Dean et al., supporting a large number of model replicas and leverages adaptive learning rates. This implementation is based on the pseudocode provided by [[1]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf) .
+
 ```python
 DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
          features_col, label_col, num_epoch, learning_rate, communication_window)
@@ -93,9 +101,20 @@ DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
 
 ### Ensemble Training
 
+In ensemble training, we train `n` models in parallel on the same dataset. All models are trained in parallel, but the training of a single model is done in a sequential manner using Keras optimizers. After the training process, one can combine and, for example, average the output of the models.
+
 ```python
 EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
                 label_col, num_epoch, batch_size, num_ensembles)
+```
+
+### Model Averaging
+
+Model averaging is a data parallel technique which will average the trainable parameters of model replicas after every epoch.
+
+```python
+AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
+                 label_col, num_epoch, batch_size, num_workers)
 ```
 
 
@@ -108,7 +127,7 @@ EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
 
 ## TODO's
 
-This list below is of all the features that still could be implemented to add to the feature list.
+List of possible future additions.
 
 - Compression / decompression of network transmissions.
 - Monitoring of loss and training.
@@ -119,16 +138,24 @@ This list below is of all the features that still could be implemented to add to
 
 ## Citing
 
+If you use this framework in any academic work, please use the following BibTex code.
 
-
+```latex
+@misc{dist_keras_joerihermans,
+  author = {Joeri Hermans and CERN IT-DB},
+  title = {Distributed Keras: Distributed Deep Learning with Apache Spark and Keras},
+  year = {2016},
+  publisher = {GitHub},
+  journal = {GitHub Repository},
+  howpublished = {\url{https://github.com/JoeriHermans/dist-keras/}},
+}
+```
 
 ## References
 
+* Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... & Ng, A. Y. (2012). Large scale distributed deep networks. In Advances in neural information processing systems (pp. 1223-1231). [[1]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf)
+
 * Zhang, S., Choromanska, A. E., & LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693). [[2]](https://arxiv.org/pdf/1412.6651.pdf)
-
-* Moritz, P., Nishihara, R., Stoica, I., & Jordan, M. I. (2015). SparkNet: Training Deep Networks in Spark. arXiv preprint arXiv:1511.06051. [2]
-
-* Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... & Ng, A. Y. (2012). Large scale distributed deep networks. In Advances in neural information processing systems (pp. 1223-1231). [3]
 
 <!-- @misc{pumperla2015, -->
 <!-- author = {Max Pumperla}, -->
@@ -138,7 +165,7 @@ This list below is of all the features that still could be implemented to add to
 <!-- journal = {GitHub repository}, -->
 <!-- howpublished = {\url{https://github.com/maxpumperla/elephas}} -->
 <!-- } -->
-* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]
+* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [3]
 
 
 ## Licensing
