@@ -53,8 +53,8 @@ class Worker(object):
         raise NotImplementedError
 
 
-class SingleTrainerWorker(Worker):
-    """Worker implementation for the `SingleTrainer` optimizer.
+class SequentialWorker(Worker):
+    """Implementation for sequential gradient updates on a single worker.
 
     Will train a model on a single worker node.
     """
@@ -66,7 +66,7 @@ class SingleTrainerWorker(Worker):
                                                   label_col, batch_size)
 
     def train(self, worker_id, iterator):
-        """Training procedure of the `SingleTrainer` optimizer.
+        """Training procedure with sequential gradient updates.
 
         # Returns
             Trained serialized Keras model.

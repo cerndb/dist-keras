@@ -11,7 +11,7 @@ from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.networking import determine_host_address
-from distkeras.workers import SingleTrainerWorker
+from distkeras.workers import SequentialWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import EAMSGDWorker
@@ -113,9 +113,9 @@ class SingleTrainer(Trainer):
 
         Only for internal use.
         """
-        worker = SingleTrainerWorker(model=self.master_model, features_col=self.features_column,
-                                     label_col=self.label_column, batch_size=self.batch_size,
-                                     optimizer=self.worker_optimizer, loss=self.loss)
+        worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
+                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  optimizer=self.worker_optimizer, loss=self.loss)
 
         return worker
 
@@ -203,7 +203,6 @@ class EnsembleTrainer(Trainer):
               See: https://keras.io/objectives/
         features_col: string. Name of the features column.
         label_col: string. Name of the label column.
-        num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_ensembles: int. Number of ensembles to train.
     # Note
@@ -211,17 +210,20 @@ class EnsembleTrainer(Trainer):
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
-                 label_col="label", num_epoch=1, batch_size=32, num_ensembles=2):
+                 label_col="label", batch_size=32, num_ensembles=2):
         super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer)
         self.features_column = features_col
         self.label_column = label_col
-        self.num_epoch = num_epoch
         self.batch_size = batch_size
         self.num_ensembles = num_ensembles
 
     def allocate_worker(self):
         """Allocates the EnsembleWorker for internal use."""
-        raise NotImplementedError
+        worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
+                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  optimizer=self.worker_optimizer, loss=self.loss)
+
+        return worker
 
     def train(self, dataframe, shuffle=False):
         """Trains the specified number of ensemble models using the specified dataframe.
@@ -233,7 +235,26 @@ class EnsembleTrainer(Trainer):
                      the network. It is recommended to shuffle the dataset before
                      training and store it.
         """
-        raise NotImplementedError
+        # Allocate a worker.
+        worker = self.allocate_worker()
+        # Repartition in order to fit the number of workers.
+        num_partitions = dataframe.rdd.getNumPartitions()
+        # Check if the dataframe needs to be shuffled before training.
+        if shuffle:
+            dataframe = shuffle(dataframe)
+        # Check if we need to repartition the dataframe.
+        if num_partitions > self.num_workers:
+            dataframe = dataframe.coalesce(self.num_workers)
+        else:
+            dataframe = dataframe.repartition(self.num_workers)
+        # Start the training procedure.
+        self.record_training_start()
+        # Train the models in parallel.
+        models = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
+        # End the training procedure.
+        self.record_training_end()
+
+        return models
 
 
 class DistributedTrainer(Trainer):

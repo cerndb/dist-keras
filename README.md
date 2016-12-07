@@ -105,7 +105,7 @@ In ensemble training, we train `n` models in parallel on the same dataset. All m
 
 ```python
 EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
-                label_col, num_epoch, batch_size, num_ensembles)
+                label_col, batch_size, num_ensembles)
 ```
 
 ### Model Averaging
