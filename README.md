@@ -24,15 +24,10 @@ pip install --upgrade git+https://github.com/JoeriHermans/dist-keras.git
 
 ### git & pip
 
-However, if you would like to contribute, or run some of the examples. It is probably best to clone the repository directly from GitHub and install it afterwards using `pip`.
+However, if you would like to contribute, or run some of the examples. It is probably best to clone the repository directly from GitHub and install it afterwards using `pip`. This will also resolve possible missing dependencies.
 
 ```bash
 git clone https://github.com/JoeriHermans/dist-keras
-```
-
-In order to install possible missing dependencies, and to compile the dist-keras modules, we need to run `pip`.
-
-```bash
 cd dist-keras
 pip install -e .
 ```
