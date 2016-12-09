@@ -53,6 +53,8 @@ export PYTHONPATH="$SPARK_HOME/python/:$SPARK_HOME/python/lib/py4j-0.9-src.zip:$
 
 We would like to refer the reader to the `workflow.ipynb` notebook in the examples folder. This will give you a complete introduction to the problem of distributed deep learning, and will guide you through the steps that have to be executed.
 
+Furthermore, we would also like to show how you exactly should process "big" datasets. This is shown in the examples starting with the prefix ```example_```. Please execute them in the provided sequence.
+
 ### Spark 2.0
 
 If you want to run the examples using Apache Spark 2.0.0 and higher. You will need to remove the line containing `sqlContext = SQLContext(sc)`. We need to do this because in Spark 2.0+, the SQLContext, and Hive context are now merged in the Spark session.
@@ -117,10 +119,12 @@ AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
                  label_col, num_epoch, batch_size, num_workers)
 ```
 
+## General note
+
+It is known that adding more asynchronous workers deteriorates the statistical performance of the model. There have been some studies which examinate this particular effect. However, some of them conclude that actually adding more asynchronous workers contributes to something what they call **implicit momentum** [[3]](https://arxiv.org/pdf/1605.09774.pdf). However, this is subject to further investigation.
+
 
 ## Known issues
-
-### List of short issues
 
 - Python 3 compatibility.
 
@@ -158,6 +162,8 @@ If you use this framework in any academic work, please use the following BibTex 
 
 * Zhang, S., Choromanska, A. E., & LeCun, Y. (2015). Deep learning with elastic averaging SGD. In Advances in Neural Information Processing Systems (pp. 685-693). [[2]](https://arxiv.org/pdf/1412.6651.pdf)
 
+* Mitliagkas, Ioannis, et al. "Asynchrony begets Momentum, with an Application to Deep Learning." arXiv preprint arXiv:1605.09774 (2016). [[3]](https://arxiv.org/pdf/1605.09774.pdf)
+
 <!-- @misc{pumperla2015, -->
 <!-- author = {Max Pumperla}, -->
 <!-- title = {elephas}, -->
@@ -166,7 +172,7 @@ If you use this framework in any academic work, please use the following BibTex 
 <!-- journal = {GitHub repository}, -->
 <!-- howpublished = {\url{https://github.com/maxpumperla/elephas}} -->
 <!-- } -->
-* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [3]
+* Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]
 
 
 ## Licensing
