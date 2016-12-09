@@ -134,6 +134,7 @@ List of possible future additions.
 - Stop on target loss.
 - Multiple parameter servers for large Deep Networks.
 - Python 3 compatibility.
+- For every worker, spawn an additional thread which is responsible for sending updates to the parameter server. The actual worker thread will just submit tasks to this queue.
 
 
 ## Citing
