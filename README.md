@@ -133,6 +133,8 @@ It is known that adding more asynchronous workers deteriorates the statistical p
 
 List of possible future additions.
 
+- Save Keras model to HDFS.
+- Load Keras model from HDFS.
 - Compression / decompression of network transmissions.
 - Monitoring of loss and training.
 - Stop on target loss.
