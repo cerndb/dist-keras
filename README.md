@@ -101,7 +101,7 @@ DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
          features_col, label_col, num_epoch, learning_rate, communication_window)
 ```
 
-### Ensemble Training
+### Ensemble Training (WIP)
 
 In ensemble training, we train `n` models in parallel on the same dataset. All models are trained in parallel, but the training of a single model is done in a sequential manner using Keras optimizers. After the training process, one can combine and, for example, average the output of the models.
 
@@ -110,7 +110,7 @@ EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
                 label_col, batch_size, num_ensembles)
 ```
 
-### Model Averaging
+### Model Averaging (WIP)
 
 Model averaging is a data parallel technique which will average the trainable parameters of model replicas after every epoch.
 
