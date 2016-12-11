@@ -16,18 +16,7 @@ setup(name='dist-keras',
       author='Joeri Hermans',
       author_email='joeri@joerihermans.com',
       license='GPLv3',
-      classifiers=[
-          # How mature is this project? Common values are
-          #   3 - Alpha
-          #   4 - Beta
-          #   5 - Production/Stable
-          'Development Status :: 3 - Alpha',
-          # Project is intended for:
-          'Intended Audience :: Developers',
-          'Topic :: Software Development :: Analytics',
-          # Python versions
-          'Programming Language :: Python :: 2.7',
-      ],
+      install_requires=['theano', 'tensorflow', 'keras'],
       packages=['distkeras'],
       package_data={'distkeras': ['distkeras/*.py']},
       # Keywords related to the project.
