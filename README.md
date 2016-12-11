@@ -158,21 +158,6 @@ If you use this framework in any academic work, please use the following BibTex 
 }
 ```
 
-## Citing
-
-If you use this software in your work, please cite us.
-
-```
-@misc{distributed_keras,
-  author       = {Joeri Hermans},
-  title        = {Distributed Keras: Distributed Deep Learning with Apache Spark and Keras},
-  month        = nov,
-  year         = 2016,
-  doi          = {10.5281/zenodo.167573},
-  url          = {https://doi.org/10.5281/zenodo.167573}
-}
-```
-
 ## References
 
 * Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... & Ng, A. Y. (2012). Large scale distributed deep networks. In Advances in neural information processing systems (pp. 1223-1231). [[1]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf)
