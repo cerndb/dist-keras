@@ -161,7 +161,7 @@ class MassWorker(NetworkWorker):
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the center variable from the parameter server.
-        center_variabe = recv_data(self.socket)
+        center_variable = recv_data(self.socket)
         self.center_variable = np.asarray(center_variable)
 
     def commit(self, delta):
