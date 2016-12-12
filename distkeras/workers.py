@@ -187,7 +187,7 @@ class MassWorker(NetworkWorker):
         try:
             while True:
                 # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in ragen(self.batch_size)]
+                batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
