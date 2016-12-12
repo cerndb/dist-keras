@@ -190,7 +190,7 @@ class MassWorker(NetworkWorker):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
+                if self.iteration % 5 == 0:
                     # Send the residual to the master.
                     self.commit(v)
                     # Clear the residual
