@@ -23,6 +23,10 @@ We will guide you how to install Distributed Keras. However, we will assume that
 When you only require the framework for development purposes, just use `pip` to install dist-keras.
 
 ```bash
+pip install --upgrade dist-keras
+
+# OR
+
 pip install --upgrade git+https://github.com/JoeriHermans/dist-keras.git
 ```
 
