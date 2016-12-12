@@ -62,8 +62,8 @@ class SequentialWorker(Worker):
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32):
         # Initialize the parent class.
-        super(SingleTrainerWorker, self).__init__(model, optimizer, loss, features_col,
-                                                  label_col, batch_size)
+        super(SequentialWorker, self).__init__(model, optimizer, loss, features_col,
+                                               label_col, batch_size)
 
     def train(self, worker_id, iterator):
         """Training procedure with sequential gradient updates.
