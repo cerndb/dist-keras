@@ -8,6 +8,7 @@ import threading
 import time
 
 from distkeras.parameter_servers import DeltaParameterServer
+from distkeras.parameter_servers import MassParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.networking import determine_host_address
@@ -15,7 +16,7 @@ from distkeras.workers import SequentialWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import EAMSGDWorker
-
+from distkeras.workers import MassWorker
 
 ## END Imports. ################################################################
 
@@ -394,7 +395,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         num_workers: int. Number of distributed workers.
 
     # Note
-        By default, the parallelization factor is set to 2.
+        By default, the parallelization factor is set to 1.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
@@ -403,7 +404,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                                                              num_workers, batch_size, features_col,
                                                              label_col, num_epoch)
         # Initialize asynchronous methods variables.
-        self.parallelism_factor = 2
+        self.parallelism_factor = 1
 
     def allocate_worker(self):
         """Allocates the worker implementation.
@@ -506,6 +507,25 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                                 self.communication_window)
 
         return worker
+
+
+class Mass(AsynchronousDistributedTrainer):
+    """Experimental research optimization algorithm."""
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, learning_rate=0.1):
+        super(Mass, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                   batch_size, features_col, label_col, num_epoch)
+        self.learning_rate = learning_rate
+
+    def allocate_parameter_server(self):
+        """Allocate Mass parameter server."""
+        return MassParameterServer(self.master_model, self.master_port)
+
+    def allocate_worker(self):
+        """Allocate Mass worker."""
+        # TODO Implement.
+        return None
 
 
 class AEASGD(AsynchronousDistributedTrainer):

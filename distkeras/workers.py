@@ -12,6 +12,8 @@ import socket
 
 import numpy as np
 
+from multiprocessing import Pool
+
 from distkeras.networking import send_data
 from distkeras.networking import recv_data
 from distkeras.utils import deserialize_keras_model
@@ -125,6 +127,87 @@ class NetworkWorker(Worker):
         See: distkeras.workers.Worker.train
         """
         raise NotImplementedError
+
+
+class MassWorker(NetworkWorker):
+    """Experimental optimization algorithm."""
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01):
+        # Initialize the parent object.
+        super(MassWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                         batch_size, master_host, master_port)
+        # Initialize Mass parameters.
+        self.learning_rate = learning_rate
+        self.iteration = 1
+        self.socket = None
+        self.center_variable = None
+        self.pool = Pool(5)
+
+    def send(self, data):
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the parameter server.
+        send_data(self.socket, data)
+
+    def connect(self):
+        """Connects with the parameter server."""
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.master_host, self.master_port))
+
+    def pull(self):
+        """Requests the center variable from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the center variable from the parameter server.
+        center_variabe = recv_data(self.socket)
+        self.center_variable = np.asarray(center_variable)
+
+    def commit(self, delta):
+        """Commits the delta to the parameter server."""
+        # Prepare the data structure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['delta'] = delta
+        # Send the data using the threadpool.
+        self.pool.apply_async(self._send, (data,))
+
+    def train(self, worker_id, iterator):
+        """Training procedure for the Mass optimizer."""
+        # Prepare the model.
+        self.prepare_model()
+        # Uniformily initialize the replica with random weights.
+        uniform_weights(self.model)
+        # Connect to the parameter server.
+        self.connect()
+        # Set the worker id.
+        self.set_worker_id(worker_id)
+        # Start the training procedure.
+        try:
+            while True:
+                # Fetch the next mini-batch.
+                batch = [next(iterator) for _ in ragen(self.batch_size)]
+                # Extract the feature and label vector.
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                # Compute the gradient.
+                W1 = np.asarray(self.model.get_weights())
+                self.model.train_on_batch(X, Y)
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                self.commit(delta)
+                if self.iteration % 32 == 0:
+                    self.pull()
+                    self.model.set_weights(self.center_variable)
+                self.iteration += 1
+        except StopIteration:
+            pass
+        # Close the socket.
+        self.socket.close()
+
+        return iter([])
+
 
 class DOWNPOURWorker(NetworkWorker):
     """Implements the training procedure for the distributed DOWNPOUR optimizer.

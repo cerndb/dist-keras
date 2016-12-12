@@ -221,3 +221,31 @@ class DeltaParameterServer(SocketParameterServer):
             self.model.set_weights(center_variable)
         # Next iteration.
         self.next_update()
+
+
+class MassParameterServer(SocketParameterServer):
+    """Experimental parameter server for Mass.
+
+    # Arguments
+        model: string. Serialized Keras model.
+        see: distkeras.utils.serialize_keras_model
+        master_port: int. Port number of the parameter server.
+    """
+
+    def __init__(self, model, master_port):
+        super(MassParameterServer, self).__init__(model, master_port)
+
+    def handle_commit(self, conn, addr):
+        # Receive the parameters from the remote node.
+        data = recv_data(conn)
+        # Extract the delta from the dictionary.
+        delta = data['delta']
+        # Update the center variable with the delta.
+        with self.mutex:
+            # Fetch the center variable.
+            center_variable = self.model.get_weights()
+            center_veriable = center_variable + delta
+            # Set the new parameters of the model.
+            self.model.set_weights(center_variable)
+        # Next iteration
+        self.next_update()
