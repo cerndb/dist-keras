@@ -142,19 +142,11 @@ class MassWorker(NetworkWorker):
         self.iteration = 1
         self.socket = None
         self.center_variable = None
-        self.pool = None
-
-    def send(self, data):
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the parameter server.
-        send_data(self.socket, data)
 
     def connect(self):
         """Connects with the parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
-        self.pool = Pool(5)
 
     def pull(self):
         """Requests the center variable from the parameter server."""
@@ -170,15 +162,15 @@ class MassWorker(NetworkWorker):
         data = {}
         data['worker_id'] = self.get_worker_id()
         data['delta'] = delta
-        # Send the data using the threadpool.
-        self.pool.apply_async(self.send, (data,))
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the parameter server.
+        send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
         """Training procedure for the Mass optimizer."""
         # Prepare the model.
         self.prepare_model()
-        # Uniformily initialize the replica with random weights.
-        uniform_weights(self.model)
         # Connect to the parameter server.
         self.connect()
         # Set the worker id.
@@ -198,7 +190,7 @@ class MassWorker(NetworkWorker):
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
                 self.commit(delta)
-                if self.iteration % 32 == 0:
+                if self.iteration % 5 == 0:
                     self.pull()
                     self.model.set_weights(self.center_variable)
                 self.iteration += 1
