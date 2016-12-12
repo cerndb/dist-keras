@@ -191,7 +191,6 @@ class MassWorker(NetworkWorker):
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if the residual needs to be communicated.
                 if self.iteration % 5 == 0:
-                    v /= 3
                     self.commit(v)
                     v.fill(0.0)
                     self.pull()
