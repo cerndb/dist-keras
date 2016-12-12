@@ -170,7 +170,7 @@ class MassWorker(NetworkWorker):
         data['worker_id'] = self.get_worker_id()
         data['delta'] = delta
         # Send the data using the threadpool.
-        self.pool.apply_async(self._send, (data,))
+        self.pool.apply_async(self.send, (data,))
 
     def train(self, worker_id, iterator):
         """Training procedure for the Mass optimizer."""
