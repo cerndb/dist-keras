@@ -142,7 +142,7 @@ class MassWorker(NetworkWorker):
         self.iteration = 1
         self.socket = None
         self.center_variable = None
-        self.pool = Pool(5)
+        self.pool = None
 
     def send(self, data):
         # Request a commit from the parameter server.
@@ -154,6 +154,7 @@ class MassWorker(NetworkWorker):
         """Connects with the parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
+        self.pool = Pool(5)
 
     def pull(self):
         """Requests the center variable from the parameter server."""
