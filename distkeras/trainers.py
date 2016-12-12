@@ -525,7 +525,9 @@ class Mass(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate Mass worker."""
         # TODO Implement.
-        return None
+        return MassWorker(self.master_model, self.worker_optimizer, self.loss,
+                          self.features_column, self.label_column, self.batch_size,
+                          self.master_host, self.master_port, self.learning_rate)
 
 
 class AEASGD(AsynchronousDistributedTrainer):
