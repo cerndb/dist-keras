@@ -171,7 +171,7 @@ class MassWorker(NetworkWorker):
         """Training procedure for the Mass optimizer."""
         # Prepare the model.
         self.prepare_model()
-        # Uniformaly initialize the replica with random weights.
+        # Uniformily initialize the replica with random weights.
         uniform_weights(self.model)
         # Connect to the parameter server.
         self.connect()
@@ -180,7 +180,7 @@ class MassWorker(NetworkWorker):
         # Prepare the gradient residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
-        # Start the training procedure.
+        # Start the epoch training process
         try:
             while True:
                 # Fetch the next mini-batch.
@@ -190,12 +190,15 @@ class MassWorker(NetworkWorker):
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
                 # Check if the residual needs to be communicated.
-                if self.iteration % 5 == 0:
+                if self.iteration % self.communication_window == 0:
+                    # Send the residual to the master.
                     self.commit(v)
+                    # Clear the residual
                     v.fill(0.0)
+                    # Update the local variable.
                     self.pull()
+                    # Update the local replica.
                     self.model.set_weights(self.center_variable)
-                # Compute the gradient.
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
@@ -204,6 +207,8 @@ class MassWorker(NetworkWorker):
                 self.iteration += 1
         except StopIteration:
             pass
+        # Commit the last residual.
+        self.commit(v)
         # Close the socket.
         self.socket.close()
 

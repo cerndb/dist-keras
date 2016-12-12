@@ -244,7 +244,7 @@ class MassParameterServer(SocketParameterServer):
         with self.mutex:
             # Fetch the center variable.
             center_variable = self.model.get_weights()
-            center_veriable = center_variable + delta
+            center_variable = center_variable + delta
             # Set the new parameters of the model.
             self.model.set_weights(center_variable)
         # Next iteration
