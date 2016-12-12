@@ -190,9 +190,8 @@ class MassWorker(NetworkWorker):
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
                 self.commit(delta)
-                if self.iteration % 5 == 0:
-                    self.pull()
-                    self.model.set_weights(self.center_variable)
+                self.pull()
+                self.model.set_weights(self.center_variable)
                 self.iteration += 1
         except StopIteration:
             pass
