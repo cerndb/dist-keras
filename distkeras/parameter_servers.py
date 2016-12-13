@@ -7,6 +7,8 @@ This center variable will eventually be the produced model of the trainer.
 
 ## BEGIN Imports. ##############################################################
 
+import numpy as np
+
 import socket
 
 import threading
