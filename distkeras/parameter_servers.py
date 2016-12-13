@@ -257,7 +257,7 @@ class MassParameterServer(SocketParameterServer):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the delta from the dictionary.
-        delta = data['delta']
+        delta = np.asarray(data['delta'])
         # Compute the next first and second order momentum.
         self.m += ((self.beta_1 * self.m) + (1 - self.beta_1) * delta)
         self.v += ((self.beta_2 * self.v) + (1 - self.beta_2) * np.power(delta, 2))
