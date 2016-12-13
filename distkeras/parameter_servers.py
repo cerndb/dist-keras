@@ -239,10 +239,10 @@ class MassParameterServer(SocketParameterServer):
     def __init__(self, model, master_port):
         super(MassParameterServer, self).__init__(model, master_port)
         # Initialize first order momentum.
-        self.m = np.asarray(self.model.get_weights())
+        self.m = np.asarray(self.model.get_weights(), dtype=np.float32)
         self.m.fill(0.0)
         # Initialize second order momentum.
-        self.v = np.asarray(self.model.get_weights())
+        self.v = np.asarray(self.model.get_weights(), dtype=np.float32)
         self.v.fill(0.0)
         # Initialize algorithm variables.
         self.beta_1 = 0.9
