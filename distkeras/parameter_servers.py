@@ -256,7 +256,7 @@ class MassParameterServer(SocketParameterServer):
 
     def weights_sqrt(self, weights):
         for i in range(0, self.num_matrices):
-            weights[i] = np.sqrt(weights)
+            weights[i] = np.sqrt(weights[i])
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
