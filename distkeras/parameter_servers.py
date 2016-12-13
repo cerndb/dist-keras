@@ -250,7 +250,7 @@ class MassParameterServer(SocketParameterServer):
         self.beta_2 = 0.999
         self.epsilon = 0.00000001
         # Initialize variable parameters which change over time.
-        self.learning_rate = 1
+        self.learning_rate = 100
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
 
@@ -271,7 +271,7 @@ class MassParameterServer(SocketParameterServer):
         # Compute the learning rate for the current iteration.
         learning_rate = self.learning_rate * (math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
         # Update the delta.
-        delta = delta + learning_rate * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
+        delta = delta - learning_rate * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
