@@ -269,7 +269,7 @@ class MassParameterServer(SocketParameterServer):
         # Compute the learning rate for the current iteration.
         learning_rate = self.learning_rate * (math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
         # Update the delta.
-        delta = learning_rate * delta * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
+        delta = delta + learning_rate * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
