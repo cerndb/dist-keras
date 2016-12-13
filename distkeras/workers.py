@@ -289,9 +289,9 @@ class DOWNPOURWorker(NetworkWorker):
                     self.pull()
                     # Update the local replica.
                     self.model.set_weights(self.center_variable)
-                W1 = np.asarray(self.model.get_weights(), dtype=np.float32)
+                W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights(), dtype=np.float32)
+                W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
                 v += delta
                 self.iteration += 1
