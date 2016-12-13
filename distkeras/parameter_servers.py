@@ -245,6 +245,7 @@ class MassParameterServer(SocketParameterServer):
         self.v = np.asarray(self.model.get_weights(), dtype=np.float32)
         self.v.fill(0.0)
         # Initialize algorithm variables.
+        self.num_matrices = len(self.model.get_weights())
         self.beta_1 = 0.9
         self.beta_2 = 0.999
         self.epsilon = 0.00000001
@@ -252,6 +253,10 @@ class MassParameterServer(SocketParameterServer):
         self.learning_rate = 1
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
+
+    def weights_sqrt(self, weights):
+        for i in range(0, self.num_matrices):
+            weights[i] = np.sqrt(weights)
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
@@ -264,7 +269,7 @@ class MassParameterServer(SocketParameterServer):
         # Compute the learning rate for the current iteration.
         learning_rate = self.learning_rate * (math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
         # Update the delta.
-        delta = learning_rate * delta * (self.m / (np.sqrt(self.v) + self.epsilon))
+        delta = learning_rate * delta * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
