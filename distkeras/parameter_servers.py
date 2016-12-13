@@ -9,6 +9,8 @@ This center variable will eventually be the produced model of the trainer.
 
 import numpy as np
 
+import math
+
 import socket
 
 import threading
@@ -258,9 +260,9 @@ class MassParameterServer(SocketParameterServer):
         delta = data['delta']
         # Compute the next first and second order momentum.
         self.m += ((self.beta_1 * self.m) + (1 - self.beta_1) * delta)
-        self.v += ((self.beta_2 * self.v) + (1 - self.beta_2) * (delta * delta))
+        self.v += ((self.beta_2 * self.v) + (1 - self.beta_2) * np.power(delta, 2))
         # Compute the learning rate for the current iteration.
-        learning_rate = self.learning_rate * (np.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
+        learning_rate = self.learning_rate * (math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
         # Update the delta.
         delta = learning_rate * delta * (self.m / (np.sqrt(self.v) + self.epsilon))
         # Update the center variable with the delta.
