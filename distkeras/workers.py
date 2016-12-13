@@ -244,7 +244,7 @@ class DOWNPOURWorker(NetworkWorker):
         self.socket.sendall(b'p')
         # Fetch the central variable from the parameter server.
         center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
+        self.center_variable = np.asarray(center_variable, dtype=np.float32)
 
     def commit(self, delta):
         """Commits the delta to the parameter server."""
@@ -268,7 +268,7 @@ class DOWNPOURWorker(NetworkWorker):
         # Set the worker id.
         self.set_worker_id(worker_id)
         # Prepare the gradient residual matrix.
-        v = np.asarray(self.model.get_weights())
+        v = np.asarray(self.model.get_weights(), dtype=np.float32)
         v.fill(0.0)
         # Start the epoch training process
         try:
@@ -289,9 +289,9 @@ class DOWNPOURWorker(NetworkWorker):
                     self.pull()
                     # Update the local replica.
                     self.model.set_weights(self.center_variable)
-                W1 = np.asarray(self.model.get_weights())
+                W1 = np.asarray(self.model.get_weights(), dtype=np.float32)
                 self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
+                W2 = np.asarray(self.model.get_weights(), dtype=np.float32)
                 delta = W2 - W1
                 v += delta
                 self.iteration += 1
