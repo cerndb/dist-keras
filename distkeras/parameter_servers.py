@@ -250,7 +250,7 @@ class MassParameterServer(SocketParameterServer):
         self.beta_2 = 0.999
         self.epsilon = 0.00000001
         # Initialize variable parameters which change over time.
-        self.learning_rate = 1
+        self.learning_rate = 0.1
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
 
@@ -280,7 +280,7 @@ class MassParameterServer(SocketParameterServer):
             # Set the new parameters of the model.
             self.model.set_weights(center_variable)
         # Update variable beta variables.
-        self.beta_1_t *= self.beta_1_t
-        self.beta_2_t *= self.beta_2_t
+        self.beta_1_t *= self.beta_1
+        self.beta_2_t *= self.beta_2
         # Next iteration
         self.next_update()
