@@ -250,7 +250,7 @@ class MassParameterServer(SocketParameterServer):
         self.beta_2 = 0.999
         self.epsilon = 0.00000001
         # Initialize variable parameters which change over time.
-        self.learning_rate = 100
+        self.learning_rate = 1
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
 
