@@ -258,6 +258,8 @@ class MassParameterServer(SocketParameterServer):
         for i in range(0, self.num_matrices):
             weights[i] = np.sqrt(weights[i])
 
+        return weights
+
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
