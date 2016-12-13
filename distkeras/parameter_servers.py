@@ -234,12 +234,33 @@ class MassParameterServer(SocketParameterServer):
 
     def __init__(self, model, master_port):
         super(MassParameterServer, self).__init__(model, master_port)
+        # Initialize first order momentum.
+        self.m = np.asarray(self.model.get_weights())
+        self.m.fill(0.0)
+        # Initialize second order momentum.
+        self.v = np.asarray(self.model.get_weights())
+        self.v.fill(0.0)
+        # Initialize algorithm variables.
+        self.beta_1 = 0.9
+        self.beta_2 = 0.999
+        self.epsilon = 0.00000001
+        # Initialize variable parameters which change over time.
+        self.learning_rate = 1
+        self.beta_1_t = self.beta_1
+        self.beta_2_t = self.beta_2
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the delta from the dictionary.
         delta = data['delta']
+        # Compute the next first and second order momentum.
+        self.m += ((self.beta_1 * self.m) + (1 - self.beta_1) * delta)
+        self.v += ((self.beta_2 * self.v) + (1 - self.beta_2) * (delta * delta))
+        # Compute the learning rate for the current iteration.
+        learning_rate = self.learning_rate * (np.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
+        # Update the delta.
+        delta = learning_rate * delta * (self.m / (np.sqrt(self.v) + self.epsilon))
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
@@ -247,5 +268,8 @@ class MassParameterServer(SocketParameterServer):
             center_variable = center_variable + delta
             # Set the new parameters of the model.
             self.model.set_weights(center_variable)
+        # Update variable beta variables.
+        self.beta_1_t *= self.beta_1_t
+        self.beta_2_t *= self.beta_2_t
         # Next iteration
         self.next_update()
