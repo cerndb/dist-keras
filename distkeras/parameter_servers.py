@@ -216,6 +216,8 @@ class DeltaParameterServer(SocketParameterServer):
         data = recv_data(conn)
         # Extract the delta from the dictionary.
         delta = data['delta']
+        # Apply worker division.
+        delta /= 5.0
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
