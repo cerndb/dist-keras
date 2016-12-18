@@ -182,8 +182,6 @@ class ADAGWorker(NetworkWorker):
         # Prepare the gradient residual.
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
-        # Fetch the optimizer learning rate.
-        lr = self.model.optimizer.lr
         # Start the epoch training process.
         try:
             while True:
@@ -197,7 +195,7 @@ class ADAGWorker(NetworkWorker):
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
-                delta = (W2 - W1) / lr
+                delta = (W2 - W1) / self.learning_rate
                 r += delta
                 # Check if the gradient residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
