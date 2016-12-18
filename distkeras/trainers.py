@@ -466,6 +466,52 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         return self.parameter_server.get_model()
 
 
+class AEASGD(AsynchronousDistributedTrainer):
+    """Asynchronous Elastic Averaging SGD optimizer.
+    Introduced by Zhang et al.
+    https://arxiv.org/pdf/1412.6651.pdf
+    # Arguments
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See https://keras.io/optimizers/
+        loss: string. String representing the loss.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the features column.
+        label_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+        communication_window: int. Staleness parameter.
+                              This parameter describes the number of mini-batches that will be
+                              computed before updating the center variable. For EASGD based
+                              algorithms we recommend large communication windows.
+        learning_rate: float. Learning rate.
+        rho: float. Elastic "exploration" variable.
+                    Higher values mean that the model is allowed to "explore" its surroundings.
+                    Smaller values are correlated with less exploration. We use the value
+                    recommend by the authors.
+    """
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=32,
+                 rho=5.0, learning_rate=0.1):
+        super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                     batch_size, features_col, label_col, num_epoch)
+        self.communication_window = communication_window
+        self.rho = rho
+        self.learning_rate = learning_rate
+
+    def allocate_worker(self):
+        """Allocates the asynchronous EASGD worker."""
+        # Allocate a AEASGD worker.
+        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                              self.features_column, self.label_column, self.batch_size,
+                              self.master_host, self.master_port, self.rho, self.learning_rate,
+                              self.communication_window)
+
+        return worker
+
+
 class DOWNPOUR(AsynchronousDistributedTrainer):
     """DOWNPOUR Optimizer.
 
