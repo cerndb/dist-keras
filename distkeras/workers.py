@@ -129,22 +129,27 @@ class NetworkWorker(Worker):
         raise NotImplementedError
 
 
-class MassWorker(NetworkWorker):
-    """Experimental optimization algorithm."""
+class ADAGWorker(NetworkWorker):
+    """Implements the training procedure for ADAG.
+
+    Introduced by Hermans et al.
+    """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01):
+                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
+                 communication_window=5):
         # Initialize the parent object.
-        super(MassWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(ADAGWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                          batch_size, master_host, master_port)
-        # Initialize Mass parameters.
+        # Initialize ADAG parameters.
         self.learning_rate = learning_rate
+        self.communication_window = communication_window
         self.iteration = 1
         self.socket = None
         self.center_variable = None
 
     def connect(self):
-        """Connects with the parameter server."""
+        """Connect with the remote parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.master_host, self.master_port))
 
@@ -153,32 +158,33 @@ class MassWorker(NetworkWorker):
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the center variable from the parameter server.
-        center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
+        self.center_variable = np.asarray(recv_data(self.socket))
 
-    def commit(self, delta):
-        """Commits the delta to the parameter server."""
-        # Prepare the data structure.
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['delta'] = delta
+        data['residual'] = delta
         # Request a commit from the parameter server.
         self.socket.sendall(b'c')
-        # Send the data to the parameter server.
+        # Send the data to the paramter server.
         send_data(self.socket, data)
 
     def train(self, worker_id, iterator):
-        """Training procedure for the Mass optimizer."""
+        """Training procedure of ADAG."""
         # Prepare the model.
         self.prepare_model()
-        # Connect to the parameter server.
+        # Connect with the remote parameter server.
         self.connect()
-        # Set the worker id.
+        # Set the worker identifier.
         self.set_worker_id(worker_id)
-        # Prepare the gradient residual matrix.
-        v = np.asarray(self.model.get_weights())
-        v.fill(0.0)
-        # Start the epoch training process
+        # Prepare the gradient residual.
+        r = np.asarray(self.model.get_weights())
+        r.fill(0.0)
+        # Fetch the optimizer learning rate.
+        lr = self.model.optimizer.lr
+        # Start the epoch training process.
         try:
             while True:
                 # Fetch the next mini-batch.
@@ -187,31 +193,32 @@ class MassWorker(NetworkWorker):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Check if the residual needs to be communicated.
-                if self.iteration % 5 == 0:
-                    # Send the residual to the master.
-                    self.commit(v)
-                    # Clear the residual
-                    v.fill(0.0)
-                    # Update the local variable.
-                    self.pull()
-                    # Update the local replica.
-                    self.model.set_weights(self.center_variable)
+                # Train the local model, and compute the new gradient residual.
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
-                delta = W2 - W1
-                v += delta
+                delta = (W2 - W1) / lr
+                r += delta
+                # Check if the gradient residual needs to be communicated.
+                if self.iteration % self.communication_window == 0:
+                    # Compute the normalized residual.
+                    d = np.abs((self.center_variable - W2))
+                    r /= d
+                    # Send the normalized residual.
+                    self.commit(r)
+                    # Clear the gradient residual.
+                    r.fill(0.0)
+                    # Update the center and local variable.
+                    self.pull()
+                    self.model.set_weights(self.center_variable)
+                # Increment the iteration.
                 self.iteration += 1
         except StopIteration:
             pass
-        # Commit the last residual.
-        self.commit(v)
-        # Close the socket.
+        # Close the connection with the parameter server.
         self.socket.close()
 
         return iter([])
-
 
 class DOWNPOURWorker(NetworkWorker):
     """Implements the training procedure for the distributed DOWNPOUR optimizer.

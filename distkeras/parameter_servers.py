@@ -216,8 +216,6 @@ class DeltaParameterServer(SocketParameterServer):
         data = recv_data(conn)
         # Extract the delta from the dictionary.
         delta = data['delta']
-        # Apply worker division.
-        delta /= 5.0
         # Update the center variable with the delta.
         with self.mutex:
             # Fetch the center variable.
@@ -229,60 +227,43 @@ class DeltaParameterServer(SocketParameterServer):
         self.next_update()
 
 
-class MassParameterServer(SocketParameterServer):
-    """Experimental parameter server for Mass.
+class ADAGParameterServer(SocketParameterServer):
+    """A parameter server which integrates the incoming gradient residuals into
+       the model, and integrates them using the ADAG scheme.
 
     # Arguments
         model: string. Serialized Keras model.
-        see: distkeras.utils.serialize_keras_model
+               See: distkeras.utils.serialize_keras_model
         master_port: int. Port number of the parameter server.
+        beta_1: float. Beta_1 in the ADAG algorithm.
+        beta_2: float. Beta_2 in the ADAG algorithm.
     """
 
-    def __init__(self, model, master_port):
-        super(MassParameterServer, self).__init__(model, master_port)
-        # Initialize first order momentum.
-        self.m = np.asarray(self.model.get_weights())
-        self.m.fill(0.0)
-        # Initialize second order momentum.
-        self.v = np.asarray(self.model.get_weights())
-        self.v.fill(0.0)
-        # Initialize algorithm variables.
-        self.num_matrices = len(self.model.get_weights())
-        self.beta_1 = 0.9
-        self.beta_2 = 0.999
-        self.epsilon = 0.00000001
-        # Initialize variable parameters which change over time.
-        self.learning_rate = 0.1
+    def __init__(self, model, master_port, learning_rate=0.01, beta_1=0.9, beta_2=0.999):
+        super(ADAGParameterServer, self).__init__(model, master_port)
+        # Initialize optimizer specific variables.
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.learning_rate = learning_rate
+        # Initialize variable parameters.
+        self.t = 1
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
-
-    def weights_sqrt(self, weights):
-        for i in range(0, self.num_matrices):
-            weights[i] = np.sqrt(weights[i])
-
-        return weights
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
-        # Extract the delta from the dictionary.
-        delta = np.asarray(data['delta'])
-        # Compute the next first and second order momentum.
-        self.m += ((self.beta_1 * self.m) + (1 - self.beta_1) * delta)
-        self.v += ((self.beta_2 * self.v) + (1 - self.beta_2) * np.power(delta, 2))
-        # Compute the learning rate for the current iteration.
-        learning_rate = self.learning_rate * (math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t))
-        # Update the delta.
-        delta = -learning_rate * (self.m / (self.weights_sqrt(self.v) + self.epsilon))
-        # Update the center variable with the delta.
+        # Extract the data from the dictionary.
+        r = data['residual']
         with self.mutex:
-            # Fetch the center variable.
+            # Compute lambda for the current iteration.
+            lambda = math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t)
+            lambda_bar = 1 - lambda
+            r = r * lambda_bar * learning_rate * 2
+            # Update the center variable.
             center_variable = self.model.get_weights()
-            center_variable = center_variable + delta
-            # Set the new parameters of the model.
-            self.model.set_weights(center_variable)
-        # Update variable beta variables.
-        self.beta_1_t *= self.beta_1
-        self.beta_2_t *= self.beta_2
-        # Next iteration
-        self.next_update()
+            center_variable += r
+            # Update iteration and beta variables.
+            self.t += (1 + lambda)
+            self.beta_1_t = math.pow(self.beta_1, self.t)
+            self.beta_2_t = math.pow(self.beta_2, self.t)
