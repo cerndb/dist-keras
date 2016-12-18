@@ -182,6 +182,9 @@ class ADAGWorker(NetworkWorker):
         # Prepare the gradient residual.
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
+        # Synchronize the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
         # Start the epoch training process.
         try:
             while True:
