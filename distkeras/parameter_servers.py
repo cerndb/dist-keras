@@ -259,7 +259,7 @@ class ADAGParameterServer(SocketParameterServer):
             # Compute lambda for the current iteration.
             l = math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t)
             l_bar = 1 - l
-            r = r * l_bar * self.learning_rate * 2
+            r = r * 2
             # Update the center variable.
             center_variable = self.model.get_weights()
             center_variable += r
