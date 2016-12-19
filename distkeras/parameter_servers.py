@@ -283,7 +283,7 @@ class ADAGParameterServer(SocketParameterServer):
             v_hat = self.v_t / (1 - self.beta_2_t)
             # Compute the square root of v_hat.
             v_hat = self.sqrt(v_hat)
-            v_hat = self.add(v_hat, 0.00000001)
+            v_hat = self.add(v_hat, 0.0000001)
             # Compute the gradient we need to apply.
             r = m_hat / v_hat
             # Update the center variable.
