@@ -221,6 +221,7 @@ class ADAGWorker(NetworkWorker):
 
         return iter([])
 
+
 class DOWNPOURWorker(NetworkWorker):
     """Implements the training procedure for the distributed DOWNPOUR optimizer.
 
