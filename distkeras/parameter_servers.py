@@ -232,7 +232,7 @@ class ADAGParameterServer(SocketParameterServer):
        the model, and integrates them using the ADAG scheme.
 
     # Arguments
-        model: string. Serialized Keras model.
+        model: string. Keras model.
                See: distkeras.utils.serialize_keras_model
         master_port: int. Port number of the parameter server.
         beta_1: float. Beta_1 in the ADAG algorithm.
@@ -249,6 +249,10 @@ class ADAGParameterServer(SocketParameterServer):
         self.t = 1
         self.beta_1_t = self.beta_1
         self.beta_2_t = self.beta_2
+        self.m_t = np.asarray(self.model.get_weights())
+        self.v_t = np.asarray(self.model.get_weights())
+        self.m_t.fill(0.0)
+        self.v_t.fill(0.0)
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
@@ -256,12 +260,18 @@ class ADAGParameterServer(SocketParameterServer):
         # Extract the data from the dictionary.
         r = data['residual']
         with self.mutex:
+            # Compute beta variables.
             self.beta_1_t = math.pow(self.beta_1, self.t)
             self.beta_2_t = math.pow(self.beta_2, self.t)
             # Compute lambda for the current iteration.
             l = math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t)
-            l_bar = 1 - l
-            r = r * l_bar * 2
+            # Update first and second momentum variables.
+            self.m_t = self.beta_1 * self.m_t + self.beta_1 * r
+            self.v_t = self.beta_2 * self.v_t + self.beta_2 * (r**2)
+            m_hat = self.m_t / (1 - self.beta_1_t)
+            v_hat = self.v_t / (1 - self.beta_2_t)
+            # Compute the gradient we need to apply.
+            r = m_hat / (np.sqrt(v_hat) + 0.00000001)
             # Update the center variable.
             center_variable = self.model.get_weights()
             center_variable += r
