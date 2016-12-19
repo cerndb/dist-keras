@@ -204,7 +204,7 @@ class ADAGWorker(NetworkWorker):
                 if self.iteration % self.communication_window == 0:
                     self.pull()
                     # Compute the normalized residual.
-                    d = np.abs(self.center_variable - W2))
+                    d = np.abs((self.center_variable - W2))
                     r /= (1 + d)
                     # Send the normalized residual.
                     self.commit(r)
