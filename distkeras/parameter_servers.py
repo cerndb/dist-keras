@@ -260,6 +260,11 @@ class ADAGParameterServer(SocketParameterServer):
         for i in range(0, self.num_matrices):
             parameters[i] = np.sqrt(parameters[i])
 
+    def add(self, parameters, value):
+        # Add the specified value to the parameters.
+        for i in range(0, self.num_matrices):
+            parameters[i] += value
+
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
@@ -276,8 +281,11 @@ class ADAGParameterServer(SocketParameterServer):
             self.v_t = self.beta_2 * self.v_t + self.beta_2 * (r**2)
             m_hat = self.m_t / (1 - self.beta_1_t)
             v_hat = self.v_t / (1 - self.beta_2_t)
+            # Compute the square root of v_hat.
+            v_hat = self.sqrt(v_hat)
+            v_hat = self.add(v_hat, 0.00000001)
             # Compute the gradient we need to apply.
-            r = m_hat / (self.sqrt(v_hat) + 0.00000001)
+            r = m_hat / v_hat
             # Update the center variable.
             center_variable = self.model.get_weights()
             center_variable += r
