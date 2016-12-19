@@ -267,3 +267,5 @@ class ADAGParameterServer(SocketParameterServer):
             center_variable += r
             # Update iteration and beta variables.
             self.t += (1 + l)
+        # Increment the number of parameter server updates.
+        self.next_update()
