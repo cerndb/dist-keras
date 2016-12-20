@@ -198,12 +198,11 @@ class ADAGWorker(NetworkWorker):
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
-                # delta = W2 - W1
-                delta = (W2 - W1) / self.communication_window
+                delta = W2 - W1
                 r += delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
-                    # r /= self.communication_window
+                    r /= self.communication_window
                     # Send the residual to the master.
                     self.commit(r)
                     # Clear the residual
