@@ -242,18 +242,8 @@ class ADAGParameterServer(SocketParameterServer):
     def __init__(self, model, master_port, learning_rate=0.01, beta_1=0.9, beta_2=0.999):
         super(ADAGParameterServer, self).__init__(model, master_port)
         # Initialize optimizer specific variables.
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
         self.learning_rate = learning_rate
         self.num_matrices = len(self.model.get_weights())
-        # Initialize variable parameters.
-        self.t = 1
-        self.beta_1_t = self.beta_1
-        self.beta_2_t = self.beta_2
-        self.m_t = np.asarray(self.model.get_weights())
-        self.v_t = np.asarray(self.model.get_weights())
-        self.m_t.fill(0.0)
-        self.v_t.fill(0.0)
 
     def sqrt(self, parameters):
         # Apply square root to the specified parameters.
@@ -271,25 +261,8 @@ class ADAGParameterServer(SocketParameterServer):
         # Extract the data from the dictionary.
         r = data['residual']
         with self.mutex:
-            # Compute beta variables.
-            self.beta_1_t = math.pow(self.beta_1, self.t)
-            self.beta_2_t = math.pow(self.beta_2, self.t)
-            # Compute lambda for the current iteration.
-            l = math.sqrt(1 - self.beta_2_t) / (1 - self.beta_1_t)
-            # Update first and second momentum variables.
-            self.m_t = self.beta_1 * self.m_t + self.beta_1 * r
-            self.v_t = self.beta_2 * self.v_t + self.beta_2 * (r**2)
-            m_hat = self.m_t / (1 - self.beta_1_t)
-            v_hat = self.v_t / (1 - self.beta_2_t)
-            # Compute the square root of v_hat.
-            self.sqrt(v_hat)
-            self.add(v_hat, 0.0000001)
-            # Compute the gradient we need to apply.
-            r = m_hat / v_hat
             # Update the center variable.
             center_variable = self.model.get_weights()
             center_variable += r
-            # Update iteration and beta variables.
-            self.t += (1 - l)
         # Increment the number of parameter server updates.
         self.next_update()

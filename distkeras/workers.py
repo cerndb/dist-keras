@@ -202,10 +202,8 @@ class ADAGWorker(NetworkWorker):
                 r += delta
                 # Check if the gradient residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
-                    self.pull()
-                    # Compute the normalized residual.
-                    d = np.abs((self.center_variable - W2))
-                    r /= (1 + d)
+                    # Normalize with the iteration.
+                    r /= self.communication_window
                     # Send the normalized residual.
                     self.commit(r)
                     # Clear the gradient residual.
