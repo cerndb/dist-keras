@@ -262,7 +262,7 @@ class ADAGParameterServer(SocketParameterServer):
         r = data['residual']
         with self.mutex:
             # Update the center variable.
-            center_variable = self.model.get_weights()
+            center_variable = np.asarray(self.model.get_weights())
             center_variable += r
         # Increment the number of parameter server updates.
         self.next_update()

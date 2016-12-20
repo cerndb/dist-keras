@@ -198,8 +198,7 @@ class ADAGWorker(NetworkWorker):
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
-                delta = (W2 - W1)
-                r += delta
+                r += (W2 - W1)
                 # Check if the gradient residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
                     # Normalize with the iteration.
