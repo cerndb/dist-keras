@@ -264,5 +264,7 @@ class ADAGParameterServer(SocketParameterServer):
             # Update the center variable.
             center_variable = self.model.get_weights()
             center_variable = center_variable + r
+            # Set the new parameters of the model.
+            self.model.set_weights(center_variable)
         # Increment the number of parameter server updates.
         self.next_update()
