@@ -197,7 +197,7 @@ class ADAGWorker(NetworkWorker):
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
                     # Send the residual to the master.
-                    self.commit(v)
+                    self.commit(r)
                     # Clear the residual
                     r.fill(0.0)
                     # Update the local variable.
