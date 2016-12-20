@@ -194,6 +194,12 @@ class ADAGWorker(NetworkWorker):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
+                # Train the model on the current mini-batch.
+                W1 = np.asarray(self.model.get_weights())
+                self.model.train_on_batch(X, Y)
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                r += delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
                     # Send the residual to the master.
@@ -204,11 +210,6 @@ class ADAGWorker(NetworkWorker):
                     self.pull()
                     # Update the local replica.
                     self.model.set_weights(self.center_variable)
-                W1 = np.asarray(self.model.get_weights())
-                self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
-                delta = W2 - W1
-                r += delta
                 self.iteration += 1
         except StopIteration:
             pass
