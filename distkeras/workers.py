@@ -194,22 +194,22 @@ class ADAGWorker(NetworkWorker):
                 feature_iterator, label_iterator = tee(batch, 2)
                 X = np.asarray([x[self.features_column] for x in feature_iterator])
                 Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Train the local model, and compute the new gradient residual.
+                # Check if the residual needs to be communicated.
+                if self.iteration % self.communication_window == 0:
+                    # Send the residual to the master.
+                    self.commit(v)
+                    # Clear the residual
+                    r.fill(0.0)
+                    # Update the local variable.
+                    self.pull()
+                    # Update the local replica.
+                    self.model.set_weights(self.center_variable)
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
-                r = r + (W2 - W1)
-                # Check if the gradient residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    # Send the normalized residual.
-                    self.commit(r)
-                    # Clear the gradient residual.
-                    r.fill(0.0)
-                    # Update the center and local variable.
-                    self.pull()
-                    self.model.set_weights(self.center_variable)
-                # Increment the iteration.
-                self.iteration = self.iteration + 1
+                delta = W2 - W1
+                r += delta
+                self.iteration += 1
         except StopIteration:
             pass
         # Close the connection with the parameter server.
