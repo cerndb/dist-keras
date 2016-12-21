@@ -199,7 +199,7 @@ class ADAGWorker(NetworkWorker):
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                r = (0.95 * r) + delta
+                r = r + delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
                     r /= self.communication_window
@@ -300,7 +300,7 @@ class DOWNPOURWorker(NetworkWorker):
                 self.model.train_on_batch(X, Y)
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                v += delta
+                v = v + delta
                 self.iteration += 1
         except StopIteration:
             pass
