@@ -106,25 +106,29 @@ class DenseTransformer(Transformer):
         return dataframe.rdd.map(self._transform).toDF()
 
 
-class MatrixTransformer(Transformer):
-    """Transforms vectors into (dense) matrices.
+class ReshapeTransformer(Transformer):
+    """Transforms vectors into other dense shapes.
+
+    # Note:
+        Only use this transformer in the last stage of the processing pipeline.
+        Since the arbitrary vector shapes will be directly passed on to the models.
 
     # Arguments:
         input_col: string. Name of the input column containing the vector.
         output_col: string. Name of the output column.
+        shape: tuple. Shape of the matrix.
     """
 
-    def __init__(self, input_col, output_col, num_rows, num_columns):
+    def __init__(self, input_col, output_col, shape):
         self.input_column = input_col
         self.output_column = output_col
-        self.num_rows = num_rows
-        self.num_columns = num_columns
+        self.shape = shape
 
     def _transform(self, row):
         """Transforms the vector to a dense matrix while putting it in a new column."""
         vector = row[self.input_column]
-        matrix = DenseMatrix(self.num_rows, self.num_columns, vector.toArray())
-        new_row = new_dataframe_row(row, self.output_column, matrix)
+        reshaped = vector.toArray().reshape(self.shape).tolist()
+        new_row = new_dataframe_row(row, self.output_column, reshaped)
 
         return new_row
 
