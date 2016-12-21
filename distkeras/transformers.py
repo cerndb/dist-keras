@@ -7,6 +7,7 @@ a column to a dataframe based on a collection of specified values.
 
 ## BEGIN Imports. ##############################################################
 
+from pyspark.mllib.linalg import DenseMatrix
 from pyspark.mllib.linalg import DenseVector
 
 from distkeras.utils import new_dataframe_row
@@ -96,6 +97,39 @@ class DenseTransformer(Transformer):
 
     def transform(self, dataframe):
         """Transforms every sparse vector in the input column to a dense vector.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe.
+        # Returns
+            A transformed Spark Dataframe.
+        """
+        return dataframe.rdd.map(self._transform).toDF()
+
+
+class MatrixTransformer(Transformer):
+    """Transforms vectors into (dense) matrices.
+
+    # Arguments:
+        input_col: string. Name of the input column containing the vector.
+        output_col: string. Name of the output column.
+    """
+
+    def __init__(self, input_col, output_col, num_rows, num_columns):
+        self.input_column = input_col
+        self.output_column = output_col
+        self.num_rows = num_rows
+        self.num_columns = num_columns
+
+    def _transform(self, row):
+        """Transforms the vector to a dense matrix while putting it in a new column."""
+        vector = row[self.input_column]
+        matrix = DenseMatrix(self.num_rows, self.num_columns, vector.toArray())
+        new_row = new_dataframe_row(row, self.output_column, matrix)
+
+        return new_row
+
+    def transform(self, dataframe):
+        """Transforms every vector in the input column to a dense vector.
 
         # Arguments
             dataframe: dataframe. Spark Dataframe.
