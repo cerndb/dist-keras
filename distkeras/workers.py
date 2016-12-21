@@ -81,8 +81,8 @@ class SequentialWorker(Worker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Retrieve the feature and label vectors.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                X = np.asarray([x[self.features_column].toArray() for x in feature_iterator])
+                Y = np.asarray([x[self.label_column].toArray() for x in label_iterator])
                 self.model.train_on_batch(X, Y)
         except StopIteration:
             pass
@@ -192,8 +192,8 @@ class ADAGWorker(NetworkWorker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                X = np.asarray([x[self.features_column].toArray() for x in feature_iterator])
+                Y = np.asarray([x[self.label_column].toArray() for x in label_iterator])
                 # Train the model on the current mini-batch.
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
@@ -284,8 +284,8 @@ class DOWNPOURWorker(NetworkWorker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                X = np.asarray([x[self.features_column].toArray() for x in feature_iterator])
+                Y = np.asarray([x[self.label_column].toArray() for x in label_iterator])
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
                     # Send the residual to the master.
@@ -373,8 +373,8 @@ class AEASGDWorker(NetworkWorker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                X = np.asarray([x[self.features_column].toArray() for x in feature_iterator])
+                Y = np.asarray([x[self.label_column].toArray() for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
                     self.pull()
@@ -458,8 +458,8 @@ class EAMSGDWorker(NetworkWorker):
                 batch = [next(iterator) for _ in range(self.batch_size)]
                 # Extract the feature and label vector.
                 feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                X = np.asarray([x[self.features_column].toArray() for x in feature_iterator])
+                Y = np.asarray([x[self.label_column].toArray() for x in label_iterator])
                 # Check if we need to communicate with the parameter server.
                 if self.iteration % self.communication_window == 0:
                     self.pull()
