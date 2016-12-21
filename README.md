@@ -74,6 +74,15 @@ This optimizer follows the traditional scheme of training a model, i.e., it uses
 SingleTrainerWorker(model, features_col, label_col, batch_size, optimizer, loss)
 ```
 
+### ADAG (Currently Recommended)
+
+DOWNPOUR variant which is able to achieve significantly better statistical performance while being less sensitive to hyperparameters. This optimizer was developed using insights gained while developing this framework. More research regarding parameter staleness is still being conducted to further improve this optimizer.
+
+```python
+ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+     features_col="features", label_col="label", num_epoch=1, communication_window=5)
+```
+
 ### Asynchronous Elastic Averaging SGD (AEASGD)
 
 The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[2]](https://arxiv.org/pdf/1412.6651.pdf) .
