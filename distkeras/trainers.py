@@ -135,14 +135,19 @@ class SingleTrainer(Trainer):
             dataframe = shuffle(dataframe)
         # Collect all the data on a single worker node.
         dataframe = dataframe.coalesce(1)
+        # Assign the dataset.
+        dataset = dataframe
+        # Build the dataset with the number of epochs.
+        for i in range(0, self.num_epoch):
+            dataset = dataset.unionAll(dataframe)
+        # Cache the dataset.
+        dataset.cache()
+        # Allocate a worker.
+        worker = self.allocate_worker()
         # Start recording training time.
         self.record_training_start()
-        # Iterate through the number of records.
-        for i in range(0, self.num_epoch):
-            # Allocate a worker.
-            worker = self.allocate_worker()
-            # Fetch the trained model.
-            self.master_model = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
+        # Fetch the trained model.
+        self.master_model = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
         # Stop recording of training time.
         self.record_training_end()
 
