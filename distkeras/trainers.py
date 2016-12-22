@@ -147,7 +147,7 @@ class SingleTrainer(Trainer):
         # Start recording training time.
         self.record_training_start()
         # Fetch the trained model.
-        self.master_model = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
+        self.master_model = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
         # Stop recording of training time.
         self.record_training_end()
 
