@@ -130,16 +130,16 @@ class SingleTrainer(Trainer):
                      the network. It is recommended to shuffle the dataset before
                      training and store it.
         """
-        # Check if the data needs to be shuffled.
-        if shuffle:
-            dataframe = shuffle(dataframe)
-        # Collect all the data on a single worker node.
-        dataframe = dataframe.coalesce(1)
         # Assign the dataset.
         dataset = dataframe
         # Build the dataset with the number of epochs.
         for i in range(0, self.num_epoch):
             dataset = dataset.unionAll(dataframe)
+        # Check if the data needs to be shuffled.
+        if shuffle:
+            dataset = shuffle(dataset)
+        # Collect the dataset on a single worker node.
+        dataset = dataset.coalesce(1)
         # Cache the dataset.
         dataset.cache()
         # Allocate a worker.
@@ -353,19 +353,25 @@ class DistributedTrainer(Trainer):
         worker = self.allocate_worker()
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
+        # Assign the dataset.
+        dataset = dataframe
+        # Build a dataset which fits the number of epochs.
+        for i in range(0, self.num_epoch):
+            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataframe = shuffle(dataframe)
+            dataset = shuffle(dataset)
         # Check if we need to repartition the dataframe.
         if num_partitions > self.num_workers:
-            dataframe = dataframe.coalesce(self.num_workers)
+            dataset = dataset.coalesce(self.num_workers)
         else:
-            dataframe = dataframe.repartition(self.num_workers)
+            dataset = dataset.repartition(self.num_workers)
+        # Cache the dataset.
+        dataset.cache()
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        for i in range(0, self.num_epoch):
-            dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
+        dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -448,21 +454,25 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         worker = self.allocate_worker()
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
+        # Assign the dataset.
+        dataset = dataframe
+        # Build the dataset with the number of epochs.
+        for i in range(0, self.num_epoch):
+            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataframe = shuffle(dataframe)
+            dataset = shuffle(dataset)
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
         if num_partitions > parallelism:
-            dataframe = dataframe.coalesce(parallelism)
+            dataset = dataset.coalesce(parallelism)
         else:
-            dataframe = dataframe.repartition(parallelism)
+            dataset = dataset.repartition(parallelism)
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        for i in range(0, self.num_epoch):
-            dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
+        dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
