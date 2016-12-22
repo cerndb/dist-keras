@@ -268,8 +268,6 @@ class DOWNPOURWorker(NetworkWorker):
         """Specific training procedure for DOWNPOUR."""
         # Prepare the model.
         self.prepare_model()
-        # Uniformily initialize the replica with random weights.
-        uniform_weights(self.model)
         # Connect to the parameter server.
         self.connect()
         # Set the worker id.
