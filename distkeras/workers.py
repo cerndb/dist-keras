@@ -182,7 +182,7 @@ class ADAGWorker(NetworkWorker):
         # Prepare the gradient residual.
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
-        # Synchronize the center variable.
+        # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
         # Start the epoch training process.
@@ -277,6 +277,9 @@ class DOWNPOURWorker(NetworkWorker):
         # Prepare the gradient residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
+        # Synchronize with the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
         # Start the epoch training process
         try:
             while True:
@@ -366,6 +369,9 @@ class AEASGDWorker(NetworkWorker):
         self.set_worker_id(worker_id)
         # Connect to the parameter server.
         self.connect()
+        # Synchronize with the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
         # Start the epoch training.
         try:
             while True:
@@ -451,6 +457,9 @@ class EAMSGDWorker(NetworkWorker):
         # Initialize the momentum residual matrix.
         v = np.asarray(self.model.get_weights())
         v.fill(0.0)
+        # Synchronize with the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
         # Start the epoch training.
         try:
             while True:
