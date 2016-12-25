@@ -645,30 +645,24 @@ class ADAG(AsynchronousDistributedTrainer):
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5,
-                 learning_rate=0.1, beta_1=0.9, beta_2=0.999):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
         # Initialize the parent object.
         super(ADAG, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                    batch_size, features_col, label_col, num_epoch)
         # Set algorithm parameters.
         self.communication_window = communication_window
-        self.learning_rate = learning_rate
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
 
     def allocate_worker(self):
         """Allocate an Adag worker."""
         worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss,
                             self.features_column, self.label_column, self.batch_size,
-                            self.master_host, self.master_port, self.learning_rate,
-                            self.communication_window)
+                            self.master_host, self.master_port, self.communication_window)
 
         return worker
 
     def allocate_parameter_server(self):
         """Allocate the Adag parameter server."""
         # Allocate an ADAGA parameter server.
-        parameter_server = ADAGParameterServer(self.master_model, self.master_port,
-                                               self.learning_rate, self.beta_1, self.beta_2)
+        parameter_server = ADAGParameterServer(self.master_model, self.master_port)
 
         return parameter_server

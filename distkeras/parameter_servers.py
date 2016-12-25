@@ -239,21 +239,8 @@ class ADAGParameterServer(SocketParameterServer):
         beta_2: float. Beta_2 in the ADAG algorithm.
     """
 
-    def __init__(self, model, master_port, learning_rate=0.01, beta_1=0.9, beta_2=0.999):
+    def __init__(self, model, master_port):
         super(ADAGParameterServer, self).__init__(model, master_port)
-        # Initialize optimizer specific variables.
-        self.learning_rate = learning_rate
-        self.num_matrices = len(self.model.get_weights())
-
-    def sqrt(self, parameters):
-        # Apply square root to the specified parameters.
-        for i in range(0, self.num_matrices):
-            parameters[i] = np.sqrt(parameters[i])
-
-    def add(self, parameters, value):
-        # Add the specified value to the parameters.
-        for i in range(0, self.num_matrices):
-            parameters[i] += value
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
