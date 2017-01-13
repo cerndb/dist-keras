@@ -235,8 +235,6 @@ class ADAGParameterServer(SocketParameterServer):
         model: string. Keras model.
                See: distkeras.utils.serialize_keras_model
         master_port: int. Port number of the parameter server.
-        beta_1: float. Beta_1 in the ADAG algorithm.
-        beta_2: float. Beta_2 in the ADAG algorithm.
     """
 
     def __init__(self, model, master_port):
