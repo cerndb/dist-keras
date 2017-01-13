@@ -149,6 +149,7 @@ class ADAGWorker(NetworkWorker):
     def connect(self):
         """Connect with the remote parameter server."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.socket.connect((self.master_host, self.master_port))
 
     def pull(self):
