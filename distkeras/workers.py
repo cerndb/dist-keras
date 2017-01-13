@@ -258,8 +258,7 @@ class DOWNPOURWorker(NetworkWorker):
 
     def connect(self):
         """Connects with the parameter server."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.master_host, self.master_port))
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
 
     def pull(self):
         """Requests the center variable from the parameter server."""
@@ -353,8 +352,7 @@ class AEASGDWorker(NetworkWorker):
 
     def connect(self):
         """Connects with the parameter server."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.master_host, self.master_port))
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
 
     def pull(self):
         """Requests the center variable from the parameter server."""
@@ -438,8 +436,7 @@ class EAMSGDWorker(NetworkWorker):
 
     def connect(self):
         """Connects with the remote parameter server."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.master_host, self.master_port))
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
 
     def pull(self):
         """Fetches the center variable from the parameter server."""
