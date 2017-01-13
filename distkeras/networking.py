@@ -84,3 +84,15 @@ def send_data(connection, data):
     # Send the data over the provided socket.
     connection.sendall(serialized_length.encode())
     connection.sendall(serialized_data)
+
+def connect(host, port, disable_nagle=True):
+    fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Check if Nagle's algorithm needs to be disabled.
+    if disable_nagle:
+        fd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    else:
+        fd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 0)
+    # Connect to the specified URI.
+    fd.connect((host, port))
+
+    return fd

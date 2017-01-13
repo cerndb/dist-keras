@@ -99,7 +99,22 @@ class NetworkWorker(Worker):
                                             label_col, batch_size)
         self.master_host = master_host
         self.master_port = master_port
+        self.disable_nagle = True
         self.worker_id = 0
+
+    def set_tcp_no_delay(self, flag):
+        """Disables or enables Nagle's algorithm.
+        (True -> TCP_NODELAY = 1)
+        (False -> TCP_NODELAY = 0)
+
+        # Arguments:
+            flag: boolean. Indicates if Nagle's algorithm should be disabled.
+        """
+        self.disable_nagle = flag
+
+    def tcp_no_delay(self):
+        """Returns of the TCP_NODELAY flag (Nagle's algorithm)."""
+        return self.tcp_no_delay()
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
@@ -148,9 +163,7 @@ class ADAGWorker(NetworkWorker):
 
     def connect(self):
         """Connect with the remote parameter server."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.socket.connect((self.master_host, self.master_port))
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
 
     def pull(self):
         """Requests the center variable from the parameter server."""
