@@ -16,6 +16,7 @@ from multiprocessing import Pool
 
 from distkeras.networking import send_data
 from distkeras.networking import recv_data
+from distkeras.networking import connect
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import shuffle
