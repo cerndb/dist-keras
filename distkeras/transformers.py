@@ -200,11 +200,16 @@ class LabelIndexTransformer(Transformer):
 
     def get_index(self, vector):
         """Returns the index with the highest value or with activation threshold."""
+        max = 0.0
+        max_index = self.default_index
         for index in range(0, self.output_dimensionality):
             if vector[index] >= self.activation_threshold:
                 return index
+            if vector[index] > max:
+                max = vector[index]
+                max_index = index
 
-        return self.default_index
+        return max_index
 
     def _transform(self, row):
         """Transforms every row by adding a "predicted index" column to the dataframe. """
