@@ -126,8 +126,8 @@ class SocketParameterServer(ParameterServer):
         # Fetch the raw center variables.
         with self.mutex:
             center_variable = self.model.get_weights()
-        # Send the data over the socket.
-        send_data(conn, center_variable)
+            # Send the data over the socket.
+            send_data(conn, center_variable)
 
     def cancel_accept(self):
         """This method will cancel the accept procedure. The method
