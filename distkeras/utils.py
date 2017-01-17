@@ -101,3 +101,14 @@ def shuffle(dataset):
     dataset.cache()
 
     return dataset
+
+
+def precache(dataset):
+    """Precaches the specified dataset.
+
+    Make sure the specified dataframe has the desired partitioning scheme.
+
+    # Arguments
+        dataset: dataframe. A Spark Dataframe.
+    """
+    return dataset.count()
