@@ -7,9 +7,11 @@ This center variable will eventually be the produced model of the trainer.
 
 ## BEGIN Imports. ##############################################################
 
-import numpy as np
+import copy
 
 import math
+
+import numpy as np
 
 import socket
 
@@ -126,8 +128,9 @@ class SocketParameterServer(ParameterServer):
         # Fetch the raw center variables.
         with self.mutex:
             center_variable = self.model.get_weights()
-            # Send the data over the socket.
-            send_data(conn, center_variable)
+            cv = copy.deepcopy(center_variable)
+        # Send the data over the socket.
+        send_data(conn, cv)
 
     def cancel_accept(self):
         """This method will cancel the accept procedure. The method
