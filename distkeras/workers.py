@@ -114,8 +114,12 @@ class NetworkWorker(Worker):
         self.disable_nagle = flag
 
     def tcp_no_delay(self):
-        """Returns of the TCP_NODELAY flag (Nagle's algorithm)."""
-        return self.tcp_no_delay()
+        """Returns the value TCP_NODELAY of the flag (Nagle's algorithm).
+
+        # Returns
+            True, if Nagle's algorithm is disabled. False otherwise.
+        """
+        return self.disable_nagle
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
