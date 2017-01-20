@@ -542,7 +542,7 @@ class ExperimentalWorker(NetworkWorker):
         # Prepare the datastructure.
         data = {}
         data['worker_id'] = self.get_worker_id()
-        data['residual'] = residual
+        data['delta'] = residual
         # Request a commit from the parameter server.
         self.socket.sendall(b'c')
         # Send the data to the paramter server.
