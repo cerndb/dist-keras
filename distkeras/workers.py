@@ -518,9 +518,9 @@ class ExperimentalWorker(NetworkWorker):
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
         # Initialize the parent object.
-        super(ADAGWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                         batch_size, master_host, master_port)
-        # Initialize ADAG parameters.
+        super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                                 batch_size, master_host, master_port)
+        # Initialize parameters.
         self.communication_window = communication_window
         self.iteration = 1
         self.socket = None
