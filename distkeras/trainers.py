@@ -669,7 +669,7 @@ class ADAG(AsynchronousDistributedTrainer):
         return parameter_server
 
 
-class ExperimentalWorker(AsynchronousDistributedTrainer):
+class Experimental(AsynchronousDistributedTrainer):
     """Asynchronous distributed experimental worker.
 
     Used for testing research ideas.
