@@ -686,6 +686,7 @@ class Experimental(AsynchronousDistributedTrainer):
         """Allocate an experimental worker."""
         worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
                                     self.features_column, self.label_column, self.batch_size,
-                                    self.master_host, self.master_port, self.communication_window)
+                                    self.master_host, self.master_port, self.communication_window,
+                                    self.num_workers)
 
         return worker

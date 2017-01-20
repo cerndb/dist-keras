@@ -516,7 +516,8 @@ class ExperimentalWorker(NetworkWorker):
     """Experimental worker for testing research ideas."""
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
+                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
+                 num_workers=2):
         # Initialize the parent object.
         super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                                  batch_size, master_host, master_port)
@@ -525,6 +526,7 @@ class ExperimentalWorker(NetworkWorker):
         self.iteration = 1
         self.socket = None
         self.center_variable = None
+        self.num_workers = num_workers
 
     def connect(self):
         """Connect with the remote parameter server."""
@@ -586,7 +588,7 @@ class ExperimentalWorker(NetworkWorker):
                     # Fetch the new center variable.
                     C2 = self.center_variable
                     # Compute the difference.
-                    d = 1 / (1 + self.communication_window * 9 * np.absolute(C2 - C1))
+                    d = 1 / (1 + self.communication_window * self.num_workers * np.square(C2 - C1))
                     # Compute the new residual.
                     r = np.multiply(r, d)
                     self.center_variable += r
