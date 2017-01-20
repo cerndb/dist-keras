@@ -510,3 +510,96 @@ class EAMSGDWorker(NetworkWorker):
         self.socket.close()
 
         return iter([])
+
+
+class ExperimentalWorker(NetworkWorker):
+    """Experimental worker for testing research ideas."""
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
+        # Initialize the parent object.
+        super(ADAGWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                         batch_size, master_host, master_port)
+        # Initialize ADAG parameters.
+        self.communication_window = communication_window
+        self.iteration = 1
+        self.socket = None
+        self.center_variable = None
+
+    def connect(self):
+        """Connect with the remote parameter server."""
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
+
+    def pull(self):
+        """Requests the center variable from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the center variable from the parameter server.
+        self.center_variable = np.asarray(recv_data(self.socket))
+
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['residual'] = residual
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the paramter server.
+        send_data(self.socket, data)
+
+    def train(self, worker_id, iterator):
+        """Training procedure of ADAG."""
+        # Prepare the model.
+        self.prepare_model()
+        # Connect with the remote parameter server.
+        self.connect()
+        # Set the worker identifier.
+        self.set_worker_id(worker_id)
+        # Prepare the gradient residual.
+        r = np.asarray(self.model.get_weights())
+        r.fill(0.0)
+        # Synchronize with the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
+        # Start the epoch training process.
+        try:
+            while True:
+                # Fetch the next mini-batch.
+                batch = [next(iterator) for _ in range(self.batch_size)]
+                # Extract the feature and label vector.
+                feature_iterator, label_iterator = tee(batch, 2)
+                X = np.asarray([x[self.features_column] for x in feature_iterator])
+                Y = np.asarray([x[self.label_column] for x in label_iterator])
+                # Train the model on the current mini-batch.
+                W1 = np.asarray(self.model.get_weights())
+                self.model.train_on_batch(X, Y)
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                r = r + delta
+                # Check if the residual needs to be communicated.
+                if self.iteration % self.communication_window == 0:
+                    # Fetch the current center variable.
+                    C1 = self.center_variable
+                    # Update the local variable.
+                    self.pull()
+                    # Fetch the new center variable.
+                    C2 = self.center_variable
+                    # Compute the difference.
+                    d = np.absolute(C2 - C1)
+                    # Compute the new residual.
+                    r /= (1 + d)
+                    self.center_variable += r
+                    # Send the residual to the master.
+                    self.commit(r)
+                    # Clear the residual
+                    r.fill(0.0)
+                    # Update the local replica.
+                    self.model.set_weights(self.center_variable)
+                self.iteration += 1
+        except StopIteration:
+            pass
+        # Close the connection with the parameter server.
+        self.socket.close()
+
+        return iter([])

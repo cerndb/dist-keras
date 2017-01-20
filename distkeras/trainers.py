@@ -17,6 +17,7 @@ from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import EAMSGDWorker
 from distkeras.workers import ADAGWorker
+from distkeras.workers import ExperimentalWorker
 
 ## END Imports. ################################################################
 
@@ -666,3 +667,25 @@ class ADAG(AsynchronousDistributedTrainer):
         parameter_server = ADAGParameterServer(self.master_model, self.master_port)
 
         return parameter_server
+
+
+class ExperimentalWorker(AsynchronousDistributedTrainer):
+    """Asynchronous distributed experimental worker.
+
+    Used for testing research ideas.
+    """
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
+        # Initialize the parent object.
+        super(ExperimentalWorker, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                                 batch_size, features_col, label_col, num_epoch)
+        # Set the algorithm parameters.
+        self.communication_window = communication_window
+
+    def allocate_worker(self):
+        """Allocate an experimental worker."""
+        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
+                                    self.features_column, self.label_column, self.batch_size,
+                                    self.master_host, self.master_port, self.communication_window)
+
+        return worker
