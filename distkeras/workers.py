@@ -588,7 +588,7 @@ class ExperimentalWorker(NetworkWorker):
                     # Compute the difference.
                     d = 1 / (1 + np.absolute(C2 - C1))
                     # Compute the new residual.
-                    r *= d
+                    r = np.multiply(r, d)
                     self.center_variable += r
                     # Send the residual to the master.
                     self.commit(r)
