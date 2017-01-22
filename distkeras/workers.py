@@ -588,7 +588,7 @@ class ExperimentalWorker(NetworkWorker):
                     # Fetch the new center variable.
                     C2 = self.center_variable
                     # Compute the difference.
-                    d = 1 / (1 + self.communication_window * self.num_workers * np.square(C2 - C1))
+                    d = 1 / (self.communication_window * (1 + np.square(C2 - C1)))
                     # Compute the new residual.
                     r = np.multiply(r, d)
                     self.center_variable += r
