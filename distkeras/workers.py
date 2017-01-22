@@ -601,17 +601,17 @@ class ExperimentalWorker(NetworkWorker):
                 self.iteration += 1
         except StopIteration:
             pass
-         # Fetch the current center variable.
-         C1 = self.center_variable
-         # Update the local variable.
-         self.pull()
-         # Fetch the new center variable.
-         C2 = self.center_variable
-         # Compute the difference.
-         d = 1 / (self.communication_window * (1 + np.square(C2 - C1)))
-         # Compute the new residual.
-         r = np.multiply(r, d)
-         self.commit(r)
+        # Fetch the current center variable.
+        C1 = self.center_variable
+        # Update the local variable.
+        self.pull()
+        # Fetch the new center variable.
+        C2 = self.center_variable
+        # Compute the difference.
+        d = 1 / (self.communication_window * (1 + np.square(C2 - C1)))
+        # Compute the new residual.
+        r = np.multiply(r, d)
+        self.commit(r)
         # Close the connection with the parameter server.
         self.socket.close()
 
