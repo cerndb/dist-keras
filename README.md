@@ -80,7 +80,7 @@ DOWNPOUR variant which is able to achieve significantly better statistical perfo
 
 ```python
 ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-     features_col="features", label_col="label", num_epoch=1, communication_window=5)
+     features_col="features", label_col="label", num_epoch=1, communication_window=12)
 ```
 
 ### Asynchronous Elastic Averaging SGD (AEASGD)
