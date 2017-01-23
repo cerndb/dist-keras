@@ -13,6 +13,8 @@ Most of the distributed optimizers we provide, are based on data parallel method
 
 **Attention**: We recommend reading the [workflow](https://github.com/JoeriHermans/dist-keras/blob/master/examples/workflow.ipynb) Jupyter notebook. This includes a complete description of the problem, how to use it, preprocess your data with Apache Spark, and a performance evaluation of all included distributed optimizers.
 
+**Attention**: A rather complete introduction to the problem of Distributed Deep Learning is given here: [http://joerihermans.com/ramblings/distributed-deep-learning-part-1-an-introduction/](http://joerihermans.com/ramblings/distributed-deep-learning-part-1-an-introduction/).
+
 
 ## Installation
 
