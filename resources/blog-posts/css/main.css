@@ -1,0 +1,182 @@
+/**
+ * joerihermans.com main stylesheet.
+ *
+ * @author  Joeri Hermans
+ * @version 0,1
+ * @since   28 June 2016
+ */
+
+/** BEGIN Imports. ************************************************************/
+
+@import url('https://fonts.googleapis.com/css?family=Roboto:300');
+
+/** END Imports. **************************************************************/
+
+/** BEGIN General. ************************************************************/
+
+html, body {
+  background: white;
+  color: #1b1b1b;
+  font-family: 'Roboto', sans-serif;
+  height: 100%;
+  margin: 0;
+  font-size: 0.95em;
+}
+
+body {
+  padding: 50px;
+}
+
+a {
+  color: #4078c0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+a img {
+  border: 0;
+}
+
+.left {
+  float: left !important;
+}
+
+.right {
+  float: right !important;
+}
+
+.inlined-code {
+  border-radius: 2px;
+  background: #f0f0f0;
+  padding: 2px 4px;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.image-container {
+  text-align: center;
+}
+
+/** END General. **************************************************************/
+
+/** BEGIN Math. ***************************************************************/
+
+.equation-math {
+  text-align: center;
+  margin: 40px 0;
+  position: relative;
+}
+
+.equation-math span {
+  text-align: left;
+}
+
+.equation-math-number {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin: 0;
+  height: 100%;
+  line-height: 40px;
+  right: 20px;
+  font-size: 0.9em;
+  color: #1b1b1b;
+  font-weight: bold;
+}
+
+/** END Math. *****************************************************************/
+
+/** BEGIN Blog. ***************************************************************/
+
+.blog-figure-container {
+  text-align: center;
+}
+
+.blog-figure-container img {
+  max-width: 100%;
+}
+
+.blog-figure-container p {
+  text-align: left;
+}
+
+/** END Blog. ****************************************************************/
+
+/** BEGIN Highlight. *********************************************************/
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 10px 30px;
+  background: #f0f0f0;
+}
+
+.hljs,
+.hljs-subst {
+  color: #444;
+}
+
+.hljs-comment {
+  color: #888888;
+}
+
+.hljs-keyword,
+.hljs-attribute,
+.hljs-selector-tag,
+.hljs-meta-keyword,
+.hljs-doctag,
+.hljs-name {
+  font-weight: bold;
+}
+
+.hljs-type,
+.hljs-string,
+.hljs-number,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-quote,
+.hljs-template-tag,
+.hljs-deletion {
+  color: #d4645c;
+}
+
+.hljs-title,
+.hljs-section {
+  color: #d4645c;
+  font-weight: bold;
+}
+
+.hljs-literal {
+  color: #78A960;
+}
+
+.hljs-built_in,
+.hljs-bullet,
+.hljs-code,
+.hljs-addition {
+  color: #397300;
+}
+
+.hljs-meta {
+  color: #1f7199;
+}
+
+.hljs-meta-string {
+  color: #4d99bf;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+/** END Highlight. ***********************************************************/
