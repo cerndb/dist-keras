@@ -553,7 +553,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_random_communication_window(self):
-        r = random.randrange(-3, 3, 1)
+        r = random.randint(-4,4)
 
         return self.communication_window + r
 
