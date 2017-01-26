@@ -529,6 +529,7 @@ class ExperimentalWorker(NetworkWorker):
         self.socket = None
         self.center_variable = None
         self.num_workers = num_workers
+        self.communication_window = self.get_random_communication_window()
 
     def connect(self):
         """Connect with the remote parameter server."""
@@ -571,8 +572,6 @@ class ExperimentalWorker(NetworkWorker):
         # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
-        # Get the current communication window.
-        cw = self.get_random_communication_window()
         # Start the epoch training process.
         try:
             while True:
@@ -589,13 +588,12 @@ class ExperimentalWorker(NetworkWorker):
                 delta = W2 - W1
                 r = r + delta
                 # Check if the residual needs to be communicated.
-                if self.iteration % cw == 0:
-                    r /= cw
+                if self.iteration % self.communication_window == 0:
+                    r /= self.communication_window
                     self.commit(r)
                     r.fill(0.0)
                     self.pull()
                     self.model.set_weights(self.center_variable)
-                    cw = self.get_random_communication_window()
                 self.iteration += 1
         except StopIteration:
             pass
