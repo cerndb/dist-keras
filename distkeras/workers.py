@@ -553,9 +553,9 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_random_communication_window(self):
-        random = random.randrange(-3, 3, 1)
+        r = random.randrange(-3, 3, 1)
 
-        return self.communication_window + random
+        return self.communication_window + r
 
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
