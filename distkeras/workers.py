@@ -6,21 +6,23 @@ algorithms.
 
 ## BEGIN Imports. ##############################################################
 
-from itertools import tee
-
-import socket
-
-import numpy as np
-
-from multiprocessing import Pool
-
-from distkeras.networking import send_data
-from distkeras.networking import recv_data
 from distkeras.networking import connect
+from distkeras.networking import recv_data
+from distkeras.networking import send_data
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
+
+from itertools import tee
+
+from multiprocessing import Pool
+
+import numpy as np
+
+import random
+
+import socket
 
 ## END Imports. ################################################################
 
@@ -550,6 +552,11 @@ class ExperimentalWorker(NetworkWorker):
         # Send the data to the paramter server.
         send_data(self.socket, data)
 
+    def get_random_communication_window(self):
+        random = random.randrange(-3, 3, 1)
+
+        return self.communication_window + random
+
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
         # Prepare the model.
@@ -564,6 +571,8 @@ class ExperimentalWorker(NetworkWorker):
         # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
+        # Get the current communication window.
+        cw = self.get_random_communication_window()
         # Start the epoch training process.
         try:
             while True:
@@ -580,24 +589,13 @@ class ExperimentalWorker(NetworkWorker):
                 delta = W2 - W1
                 r = r + delta
                 # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    # Fetch the current center variable.
-                    C1 = self.center_variable
-                    # Update the local variable.
-                    self.pull()
-                    # Fetch the new center variable.
-                    C2 = self.center_variable
-                    # Compute the difference.
-                    d = 1 / (self.communication_window * (1 + np.square(C2 - C1)))
-                    # Compute the new residual.
-                    r = np.multiply(r, d)
-                    self.center_variable += r
-                    # Send the residual to the master.
+                if self.iteration % cw == 0:
+                    r /= cw
                     self.commit(r)
-                    # Clear the residual
                     r.fill(0.0)
-                    # Update the local replica.
+                    self.pull()
                     self.model.set_weights(self.center_variable)
+                    cw = self.get_random_communication_window()
                 self.iteration += 1
         except StopIteration:
             pass
