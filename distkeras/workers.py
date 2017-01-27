@@ -529,7 +529,7 @@ class ExperimentalWorker(NetworkWorker):
         self.socket = None
         self.center_variable = None
         self.num_workers = num_workers
-        self.communication_window = self.get_random_communication_window()
+        self.normalizer = self.communication_window * num_workers
 
     def connect(self):
         """Connect with the remote parameter server."""
@@ -552,11 +552,6 @@ class ExperimentalWorker(NetworkWorker):
         self.socket.sendall(b'c')
         # Send the data to the paramter server.
         send_data(self.socket, data)
-
-    def get_random_communication_window(self):
-        r = random.randint(-4,4)
-
-        return self.communication_window + r
 
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
@@ -589,7 +584,7 @@ class ExperimentalWorker(NetworkWorker):
                 r = r + delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
-                    r /= self.communication_window
+                    r /= self.normalizer
                     self.commit(r)
                     r.fill(0.0)
                     self.pull()
@@ -597,17 +592,6 @@ class ExperimentalWorker(NetworkWorker):
                 self.iteration += 1
         except StopIteration:
             pass
-        # Fetch the current center variable.
-        C1 = self.center_variable
-        # Update the local variable.
-        self.pull()
-        # Fetch the new center variable.
-        C2 = self.center_variable
-        # Compute the difference.
-        d = 1 / (self.communication_window * (1 + np.square(C2 - C1)))
-        # Compute the new residual.
-        r = np.multiply(r, d)
-        self.commit(r)
         # Close the connection with the parameter server.
         self.socket.close()
 
