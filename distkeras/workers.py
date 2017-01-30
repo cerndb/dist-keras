@@ -529,7 +529,7 @@ class ExperimentalWorker(NetworkWorker):
         self.socket = None
         self.center_variable = None
         self.num_workers = num_workers
-        self.normalizer = self.communication_window * num_workers
+        self.normalizer = self.communication_window * 2
 
     def connect(self):
         """Connect with the remote parameter server."""
