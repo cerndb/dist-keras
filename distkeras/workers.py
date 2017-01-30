@@ -529,7 +529,6 @@ class ExperimentalWorker(NetworkWorker):
         self.socket = None
         self.center_variable = None
         self.num_workers = num_workers
-        self.normalizer = self.communication_window * 2
 
     def connect(self):
         """Connect with the remote parameter server."""
@@ -584,10 +583,14 @@ class ExperimentalWorker(NetworkWorker):
                 r = r + delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
-                    r /= self.normalizer
+                    cv_old = self.center_variable
+                    self.pull()
+                    t = np.abs(self.center_variable - cv_old)
+                    t /= (self.communication_window * np.exp(t))
+                    r = np.multiply(r, delta)
                     self.commit(r)
                     r.fill(0.0)
-                    self.pull()
+                    self.center_variable += r
                     self.model.set_weights(self.center_variable)
                 self.iteration += 1
         except StopIteration:
