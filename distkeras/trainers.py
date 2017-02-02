@@ -12,12 +12,12 @@ from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.networking import determine_host_address
-from distkeras.workers import SequentialWorker
+from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import EAMSGDWorker
-from distkeras.workers import ADAGWorker
 from distkeras.workers import ExperimentalWorker
+from distkeras.workers import SequentialWorker
 
 ## END Imports. ################################################################
 
@@ -204,7 +204,11 @@ class AveragingTrainer(Trainer):
 
     def allocate_worker(self):
         """Allocates the AveragingWorker for internal use."""
-        raise NotImplementedError
+        worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
+                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  optimizer=self.worker_optimizer, loss=self.loss)
+
+        return worker
 
     def train(self, dataframe, shuffle=False):
         """Applies model averaging to the model replicas distributed over the specified
