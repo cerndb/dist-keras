@@ -7,6 +7,8 @@ import threading
 
 import time
 
+import numpy as np
+
 from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.utils import deserialize_keras_model
