@@ -180,6 +180,27 @@ class AveragingTrainer(Trainer):
         self.num_epoch = num_epoch
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.parameter_buffer = np.asarray(keras_model.get_weights())
+        self.parameter_buffer.fill(0.0)
+
+    def average_models(self, models):
+        """Averages the specified list of Keras models, and assigns the
+        averaged model as the master model.
+
+        # Arguments:
+            models: list. A list of serialized Keras models.
+        """
+        num_models = len(models)
+        # Get all weights of the models.
+        for i in range(0, num_models):
+            weights = np.asarray(deserialize_keras_model(models[i]).get_weights())
+            self.parameter_buffer += weights
+        # Average the parameters.
+        self.parameter_buffer /= num_models
+        temp_model = deserialize_keras_model(self.master_model)
+        temp_model.set_weights(self.parameter_buffer)
+        self.master_model = serialize_keras_model(temp_model)
+
 
     def allocate_worker(self):
         """Allocates the AveragingWorker for internal use."""
@@ -196,7 +217,26 @@ class AveragingTrainer(Trainer):
                      the network. It is recommended to shuffle the dataset before
                      training and store it.
         """
-        raise NotImplementedError
+        # Repartition the data in order to fit the number of workers.
+        num_partitions = dataframe.rdd.getNumPartitions()
+        # Check if the dataset needs to be shuffled.
+        if shuffle:
+            dataframe = shuffle(dataframe)
+        # Check if we need to repartition the dataframe.
+        if num_partitions > self.num_workers:
+            dataframe = dataframe.coalesce(self.num_workers)
+        else:
+            dataframe = dataframe.repartition(self.num_workers)
+        # Start the training procedure.
+        self.record_training_start()
+        for i in range(0, self.num_epoch):
+            worker = self.allocate_worker()
+            models = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
+            self.average_models(models)
+        # End the training procedure.
+        self.record_training_end()
+
+        return deserialize_keras_model(self.master_model)
 
 
 class EnsembleTrainer(Trainer):
@@ -236,7 +276,7 @@ class EnsembleTrainer(Trainer):
         """Trains the specified number of ensemble models using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe: A Spark Dataframe containing the dataset.
+            dataframe: dataframe. A Spark Dataframe containing the dataset.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
                      the network. It is recommended to shuffle the dataset before

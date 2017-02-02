@@ -586,7 +586,9 @@ class ExperimentalWorker(NetworkWorker):
                     cv_old = self.center_variable
                     self.pull()
                     t = np.abs(self.center_variable - cv_old)
-                    t /= (self.communication_window * np.exp(t))
+                    for i in range(0, len(t)):
+                        t[i] = np.exp(t[i])
+                    t /= (self.communication_window * t)
                     r = np.multiply(r, delta)
                     self.commit(r)
                     r.fill(0.0)
