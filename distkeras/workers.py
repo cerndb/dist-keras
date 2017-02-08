@@ -535,7 +535,7 @@ class ExperimentalWorker(NetworkWorker):
         self.num_workers = num_workers
         self.processing = True
         self.prefetching_thread = None
-        self.mini_batches = Queue.Queue()
+        self.mini_batches = None
         self.max_mini_batches = 1000
 
     def connect(self):
@@ -564,6 +564,7 @@ class ExperimentalWorker(NetworkWorker):
         return self.mini_batches.get_nowait()
 
     def start_prefetching_thread(self, iterator):
+        self.mini_batches = Queue.Queue()
         self.prefetching_thread = threading.Thread(target=self.prefetching, args=(iterator))
         self.prefetching_thread.start()
 
