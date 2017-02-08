@@ -583,20 +583,21 @@ class ExperimentalWorker(NetworkWorker):
                 r = r + delta
                 # Check if the residual needs to be communicated.
                 if self.iteration % self.communication_window == 0:
-                    cv_old = self.center_variable
-                    self.pull()
-                    t = np.abs(self.center_variable - cv_old)
-                    for i in range(0, len(t)):
-                        t[i] = np.exp(t[i])
-                    t /= (self.communication_window * t)
-                    r = np.multiply(r, delta)
+                    r /= self.communication_window
+                    # Send the residual to the master.
                     self.commit(r)
+                    # Clear the residual
                     r.fill(0.0)
-                    self.center_variable += r
+                    # Update the local variable.
+                    self.pull()
+                    # Update the local replica.
                     self.model.set_weights(self.center_variable)
                 self.iteration += 1
         except StopIteration:
             pass
+        # Commit the final residual to the parameter server.
+        r /= self.communication_window
+        self.commit(r)
         # Close the connection with the parameter server.
         self.socket.close()
 
