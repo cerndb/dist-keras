@@ -536,6 +536,7 @@ class ExperimentalWorker(NetworkWorker):
         self.processing = True
         self.prefetching_thread = None
         self.mini_batches = None
+        self.iterator = None
         self.max_mini_batches = 1000
 
     def connect(self):
@@ -566,16 +567,17 @@ class ExperimentalWorker(NetworkWorker):
 
     def start_prefetching_thread(self, iterator):
         self.mini_batches = Queue.Queue()
-        self.prefetching_thread = threading.Thread(target=self.prefetching, args=(iterator))
+        self.iterator = iterator
+        self.prefetching_thread = threading.Thread(target=self.prefetching
         self.prefetching_thread.start()
 
-    def prefetching(self, iterator):
+    def prefetching(self):
         try:
             # Start prefetching the mini-batches.
             while self.processing:
                 if self.mini_batches.qsize() < self.max_mini_batches:
                     print("Storing mini-batch")
-                    batch = [next(iterator) for _ in range(self.batch_size)]
+                    batch = [next(self.iterator) for _ in range(self.batch_size)]
                     feature_iterator, label_iterator = tee(batch, 2)
                     X = np.asarray([x[self.features_column] for x in feature_iterator])
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
