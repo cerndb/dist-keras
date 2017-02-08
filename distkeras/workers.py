@@ -562,6 +562,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_next_minibatch(self):
+        print("Fetching mini-batch")
         mini_batch = self.mini_batches.get()
 
         return mini_batch
@@ -577,12 +578,13 @@ class ExperimentalWorker(NetworkWorker):
             # Start prefetching the mini-batches.
             while True:
                 if self.mini_batches.qsize() < self.max_mini_batches:
+                    print("Adding mini-batch")
                     batch = [next(self.iterator) for _ in range(self.batch_size)]
                     feature_iterator, label_iterator = tee(batch, 2)
                     X = np.asarray([x[self.features_column] for x in feature_iterator])
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
-        except StopIteration:
+        except:
             pass
 
     def train(self, worker_id, iterator):
@@ -601,6 +603,7 @@ class ExperimentalWorker(NetworkWorker):
         # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
+        print("Start training procedure")
         # Start the epoch training process.
         while self.processing:
             try:
