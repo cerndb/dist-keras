@@ -562,8 +562,9 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_next_minibatch(self):
-        print("Fetching mini-batch")
-        return self.mini_batches.get()
+        mini_batch = self.mini_batches.get()
+
+        return mini_batch
 
     def start_prefetching_thread(self, iterator):
         self.mini_batches = Queue.Queue()
@@ -574,17 +575,15 @@ class ExperimentalWorker(NetworkWorker):
     def prefetching(self):
         try:
             # Start prefetching the mini-batches.
-            while self.processing:
+            while True:
                 if self.mini_batches.qsize() < self.max_mini_batches:
-                    print("Storing mini-batch")
                     batch = [next(self.iterator) for _ in range(self.batch_size)]
                     feature_iterator, label_iterator = tee(batch, 2)
                     X = np.asarray([x[self.features_column] for x in feature_iterator])
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
-        except:
-            # Stop the processing loop
-            self.processing = False
+        except StopIteration:
+            pass
 
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
@@ -602,34 +601,33 @@ class ExperimentalWorker(NetworkWorker):
         # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
-        print("Starting training")
         # Start the epoch training process.
-        try:
-            while self.processing:
-                # Get the next batch.
+        while self.processing:
+            try:
+                # Fetch the next mini-batch.
                 X, Y = self.get_next_minibatch()
-                # Train the model on the current mini-batch.
-                W1 = np.asarray(self.model.get_weights())
-                self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
-                delta = W2 - W1
-                r = r + delta
-                # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    r /= self.communication_window
-                    # Send the residual to the master.
-                    self.commit(r)
-                    # Clear the residual
-                    r.fill(0.0)
-                    # Update the local variable.
-                    self.pull()
-                    # Update the local replica.
-                    self.model.set_weights(self.center_variable)
-                self.iteration += 1
-        except:
-            pass
-        # Disable the processing flag.
-        self.processing = False
+            except:
+                # Retrieval of next mini batch failed, end training.
+                self.processing = False
+                continue
+            # Train the model on the current mini-batch.
+            W1 = np.asarray(self.model.get_weights())
+            self.model.train_on_batch(X, Y)
+            W2 = np.asarray(self.model.get_weights())
+            delta = W2 - W1
+            r = r + delta
+            # Check if the residual needs to be communicated.
+            if self.iteration % self.communication_window == 0:
+                r /= self.communication_window
+                # Send the residual to the master.
+                self.commit(r)
+                # Clear the residual
+                r.fill(0.0)
+                # Update the local variable.
+                self.pull()
+                # Update the local replica.
+                self.model.set_weights(self.center_variable)
+            self.iteration += 1
         # Commit the final residual to the parameter server.
         r /= self.communication_window
         self.commit(r)
