@@ -609,7 +609,10 @@ class ExperimentalWorker(NetworkWorker):
             try:
                 # Fetch the next mini-batch.
                 X, Y = self.get_next_minibatch()
+                print(Y)
             except:
+                print("Exception occurred")
+                print(Y)
                 # Retrieval of next mini batch failed, end training.
                 self.processing = False
                 continue
