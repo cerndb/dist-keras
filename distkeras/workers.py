@@ -561,7 +561,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_next_minibatch(self):
-        return self.mini_batches.get_nowait()
+        return self.mini_batches.get()
 
     def start_prefetching_thread(self, iterator):
         self.mini_batches = Queue.Queue()
