@@ -568,7 +568,7 @@ class ExperimentalWorker(NetworkWorker):
     def start_prefetching_thread(self, iterator):
         self.mini_batches = Queue.Queue()
         self.iterator = iterator
-        self.prefetching_thread = threading.Thread(target=self.prefetching
+        self.prefetching_thread = threading.Thread(target=self.prefetching)
         self.prefetching_thread.start()
 
     def prefetching(self):
