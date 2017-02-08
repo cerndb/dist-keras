@@ -20,6 +20,10 @@ from multiprocessing import Pool
 
 import numpy as np
 
+import threading
+
+import Queue
+
 import random
 
 import socket
@@ -529,6 +533,10 @@ class ExperimentalWorker(NetworkWorker):
         self.socket = None
         self.center_variable = None
         self.num_workers = num_workers
+        self.processing = True
+        self.prefetching_thread = None
+        self.mini_batches = Queue.Queue()
+        self.max_mini_batches = 1000
 
     def connect(self):
         """Connect with the remote parameter server."""
@@ -552,8 +560,31 @@ class ExperimentalWorker(NetworkWorker):
         # Send the data to the paramter server.
         send_data(self.socket, data)
 
+    def get_next_minibatch(self):
+        return self.mini_batches.get_nowait()
+
+    def start_prefetching_thread(self, iterator):
+        self.prefetching_thread = threading.Thread(target=self.prefetching, args=(iterator))
+        self.prefetching_thread.start()
+
+    def prefetching(self, iterator):
+        try:
+            # Start prefetching the mini-batches.
+            while self.processing:
+                if self.mini_batches.qsize() < self.max_mini_batches:
+                    batch = [next(iterator) for _ in range(self.batch_size)]
+                    feature_iterator, label_iterator = tee(batch, 2)
+                    X = np.asarray([x[self.features_column] for x in feature_iterator])
+                    Y = np.asarray([x[self.label_column] for x in label_iterator])
+                    self.mini_batches.put([X, Y])
+        except:
+            # Stop the processing loop
+            self.processing = False
+
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
+        # Start the data prefetching thread.
+        self.start_prefetching_thread(iterator)
         # Prepare the model.
         self.prepare_model()
         # Connect with the remote parameter server.
@@ -568,13 +599,9 @@ class ExperimentalWorker(NetworkWorker):
         self.model.set_weights(self.center_variable)
         # Start the epoch training process.
         try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
+            while self.processing:
+                # Get the next batch.
+                X, Y = self.get_next_minibatch()
                 # Train the model on the current mini-batch.
                 W1 = np.asarray(self.model.get_weights())
                 self.model.train_on_batch(X, Y)
@@ -593,12 +620,15 @@ class ExperimentalWorker(NetworkWorker):
                     # Update the local replica.
                     self.model.set_weights(self.center_variable)
                 self.iteration += 1
-        except StopIteration:
+        except:
             pass
+        # Disable the processing flag.
+        self.processing = False
         # Commit the final residual to the parameter server.
         r /= self.communication_window
         self.commit(r)
         # Close the connection with the parameter server.
         self.socket.close()
+        self.prefetching_thread.join()
 
         return iter([])
