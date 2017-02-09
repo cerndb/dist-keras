@@ -562,7 +562,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_next_minibatch(self):
-        print("Fetching mini-batch")
+        print("Fetching mini-batch. Queue size: " + str(self.mini_batches.qsize()))
         mini_batch = self.mini_batches.get()
 
         return mini_batch
