@@ -537,6 +537,7 @@ class ExperimentalWorker(NetworkWorker):
         self.prefetching_thread = None
         self.mini_batches = None
         self.iterator = None
+        self.prefetching = True
         self.max_mini_batches = 1000
 
     def connect(self):
@@ -585,7 +586,7 @@ class ExperimentalWorker(NetworkWorker):
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
         except:
-            pass
+            self.prefetching = False
 
     def train(self, worker_id, iterator):
         """Training procedure of ADAG."""
@@ -613,8 +614,9 @@ class ExperimentalWorker(NetworkWorker):
             except:
                 print("Exception occurred")
                 print(Y)
-                # Retrieval of next mini batch failed, end training.
-                self.processing = False
+                # Retrieval of next mini batch failed, check if
+                # prefetching thread is done.
+                self.processing = self.prefetching
                 continue
             # Train the model on the current mini-batch.
             W1 = np.asarray(self.model.get_weights())
