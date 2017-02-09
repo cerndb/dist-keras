@@ -240,6 +240,17 @@ class ADAGWorker(NetworkWorker):
         self.communication_window = communication_window
         self.iteration = 1
 
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['residual'] = residual
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the paramter server.
+        send_data(self.socket, data)
+
     def optimize(self):
         """Optimization procedure of ADAG."""
         r = np.asarray(self.model.get_weights())
