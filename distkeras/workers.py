@@ -155,7 +155,7 @@ class NetworkWorker(Worker):
         self.disable_nagle = True
         self.worker_id = 0
 
-     def connect(self):
+    def connect(self):
         """Connect with the remote parameter server."""
         self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
 
