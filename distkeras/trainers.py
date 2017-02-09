@@ -599,11 +599,9 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, learning_rate=0.1,
-                 communication_window=5):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
         super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                        batch_size, features_col, label_col, num_epoch)
-        self.learning_rate = learning_rate
         self.communication_window = communication_window
 
     def allocate_worker(self):
@@ -611,8 +609,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         # Allocate DOWNPOUR worker.
         worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
                                 self.features_column, self.label_column, self.batch_size,
-                                self.master_host, self.master_port, self.learning_rate,
-                                self.communication_window)
+                                self.master_host, self.master_port, self.communication_window)
 
         return worker
 

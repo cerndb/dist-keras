@@ -44,6 +44,23 @@ class Worker(object):
         self.features_column = features_col
         self.label_column = label_col
         self.batch_size = batch_size
+        self.max_mini_batches = 1000
+        self.prefetching_thread = None
+        self.mini_batches = None
+        self.is_prefetching = True
+        self.worker_id = -1
+
+    def set_worker_id(self, worker_id):
+        """Sets the worker id.
+
+        # Arguments
+            worker_id: int. Worker identifier.
+        """
+        self.worker_id = worker_id
+
+    def get_worker_id(self):
+        """Returns the worker id."""
+        return self.worker_id
 
     def prepare_model(self):
         """Prepares the model for training."""
@@ -52,6 +69,33 @@ class Worker(object):
         # Compile the model with the specified loss and optimizer.
         self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
 
+    def get_next_minibatch(self):
+        """Returns the next mini-batch."""
+        return self.mini_batches.get(timeout=1)
+
+    def start_prefetching_thread(self, iterator):
+        """Starts the data prefetching thread."""
+        self.mini_batches = Queue.Queue()
+        self.iterator = iterator
+        self.prefetching_thread = threading.Thread(target=self.prefetching)
+        self.prefetching_thread.start()
+
+    def prefetching(self):
+        try:
+            while True:
+                if self.mini_batches.qsize() < self.max_mini_batches:
+                    batch = [next(self.iterator) for _ in range(self.batch_size)]
+                    feature_iterator, label_iterator = tee(batch, 2)
+                    X = np.asarray([x[self.features_column] for x in feature_iterator])
+                    Y = np.asarray([x[self.label_column] for x in label_iterator])
+                    self.mini_batches.put([X, Y])
+        except:
+            self.is_prefetching = False
+
+    def optimize(self):
+        """Optimization procedure of a worker."""
+        raise NotImplementedError
+
     def train(self, worker_id, iterator):
         """Training procedure for the worker node.
 
@@ -59,7 +103,19 @@ class Worker(object):
             worker_id: int. Partition index provided by Spark. Can be used as a worker_id.
             iterator: iterator. Data iterator.
         """
-        raise NotImplementedError
+        # Prepare the optimization procedure.
+        self.start_prefetching_thread(iterator)
+        self.set_worker_id(worker_id)
+        self.prepare_model()
+        # Start the optimization procedure.
+        try:
+            self.optimize()
+        except:
+            pass
+        # Wait for the prefetching thread to stop.
+        self.prefetching_thread.join()
+
+        return iter([serialize_keras_model(self.model)])
 
 
 class SequentialWorker(Worker):
@@ -74,27 +130,15 @@ class SequentialWorker(Worker):
         super(SequentialWorker, self).__init__(model, optimizer, loss, features_col,
                                                label_col, batch_size)
 
-    def train(self, worker_id, iterator):
+    def optimize(self):
         """Training procedure with sequential gradient updates.
 
         # Returns
             Trained serialized Keras model.
         """
-        # Prepare the model.
-        self.prepare_model()
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Retrieve the feature and label vectors.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                self.model.train_on_batch(X, Y)
-        except StopIteration:
-            pass
-
-        return iter([serialize_keras_model(self.model)])
+        while True:
+            X, Y = self.get_next_minibatch()
+            self.model.train_on_batch(X, Y)
 
 
 class NetworkWorker(Worker):
@@ -106,8 +150,32 @@ class NetworkWorker(Worker):
                                             label_col, batch_size)
         self.master_host = master_host
         self.master_port = master_port
+        self.socket = None
+        self.center_variable = None
         self.disable_nagle = True
         self.worker_id = 0
+
+     def connect(self):
+        """Connect with the remote parameter server."""
+        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
+
+    def pull(self):
+        """Requests the center variable from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the center variable from the parameter server.
+        self.center_variable = np.asarray(recv_data(self.socket))
+
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['delta'] = residual
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the paramter server.
+        send_data(self.socket, data)
 
     def set_tcp_no_delay(self, flag):
         """Disables or enables Nagle's algorithm.
@@ -127,18 +195,6 @@ class NetworkWorker(Worker):
         """
         return self.disable_nagle
 
-    def set_worker_id(self, worker_id):
-        """Sets the worker id.
-
-        # Arguments
-            worker_id: int. Worker identifier.
-        """
-        self.worker_id = worker_id
-
-    def get_worker_id(self):
-        """Returns the worker id."""
-        return self.worker_id
-
     def get_master_host(self):
         """Returns the host address of the master parameter server."""
         return self.master_host
@@ -147,12 +203,26 @@ class NetworkWorker(Worker):
         """Returns the port of the master parameter server."""
         return self.master_port
 
-    def train(self, worker_id, iterator):
-        """Abstract training procedure of a network based trainer.
-
-        See: distkeras.workers.Worker.train
-        """
+    def optimize(self):
+        """Optimization procedure of a network worker."""
         raise NotImplementedError
+
+    def train(self, worker_id, iterator):
+        """Training procedure of a networked worker with a parameter server."""
+        self.start_prefetching_thread(iterator)
+        self.set_worker_id(worker_id)
+        self.prepare_model()
+        self.connect()
+        self.pull()
+        self.model.set_weights(self.center_variable)
+        try:
+            self.optimize()
+        except:
+            pass
+        self.socket.close()
+        self.prefetching_thread.join()
+
+        return iter([])
 
 
 class ADAGWorker(NetworkWorker):
@@ -169,81 +239,25 @@ class ADAGWorker(NetworkWorker):
         # Initialize ADAG parameters.
         self.communication_window = communication_window
         self.iteration = 1
-        self.socket = None
-        self.center_variable = None
 
-    def connect(self):
-        """Connect with the remote parameter server."""
-        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
-
-    def pull(self):
-        """Requests the center variable from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the center variable from the parameter server.
-        self.center_variable = np.asarray(recv_data(self.socket))
-
-    def commit(self, residual):
-        """Sends the gradient residual to the parameter server."""
-        # Prepare the datastructure.
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['residual'] = residual
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the paramter server.
-        send_data(self.socket, data)
-
-    def train(self, worker_id, iterator):
-        """Training procedure of ADAG."""
-        # Prepare the model.
-        self.prepare_model()
-        # Connect with the remote parameter server.
-        self.connect()
-        # Set the worker identifier.
-        self.set_worker_id(worker_id)
-        # Prepare the gradient residual.
+    def optimize(self):
+        """Optimization procedure of ADAG."""
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        # Start the epoch training process.
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Train the model on the current mini-batch.
-                W1 = np.asarray(self.model.get_weights())
-                self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
-                delta = W2 - W1
-                r = r + delta
-                # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    r /= self.communication_window
-                    # Send the residual to the master.
-                    self.commit(r)
-                    # Clear the residual
-                    r.fill(0.0)
-                    # Update the local variable.
-                    self.pull()
-                    # Update the local replica.
-                    self.model.set_weights(self.center_variable)
-                self.iteration += 1
-        except StopIteration:
-            pass
-        # Commit the final residual to the parameter server.
-        r /= self.communication_window
-        self.commit(r)
-        # Close the connection with the parameter server.
-        self.socket.close()
-
-        return iter([])
+        while True:
+            X, Y = self.get_next_minibatch()
+            W1 = np.asarray(self.model.get_weights())
+            self.model.train_on_batch(X, Y)
+            W2 = np.asarray(self.model.get_weights())
+            delta = W2 - W1
+            r += delta
+            if self.iteration % self.communication_window == 0:
+                r /= self.communication_window
+                self.commit(r)
+                self.pull()
+                r.fill(0.0)
+                self.model.set_weights(self.center_variable)
+            self.iteration += 1
 
 
 class DOWNPOURWorker(NetworkWorker):
@@ -254,88 +268,30 @@ class DOWNPOURWorker(NetworkWorker):
     """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=0.01,
-                 communication_window=3):
+                 batch_size=32, master_host="localhost", master_port=5000, communication_window=3):
         # Initialize the parent object.
         super(DOWNPOURWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                              batch_size, master_host, master_port)
-        # Initialize DOWNPOUR parameters.
-        self.learning_rate = learning_rate
         self.communication_window = communication_window
         self.iteration = 1
-        self.socket = None
-        self.center_variable = None
 
-    def connect(self):
-        """Connects with the parameter server."""
-        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
-
-    def pull(self):
-        """Requests the center variable from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the central variable from the parameter server.
-        center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
-
-    def commit(self, delta):
-        """Commits the delta to the parameter server."""
-        # Prepare the datastructure.
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['delta'] = delta
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the parameter server.
-        send_data(self.socket, data)
-
-    def train(self, worker_id, iterator):
-        """Specific training procedure for DOWNPOUR."""
-        # Prepare the model.
-        self.prepare_model()
-        # Connect to the parameter server.
-        self.connect()
-        # Set the worker id.
-        self.set_worker_id(worker_id)
-        # Prepare the gradient residual matrix.
-        v = np.asarray(self.model.get_weights())
-        v.fill(0.0)
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        # Start the epoch training process
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Check if the residual needs to be communicated.
-                if self.iteration % self.communication_window == 0:
-                    # Send the residual to the master.
-                    self.commit(v)
-                    # Clear the residual
-                    v.fill(0.0)
-                    # Update the local variable.
-                    self.pull()
-                    # Update the local replica.
-                    self.model.set_weights(self.center_variable)
-                W1 = np.asarray(self.model.get_weights())
-                self.model.train_on_batch(X, Y)
-                W2 = np.asarray(self.model.get_weights())
-                delta = W2 - W1
-                v = v + delta
-                self.iteration += 1
-        except StopIteration:
-            pass
-        # Commit the last residual.
-        self.commit(v)
-        # Close the socket.
-        self.socket.close()
-
-        return iter([])
+    def optimize(self):
+        """Specific optimization procedure for DOWNPOUR."""
+        r = np.asarray(self.model.get_weights())
+        r.fill(0.0)
+        while True:
+            X, Y = self.get_next_minibatch()
+            if self.iteration % self.communication_window == 0:
+                self.commit(r)
+                self.pull()
+                r.fill(0.0)
+                self.model.set_weights(self.center_variable)
+            W1 = np.asarray(self.model.get_weights())
+            self.model.train_on_batch(X, Y)
+            W2 = np.asarray(self.model.get_weights())
+            delta = W2 - W1
+            r += delta
+            self.iteration += 1
 
 
 class AEASGDWorker(NetworkWorker):
@@ -357,68 +313,20 @@ class AEASGDWorker(NetworkWorker):
         self.communication_window = communication_window
         self.alpha = self.rho * self.learning_rate
         self.iteration = 1
-        self.socket = None
-        self.center_variable = None
 
-    def connect(self):
-        """Connects with the parameter server."""
-        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
-
-    def pull(self):
-        """Requests the center variable from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the central variable from the parameter server.
-        center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
-
-    def commit(self, delta):
-        """Sends the delta to the parameter server."""
-        # Prepare the datastructure.
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['delta'] = delta
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the parameter server.
-        send_data(self.socket, data)
-
-    def train(self, worker_id, iterator):
+    def optimize(self):
         """Specific training procedure for AEASGD."""
-        # Prepare the model.
-        self.prepare_model()
-        # Set the worker id.
-        self.set_worker_id(worker_id)
-        # Connect to the parameter server.
-        self.connect()
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        # Start the epoch training.
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Check if we need to communicate with the parameter server.
-                if self.iteration % self.communication_window == 0:
-                    self.pull()
-                    W = np.asarray(self.model.get_weights())
-                    E = self.alpha * (W - self.center_variable)
-                    W = W - E
-                    self.model.set_weights(W)
-                    self.commit(E)
-                self.model.train_on_batch(X, Y)
-                self.iteration += 1
-        except StopIteration:
-            pass
-        # Close the connection with the parameter server.
-        self.socket.close()
-
-        return iter([])
+        while True:
+            X, Y = self.get_next_minibatch()
+            if self.iteration % self.communication_window == 0:
+                self.pull()
+                W = np.asarray(self.model.get_weights())
+                E = self.alpha * (W - self.center_variable)
+                W = W - E
+                self.model.set_weights(W)
+                self.commit(E)
+            self.model.train_on_batch(X, Y)
+            self.iteration += 1
 
 
 class EAMSGDWorker(NetworkWorker):
@@ -441,195 +349,28 @@ class EAMSGDWorker(NetworkWorker):
         self.communication_window = communication_window
         self.alpha = self.learning_rate * self.rho
         self.iteration = 1
-        self.socket = None
-        self.center_variable = None
-
-    def connect(self):
-        """Connects with the remote parameter server."""
-        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
-
-    def pull(self):
-        """Fetches the center variable from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the central variable from the parameter server.
-        center_variable = recv_data(self.socket)
-        self.center_variable = np.asarray(center_variable)
-
-    def commit(self, delta):
-        """Sends the delta to the parameter server."""
-        # Prepare the datastructure.
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['delta'] = delta
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the parameter server.
-        send_data(self.socket, data)
-
-    def train(self, worker_id, iterator):
-        """Specific training procedure of asynchronous EAMSGD."""
-        # Prepare the model.
-        self.prepare_model()
-        # Set the worker identifier.
-        self.set_worker_id(worker_id)
-        # Connect to the parameter server.
-        self.connect()
-        # Initialize the momentum residual matrix.
-        v = np.asarray(self.model.get_weights())
-        v.fill(0.0)
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        # Start the epoch training.
-        try:
-            while True:
-                # Fetch the next mini-batch.
-                batch = [next(iterator) for _ in range(self.batch_size)]
-                # Extract the feature and label vector.
-                feature_iterator, label_iterator = tee(batch, 2)
-                X = np.asarray([x[self.features_column] for x in feature_iterator])
-                Y = np.asarray([x[self.label_column] for x in label_iterator])
-                # Check if we need to communicate with the parameter server.
-                if self.iteration % self.communication_window == 0:
-                    self.pull()
-                    W = np.asarray(self.model.get_weights())
-                    E = self.alpha * (W - self.center_variable)
-                    W = W - E
-                    self.model.set_weights(W)
-                    self.commit(E)
-                # Update the momentum residual.
-                v_t = self.momentum * v
-                W_copy = np.asarray(self.model.get_weights())
-                W = np.asarray(self.model.get_weights())
-                W += v_t
-                self.model.set_weights(W)
-                self.model.train_on_batch(X, Y)
-                gradient = np.asarray(self.model.get_weights()) - W
-                v = v_t - self.learning_rate * gradient
-                W_copy -= v
-                self.model.set_weights(W_copy)
-                self.iteration += 1
-        except StopIteration:
-            pass
-        # Close the connection with the parameter server.
-        self.socket.close()
-
-        return iter([])
-
-
-class ExperimentalWorker(NetworkWorker):
-    """Experimental worker for testing research ideas."""
-
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
-                 num_workers=2):
-        # Initialize the parent object.
-        super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                                 batch_size, master_host, master_port)
-        # Initialize parameters.
-        self.communication_window = communication_window
-        self.iteration = 1
-        self.socket = None
-        self.center_variable = None
-        self.num_workers = num_workers
-        self.processing = True
-        self.prefetching_thread = None
-        self.mini_batches = None
-        self.iterator = None
-        self.is_prefetching = True
-        self.max_mini_batches = 1000
-
-    def connect(self):
-        """Connect with the remote parameter server."""
-        self.socket = connect(self.master_host, self.master_port, self.disable_nagle)
-
-    def pull(self):
-        """Requests the center variable from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the center variable from the parameter server.
-        self.center_variable = np.asarray(recv_data(self.socket))
-
-    def commit(self, residual):
-        """Sends the gradient residual to the parameter server."""
-        # Prepare the datastructure.
-        data = {}
-        data['worker_id'] = self.get_worker_id()
-        data['delta'] = residual
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        # Send the data to the paramter server.
-        send_data(self.socket, data)
-
-    def get_next_minibatch(self):
-        return self.mini_batches.get_nowait()
-
-    def start_prefetching_thread(self, iterator):
-        self.mini_batches = Queue.Queue()
-        self.iterator = iterator
-        self.prefetching_thread = threading.Thread(target=self.prefetching)
-        self.prefetching_thread.start()
-
-    def prefetching(self):
-        try:
-            # Start prefetching the mini-batches.
-            while True:
-                if self.mini_batches.qsize() < self.max_mini_batches:
-                    batch = [next(self.iterator) for _ in range(self.batch_size)]
-                    feature_iterator, label_iterator = tee(batch, 2)
-                    X = np.asarray([x[self.features_column] for x in feature_iterator])
-                    Y = np.asarray([x[self.label_column] for x in label_iterator])
-                    self.mini_batches.put([X, Y])
-        except:
-            self.is_prefetching = False
 
     def optimize(self):
-         # Prepare the gradient residual.
+        """Specific training procedure of asynchronous EAMSGD."""
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
-        # Start the training process.
         while True:
-            # Fetch the next mini-batch.
             X, Y = self.get_next_minibatch()
-            # Train the model on the current mini-batch.
-            W1 = np.asarray(self.model.get_weights())
-            self.model.train_on_batch(X, Y)
-            W2 = np.asarray(self.model.get_weights())
-            delta = W2 - W1
-            r = r + delta
-            # Check if the residual needs to be communicated.
             if self.iteration % self.communication_window == 0:
-                r /= self.communication_window
-                # Send the residual to the master.
-                self.commit(r)
-                # Clear the residual
-                r.fill(0.0)
-                # Update the local variable.
                 self.pull()
-                # Update the local replica.
-                self.model.set_weights(self.center_variable)
+                W = np.asarray(self.model.get_weights())
+                E = self.alpha * (W - self.center_variable)
+                W = W - E
+                self.model.set_weights(W)
+                self.commit(E)
+            r_t = self.momentum * r
+            W_copy = np.asarray(self.model.get_weights())
+            W = np.asarray(self.model.get_weights())
+            W += r_t
+            self.model.set_weights(W)
+            self.model.train_on_batch(X, Y)
+            gradient = np.asarray(self.model.get_weights()) - W
+            r = r_t - self.learning_rate * gradient
+            W_copy -= r
+            self.model.set_weights(W_copy)
             self.iteration += 1
-
-    def train(self, worker_id, iterator):
-        """Training procedure of ADAG."""
-        # Start the data prefetching thread.
-        self.start_prefetching_thread(iterator)
-        # Prepare the model.
-        self.prepare_model()
-        # Connect with the remote parameter server.
-        self.connect()
-        # Set the worker identifier.
-        self.set_worker_id(worker_id)
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        try:
-            self.optimize()
-        except:
-            pass
-        # Close the connection with the parameter server.
-        self.socket.close()
-        self.prefetching_thread.join()
-
-        return iter([])
