@@ -584,30 +584,14 @@ class ExperimentalWorker(NetworkWorker):
         except:
             self.is_prefetching = False
 
-    def train(self, worker_id, iterator):
-        """Training procedure of ADAG."""
-        # Start the data prefetching thread.
-        self.start_prefetching_thread(iterator)
-        # Prepare the model.
-        self.prepare_model()
-        # Connect with the remote parameter server.
-        self.connect()
-        # Set the worker identifier.
-        self.set_worker_id(worker_id)
-        # Prepare the gradient residual.
+    def optimize(self):
+         # Prepare the gradient residual.
         r = np.asarray(self.model.get_weights())
         r.fill(0.0)
-        # Synchronize with the center variable.
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        # Start the epoch training process.
-        while self.processing:
-            try:
-                # Fetch the next mini-batch.
-                X, Y = self.get_next_minibatch()
-            except:
-                self.processing = self.is_prefetching
-                continue
+        # Start the training process.
+        while True:
+            # Fetch the next mini-batch.
+            X, Y = self.get_next_minibatch()
             # Train the model on the current mini-batch.
             W1 = np.asarray(self.model.get_weights())
             self.model.train_on_batch(X, Y)
@@ -626,9 +610,24 @@ class ExperimentalWorker(NetworkWorker):
                 # Update the local replica.
                 self.model.set_weights(self.center_variable)
             self.iteration += 1
-        # Commit the final residual to the parameter server.
-        r /= self.communication_window
-        self.commit(r)
+
+    def train(self, worker_id, iterator):
+        """Training procedure of ADAG."""
+        # Start the data prefetching thread.
+        self.start_prefetching_thread(iterator)
+        # Prepare the model.
+        self.prepare_model()
+        # Connect with the remote parameter server.
+        self.connect()
+        # Set the worker identifier.
+        self.set_worker_id(worker_id)
+        # Synchronize with the center variable.
+        self.pull()
+        self.model.set_weights(self.center_variable)
+        try:
+            self.optimize()
+        except:
+            pass
         # Close the connection with the parameter server.
         self.socket.close()
         self.prefetching_thread.join()
