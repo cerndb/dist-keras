@@ -563,10 +563,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def get_next_minibatch(self):
-        print("Fetching mini-batch. Queue size: " + str(self.mini_batches.qsize()))
-        mini_batch = self.mini_batches.get(timeout=1)
-
-        return mini_batch
+        return self.mini_batches.get(timeout=1)
 
     def start_prefetching_thread(self, iterator):
         self.mini_batches = Queue.Queue()
@@ -579,7 +576,6 @@ class ExperimentalWorker(NetworkWorker):
             # Start prefetching the mini-batches.
             while True:
                 if self.mini_batches.qsize() < self.max_mini_batches:
-                    print("Adding mini-batch")
                     batch = [next(self.iterator) for _ in range(self.batch_size)]
                     feature_iterator, label_iterator = tee(batch, 2)
                     X = np.asarray([x[self.features_column] for x in feature_iterator])
@@ -604,18 +600,12 @@ class ExperimentalWorker(NetworkWorker):
         # Synchronize with the center variable.
         self.pull()
         self.model.set_weights(self.center_variable)
-        print("Start training procedure")
         # Start the epoch training process.
         while self.processing:
             try:
                 # Fetch the next mini-batch.
                 X, Y = self.get_next_minibatch()
-                print(Y)
             except:
-                print("Exception occurred")
-                print(Y)
-                # Retrieval of next mini batch failed, check if
-                # prefetching thread is done.
                 self.processing = self.prefetching
                 continue
             # Train the model on the current mini-batch.
