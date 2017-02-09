@@ -563,7 +563,7 @@ class ExperimentalWorker(NetworkWorker):
 
     def get_next_minibatch(self):
         print("Fetching mini-batch. Queue size: " + str(self.mini_batches.qsize()))
-        mini_batch = self.mini_batches.get()
+        mini_batch = self.mini_batches.get(timeout=1)
 
         return mini_batch
 
