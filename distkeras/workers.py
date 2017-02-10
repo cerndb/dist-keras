@@ -253,21 +253,18 @@ class ADAGWorker(NetworkWorker):
 
     def optimize(self):
         """Optimization procedure of ADAG."""
-        r = np.asarray(self.model.get_weights())
-        r.fill(0.0)
+        W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
-            W1 = np.asarray(self.model.get_weights())
             self.model.train_on_batch(X, Y)
-            W2 = np.asarray(self.model.get_weights())
-            delta = W2 - W1
-            r += delta
             if self.iteration % self.communication_window == 0:
-                r /= self.communication_window
-                self.commit(r)
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                delta /= self.communication_window
+                self.commit(delta)
                 self.pull()
-                r.fill(0.0)
                 self.model.set_weights(self.center_variable)
+                W1 = self.center_variable
             self.iteration += 1
 
 
