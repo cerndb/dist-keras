@@ -285,20 +285,17 @@ class DOWNPOURWorker(NetworkWorker):
 
     def optimize(self):
         """Specific optimization procedure for DOWNPOUR."""
-        r = np.asarray(self.model.get_weights())
-        r.fill(0.0)
+        W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
             if self.iteration % self.communication_window == 0:
-                self.commit(r)
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                self.commit(delta)
                 self.pull()
-                r.fill(0.0)
                 self.model.set_weights(self.center_variable)
-            W1 = np.asarray(self.model.get_weights())
+                W1 = self.center_variable
             self.model.train_on_batch(X, Y)
-            W2 = np.asarray(self.model.get_weights())
-            delta = W2 - W1
-            r += delta
             self.iteration += 1
 
 
