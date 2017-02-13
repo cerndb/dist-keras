@@ -12,6 +12,7 @@ import numpy as np
 from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import DynSGDParameterServer
+from distkeras.parameter_servers import ExperimentalParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.networking import determine_host_address
@@ -19,6 +20,7 @@ from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import DynSGDWorker
+from distkeras.workers import ExperimentalWorker
 from distkeras.workers import EAMSGDWorker
 from distkeras.workers import SequentialWorker
 
@@ -751,5 +753,34 @@ class DynSGD(AsynchronousDistributedTrainer):
     def allocate_parameter_server(self):
         """Allocate DYNSGD parameter server."""
         parameter_server = DynSGDParameterServer(self.master_model, self.master_port)
+
+        return parameter_server
+
+
+class Experimental(AsynchronousDistributedTrainer):
+    """Experimental optimization scheme for development purposes."""
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
+        # Initialize the parent object.
+        super(Experimental, self).__init__(self.master_model, self.worker_optimizer, self.loss,
+                                           self.features_column, self.label_column, self.batch_size,
+                                           self.master_host, self.master_port, self.communication_window)
+        # Set the algorithm parameters.
+        self.communication_window
+
+    def allocate_worker(self):
+        """Allocate experimental worker."""
+        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
+                                    self.features_column, self.label_column, self.batch_size,
+                                    self.master_host, self.master_port, self.communication_window,
+                                    self.num_workers)
+
+        return worker
+
+    def allocate_parameter_server(self):
+        """Allocate experimental parameter server."""
+        parameter_server = ExperimentalParameterServer(self.master_model, self.master_port)
+        parameter_server.set_num_workers(self.num_workers)
 
         return parameter_server
