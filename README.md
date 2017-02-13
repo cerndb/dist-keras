@@ -71,7 +71,7 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 This optimizer follows the traditional scheme of training a model, i.e., it uses sequential gradient updates to optimize the parameters. It does this by executing the training procedure on a single Spark executor.
 
 ```python
-SingleTrainerWorker(model, features_col, label_col, batch_size, optimizer, loss)
+SingleTrainer(model, features_col, label_col, batch_size, optimizer, loss)
 ```
 
 ### ADAG (Currently Recommended)
