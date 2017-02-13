@@ -748,6 +748,6 @@ class DynSGD(AsynchronousDistributedTrainer):
 
     def allocate_parameter_server(self):
         """Allocate DYNSGD parameter server."""
-        parameter_server = DYNSGDParameterServer(self.master_model, self.master_port)
+        parameter_server = DynSGDParameterServer(self.master_model, self.master_port)
 
         return parameter_server

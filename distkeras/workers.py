@@ -400,8 +400,8 @@ class DynSGDWorker(NetworkWorker):
         self.socket.sendall(b'p')
         # Fetch the dictionary from the parameter server.
         data = np.asarray(recv_data(self.socket))
-        self.center_variable = np.asarray(data['m'])
-        self.last_update = data['u']
+        self.center_variable = np.asarray(data['model'])
+        self.last_update = data['update']
 
     def commit(self, residual):
         """Sends the gradient residual to the parameter server."""

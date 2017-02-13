@@ -288,9 +288,9 @@ class DynSGDParameterServer(SocketParameterServer):
         # Allocate a new dictionary.
         data = {}
         # Store the model (m).
-        data['m'] = cv
+        data['model'] = cv
         # Store the number of updates (u) the PS executed.
-        data['u'] = self.num_updates
+        data['update'] = self.num_updates
         # Send the data over the socket.
         send_data(conn, data)
 
@@ -299,7 +299,7 @@ class DynSGDParameterServer(SocketParameterServer):
         r = data['residual']
         # Fetch the last iteration number
         last_update = data['last_update']
-        du = (last_update - self.num_updates) + 1
+        du = (self.num_updates - last_update) + 1
         r /= du
         with self.mutex:
             center_variable = self.model.get_weights()
