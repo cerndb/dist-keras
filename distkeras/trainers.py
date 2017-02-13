@@ -766,7 +766,7 @@ class Experimental(AsynchronousDistributedTrainer):
         super(Experimental, self).__init__(keras_model, worker_optimizer, loss, num_workers,
                                            batch_size, features_col, label_col, num_epoch)
         # Set the algorithm parameters.
-        self.communication_window
+        self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocate experimental worker."""
