@@ -399,7 +399,7 @@ class DynSGDWorker(NetworkWorker):
         # Request a pull from the parameter server.
         self.socket.sendall(b'p')
         # Fetch the dictionary from the parameter server.
-        data = np.asarray(recv_data(self.socket))
+        data = recv_data(self.socket)
         self.center_variable = np.asarray(data['model'])
         self.last_update = data['update']
 
