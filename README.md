@@ -83,6 +83,10 @@ ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
      features_col="features", label_col="label", num_epoch=1, communication_window=12)
 ```
 
+### DynSGD
+
+Dynamic SGD, dynamically maintains a learning rate for every worker by incorperating parameter staleness. This optimization scheme is introduced in "Heterogeneity-aware Distributed Parameter Servers" at the SIGMOD 2017 conference [[5]](http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf).
+
 ### Asynchronous Elastic Averaging SGD (AEASGD)
 
 The distinctive idea of EASGD is to allow the local workers to perform more exploration (small rho) and the master to perform exploitation. This approach differs from other settings explored in the literature, and focus on how fast the center variable converges [[2]](https://arxiv.org/pdf/1412.6651.pdf) .
@@ -188,6 +192,7 @@ If you use this framework in any academic work, please use the following BibTex 
 <!-- howpublished = {\url{https://github.com/maxpumperla/elephas}} -->
 <!-- } -->
 * Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]
+* Jiawei Jiang, Bin Cui, Ce Zhang and Lele Yu (2017). Heterogeneity-aware Distributed Parameter Servers [[5]])(http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf)
 
 
 ## Licensing
