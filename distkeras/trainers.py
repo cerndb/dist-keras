@@ -9,14 +9,16 @@ import time
 
 import numpy as np
 
-from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import ADAGParameterServer
+from distkeras.parameter_servers import DeltaParameterServer
+from distkeras.parameter_servers import DynSGDParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.networking import determine_host_address
 from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
+from distkeras.workers import DynSGDWorker
 from distkeras.workers import EAMSGDWorker
 from distkeras.workers import SequentialWorker
 
