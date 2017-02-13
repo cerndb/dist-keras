@@ -256,3 +256,54 @@ class ADAGParameterServer(SocketParameterServer):
             self.model.set_weights(center_variable)
         # Increment the number of parameter server updates.
         self.next_update()
+
+
+class DynSGDParameterServer(SocketParameterServer):
+    """DynSGD parameter server, keeps track of the staleness between updates
+    to maintain dynamic worker learning rates based on staleness.
+
+    # Arguments
+        model: string. Keras model
+               See: distkeras.utils.serialize_keras_model
+        master_port: int. Port number of the parameter server.
+    """
+
+    def __init__(self, model, master_port):
+        super(DynSGDParameterServer, self).__init__(model, master_port)
+
+    def handle_pull(self, conn, addr):
+        """Handles parameter requests coming from the workers. This will
+        actually send the model parameters to the requesting host.
+
+        This is a specific implementation for DynSGD.
+
+        # Arguments:
+            conn: socket. The opened connection.
+            addr: addr. Address of the remote host.
+        """
+        # Fetch the raw center variables.
+        with self.mutex:
+            center_variable = self.model.get_weights()
+            cv = copy.deepcopy(center_variable)
+        # Allocate a new dictionary.
+        data = {}
+        # Store the model (m).
+        data['m'] = cv
+        # Store the number of updates (u) the PS executed.
+        data['u'] = self.num_updates
+        # Send the data over the socket.
+        send_data(conn, data)
+
+    def handle_commit(self, conn, addr):
+        data = recv_data(conn)
+        r = data['residual']
+        # Fetch the last iteration number
+        last_update = data['last_update']
+        du = (last_update - self.num_updates) + 1
+        r /= du
+        with self.mutex:
+            center_variable = self.model.get_weights()
+            center_variable = center_variable + r
+            self.model.set_weights(center_variable)
+        # Increment the number of parameter server updates.
+        self.next_update()

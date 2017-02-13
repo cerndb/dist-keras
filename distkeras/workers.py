@@ -379,3 +379,53 @@ class EAMSGDWorker(NetworkWorker):
             W_copy -= r
             self.model.set_weights(W_copy)
             self.iteration += 1
+
+
+class DynSGDWorker(NetworkWorker):
+    """Implements the training procedure for DynSGD."""
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
+        # Initialize the parent object.
+        super(DynSGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                           batch_size, master_host, master_port)
+        # Initialize DynSGD parameters.
+        self.communication_window = communication_window
+        self.iteration = 1
+        self.last_update = 0
+
+    def pull(self):
+        """Requests the center variable and last update from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the dictionary from the parameter server.
+        data = np.asarray(recv_data(self.socket))
+        self.center_variable = np.asarray(data['m'])
+        self.last_update = data['u']
+
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['residual'] = residual
+        data['last_update'] = self.last_update
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the paramter server.
+        send_data(self.socket, data)
+
+    def optimize(self):
+        """Optimization procedure of DynSGD."""
+        W1 = np.asarray(self.model.get_weights())
+        while True:
+            X, Y = self.get_next_minibatch()
+            self.model.train_on_batch(X, Y)
+            if self.iteration % self.communication_window == 0:
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                self.commit(delta)
+                self.pull()
+                self.model.set_weights(self.center_variable)
+                W1 = self.center_variable
+            self.iteration += 1

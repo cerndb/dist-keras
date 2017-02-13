@@ -682,9 +682,6 @@ class ADAG(AsynchronousDistributedTrainer):
                               This parameter describes the number of mini-batches that will be
                               computed before updating the center variable. For DOWNPOUR based
                               algorithms we recommend large communication windows.
-        learning_rate: float. Learning rate.
-        beta_1: float. Default value 0.9
-        beta_2: float. Default value 0.999
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
@@ -705,7 +702,52 @@ class ADAG(AsynchronousDistributedTrainer):
 
     def allocate_parameter_server(self):
         """Allocate the Adag parameter server."""
-        # Allocate an ADAGA parameter server.
         parameter_server = ADAGParameterServer(self.master_model, self.master_port)
+
+        return parameter_server
+
+
+class DynSGD(AsynchronousDistributedTrainer):
+    """Dynamic SGD, dynamically maintains learning rate for every worker
+    and incorperates staleness.
+
+    Introduced in SIGMOD 2017 "Heterogenity-aware Parameter Servers"
+    http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf
+
+    # Arguments:
+        keras_model: model. Keras model to train.
+        worker_optimizer: string. String representing worker optimizer.
+                          See: https://keras.io/optimizers/
+        loss: string. String representing the loss function.
+              See: https://keras.io/objectives/
+        features_col: string. Name of the label column.
+        num_epoch: int. Number of epochs.
+        batch_size: int. Mini-batch size.
+        num_workers: int. Number of distributed workers.
+        communication_window: int. Staleness parameter.
+                              This parameter describes the number of mini-batches that will be
+                              computed before updating the center variable. For DOWNPOUR based
+                              algorithms we recommend large communication windows.
+    """
+
+    def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+                 features_col="features", label_col="label", num_epoch=1, communication_window=12):
+        # Initialize the parent object.
+        super(DynSGD, self).__init__(keras_model, worker_optimizer, loss, num_workers,
+                                     batch_size, features_col, label_col, num_epoch)
+        # Set algorithm parameters.
+        self.communication_window = communication_window
+
+    def allocate_worker(self):
+        """Allocate DYNSGD worker."""
+        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss,
+                              self.features_column, self.label_column, self.batch_size,
+                              self.master_host, self.master_port, self.communication_window)
+
+        return worker
+
+    def allocate_parameter_server(self):
+        """Allocate DYNSGD parameter server."""
+        parameter_server = DYNSGDParameterServer(self.master_model, self.master_port)
 
         return parameter_server

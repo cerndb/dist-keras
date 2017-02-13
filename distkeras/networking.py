@@ -85,6 +85,7 @@ def send_data(connection, data):
     connection.sendall(serialized_length.encode())
     connection.sendall(serialized_data)
 
+
 def connect(host, port, disable_nagle=True):
     fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Check if Nagle's algorithm needs to be disabled.
