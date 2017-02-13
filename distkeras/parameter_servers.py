@@ -347,7 +347,7 @@ class ExperimentalParameterServer(SocketParameterServer):
         data = recv_data(conn)
         # Check if the data contains end of a process.
         if "worker_done" in data:
-            self.num_workers--
+            self.num_workers -= 1
         else:
             # Fetch the residual.
             r = data['residual']
