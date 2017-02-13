@@ -446,6 +446,7 @@ class ExperimentalWorker(NetworkWorker):
         # Initialize ADAG parameters.
         self.communication_window = communication_window
         self.num_workers = num_workers
+        self.current_num_workers = self.num_workers
         self.iteration = 1
         self.beta = (1 - self.communication_window) / self.num_workers
 
@@ -456,7 +457,7 @@ class ExperimentalWorker(NetworkWorker):
         # Fetch the dictionary from the parameter server.
         data = recv_data(self.socket)
         self.center_variable = np.asarray(data['model'])
-        self.num_workers = data['num_workers']
+        self.current_num_workers = data['num_workers']
 
     def commit(self, residual):
         """Sends the gradient residual to the parameter server."""
@@ -486,7 +487,7 @@ class ExperimentalWorker(NetworkWorker):
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                d = self.num_workers * self.beta
+                d = self.communication_window - (self.num_workers - self.current_num_workers) * self.beta
                 delta /= d
                 self.commit(delta)
                 self.pull()
