@@ -441,7 +441,7 @@ class ExperimentalWorker(NetworkWorker):
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
                  num_workers=2):
         # Initialize the parent object.
-        super(ADAGWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                          batch_size, master_host, master_port)
         # Initialize ADAG parameters.
         self.communication_window = communication_window
@@ -477,7 +477,7 @@ class ExperimentalWorker(NetworkWorker):
         send_data(self.socket, data)
 
     def optimize(self):
-        """Optimization procedure of ADAG."""
+        """Optimization procedure of experimental optimizer."""
         W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
