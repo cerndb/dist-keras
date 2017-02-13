@@ -197,7 +197,7 @@ If you use this framework in any academic work, please use the following BibTex 
 <!-- howpublished = {\url{https://github.com/maxpumperla/elephas}} -->
 <!-- } -->
 * Pumperla, M. (2015). Elephas. Github Repository https://github.com/maxpumperla/elephas/. [4]
-* Jiawei Jiang, Bin Cui, Ce Zhang and Lele Yu (2017). Heterogeneity-aware Distributed Parameter Servers [[5]])(http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf)
+* Jiawei Jiang, Bin Cui, Ce Zhang and Lele Yu (2017). Heterogeneity-aware Distributed Parameter Servers [[5]](http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf)
 
 
 ## Licensing
