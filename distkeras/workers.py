@@ -447,6 +447,7 @@ class ExperimentalWorker(NetworkWorker):
         self.communication_window = communication_window
         self.num_workers = num_workers
         self.iteration = 1
+        self.beta = (1 - self.communication_window) / self.num_workers
 
     def pull(self):
         """Requests the center variable and last update from the parameter server."""
@@ -485,7 +486,8 @@ class ExperimentalWorker(NetworkWorker):
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                delta /= self.communication_window
+                d = self.num_workers * self.beta
+                delta /= d
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)
