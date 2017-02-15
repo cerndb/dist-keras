@@ -54,9 +54,11 @@ class Emperor(Scheme):
         evaluation_frequency: int. Frequency of hyperparameter evaluation.
     """
 
-    def __init__(self, optimizer, evaluate_loss, num_epoch=15, evaluation_frequency=5):
+    def __init__(self, optimizer, evaluate_loss, num_epoch=15, evaluation_frequency=5,
+                 loss_threshold=0.005):
         super(Emperor, self).__init__(optimizer, num_epoch, evaluation_frequency)
         self.previous_loss = float('inf')
+        self.loss_threshold = loss_threshold
         self.evaluate_loss = evaluate_loss
 
     def optimize(self, training_set, validation_set):
@@ -74,7 +76,7 @@ class Emperor(Scheme):
             print("Current loss: " + str(loss))
             dl = math.fabs(loss - self.previous_loss)
             self.previous_loss = loss
-            if dl <= 0.005:
+            if dl <= self.loss_threshold:
                 print("Lowering learning rate.")
                 print("Old learning rate: " + str(self.optimizer.get_learning_rate()))
                 # Modify the learning rate.
