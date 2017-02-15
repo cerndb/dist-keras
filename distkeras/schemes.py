@@ -71,9 +71,11 @@ class Emperor(Scheme):
             self.optimizer.set_model(trained_model)
             # Evaluate the training set, and fetch the loss.
             loss = self.evaluate_loss(trained_model, validation_set)
+            print("Current loss: " + str(loss))
             dl = math.fabs(loss - self.previous_loss)
             self.previous_loss = loss
             if dl <= 0.5:
+                print("Lowering learning rate.")
                 # Modify the learning rate.
                 learning_rate = self.optimizer.get_learning_rate()
                 learning_rate /= 2
