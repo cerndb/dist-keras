@@ -439,7 +439,7 @@ class ExperimentalWorker(NetworkWorker):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
-                 num_workers=2):
+                 num_workers=2, learning_rate=1.0):
         # Initialize the parent object.
         super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
                                          batch_size, master_host, master_port)
@@ -449,6 +449,7 @@ class ExperimentalWorker(NetworkWorker):
         self.current_num_workers = self.num_workers
         self.iteration = 1
         self.beta = (1 - self.communication_window) / self.num_workers
+        self.learning_rate = learning_rate
 
     def pull(self):
         """Requests the center variable and last update from the parameter server."""
@@ -489,6 +490,7 @@ class ExperimentalWorker(NetworkWorker):
                 delta = W2 - W1
                 d = self.communication_window - (self.num_workers - self.current_num_workers) * self.beta
                 delta /= d
+                delta *= self.learning_rate
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)

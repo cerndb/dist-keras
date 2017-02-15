@@ -47,6 +47,10 @@ class Trainer(object):
         self.training_time_end = 0
         self.training_time = 0
 
+    def set_model(self, model):
+        """Sets the master model to be used by the trainer."""
+        self.master_model = serialize_keras_model(model)
+
     def record_training_start(self):
         """Records the start of the training.
 
@@ -341,6 +345,39 @@ class DistributedTrainer(Trainer):
         self.parameter_server_thread = None
         self.master_host = determine_host_address()
         self.master_port = 5000
+        self.learning_rate = 1.0
+
+    def get_features_column(self):
+        """Returns the name of the features column."""
+        return self.features_column
+
+    def get_label_column(self):
+        """Returns the name of the label column."""
+        return self.label_column
+
+    def get_learning_rate(self):
+        """Returns the learning rate of the worker which can be tuned by
+        the parameter server, or optimization scheme.
+
+        Note: this learning rate is independent of the learning rate of the optimizer.
+        """
+        return self.learning_rate
+
+    def set_learning_rate(self, learning_rate):
+        """Sets the learning rate which can be tuned by the parameter server,
+        or optimization scheme.
+
+        Note: this learning rate is independent of the learning rate of the optimizer.
+        """
+        self.learning_rate = learning_rate
+
+    def set_num_epoch(self, num_epoch):
+        """Sets the number of epochs."""
+        self.num_epoch = num_epoch
+
+    def get_num_epoch(self):
+        """Returns the number of epochs."""
+        return self.num_epoch
 
     def allocate_worker(self):
         """Allocates the worker implementation.
@@ -358,6 +395,14 @@ class DistributedTrainer(Trainer):
         parameter_server = DeltaParameterServer(self.master_model, self.master_port)
 
         return parameter_server
+
+    def set_num_workers(self, num_workers):
+        """Sets the number of parallel workers to use."""
+        self.num_workers = num_workers
+
+    def get_num_workers(self):
+        """Returns the number of parallel workers."""
+        return self.num_workers
 
     def num_updates(self):
         """Returns the number of model updates the parameter server performed."""
@@ -773,7 +818,7 @@ class Experimental(AsynchronousDistributedTrainer):
         worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
                                     self.features_column, self.label_column, self.batch_size,
                                     self.master_host, self.master_port, self.communication_window,
-                                    self.num_workers)
+                                    self.num_workers, self.learning_rate)
 
         return worker
 
