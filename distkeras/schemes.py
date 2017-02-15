@@ -36,7 +36,7 @@ class Scheme(object):
 
     def get_epoch_over_evaluation_frequency(self):
         """Returns the number of epochs per evaluation frequency."""
-        return self.epoch_over_frequency
+        return self.epoch_over_eval_frequency
 
     def optimize(self, training_set, validation_set):
         raise NotImplementedError

@@ -347,6 +347,14 @@ class DistributedTrainer(Trainer):
         self.master_port = 5000
         self.learning_rate = 1.0
 
+    def set_minibatch_size(self, size):
+        """Sets the size of the mini-batch."""
+        self.batch_size = size
+
+    def get_minibatch_size(self):
+        """Returns the size of the mini-batch."""
+        return self.batch_size
+
     def get_features_column(self):
         """Returns the name of the features column."""
         return self.features_column
