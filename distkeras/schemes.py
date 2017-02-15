@@ -23,7 +23,7 @@ class Scheme(object):
         evaluation_frequency: int. Frequency of hyperparameter evaluation.
     """
 
-    def __init__(self, optimizer, num_epoch=10, evaluation_frequency=1):
+    def __init__(self, optimizer, num_epoch=15, evaluation_frequency=5):
         self.optimizer = optimizer
         self.num_epoch = num_epoch
         self.evaluation_frequency = evaluation_frequency
@@ -54,7 +54,7 @@ class Emperor(Scheme):
         evaluation_frequency: int. Frequency of hyperparameter evaluation.
     """
 
-    def __init__(self, optimizer, evaluate_loss, num_epoch=10, evaluation_frequency=1):
+    def __init__(self, optimizer, evaluate_loss, num_epoch=15, evaluation_frequency=5):
         super(Emperor, self).__init__(optimizer, num_epoch, evaluation_frequency)
         self.previous_loss = float('inf')
         self.evaluate_loss = evaluate_loss
@@ -76,9 +76,11 @@ class Emperor(Scheme):
             self.previous_loss = loss
             if dl <= 0.5:
                 print("Lowering learning rate.")
+                print("Old learning rate: " + str(self.optimizer.get_learning_rate()))
                 # Modify the learning rate.
                 learning_rate = self.optimizer.get_learning_rate()
                 learning_rate /= 10
                 self.optimizer.set_learning_rate(learning_rate)
+                print("New learning rate: "+ str(self.optimizer.get_learning_rate()))
 
         return trained_model

@@ -37,7 +37,7 @@ class Worker(object):
     """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32):
+                 batch_size=32, learning_rate=1.0):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
@@ -49,6 +49,15 @@ class Worker(object):
         self.mini_batches = None
         self.is_prefetching = True
         self.worker_id = -1
+        self.learning_rate = learning_rate
+
+    def set_learning_rate(self, learning_rate):
+        """Sets the learning rate of the worker."""
+        self.learning_rate = learning_rate
+
+    def get_learning_rate(self):
+        """Returns the learning rate of the worker."""
+        return self.learning_rate
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
@@ -442,14 +451,13 @@ class ExperimentalWorker(NetworkWorker):
                  num_workers=2, learning_rate=1.0):
         # Initialize the parent object.
         super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
-                                         batch_size, master_host, master_port)
+                                                 batch_size, master_host, master_port, learning_rate)
         # Initialize ADAG parameters.
         self.communication_window = communication_window
         self.num_workers = num_workers
         self.current_num_workers = self.num_workers
         self.iteration = 1
         self.beta = (1 - self.communication_window) / self.num_workers
-        self.learning_rate = learning_rate
 
     def pull(self):
         """Requests the center variable and last update from the parameter server."""
