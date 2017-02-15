@@ -74,7 +74,7 @@ class Emperor(Scheme):
             print("Current loss: " + str(loss))
             dl = math.fabs(loss - self.previous_loss)
             self.previous_loss = loss
-            if dl <= 0.5:
+            if dl <= 0.005:
                 print("Lowering learning rate.")
                 print("Old learning rate: " + str(self.optimizer.get_learning_rate()))
                 # Modify the learning rate.
