@@ -78,7 +78,7 @@ class Emperor(Scheme):
                 print("Lowering learning rate.")
                 # Modify the learning rate.
                 learning_rate = self.optimizer.get_learning_rate()
-                learning_rate /= 2
+                learning_rate /= 10
                 self.optimizer.set_learning_rate(learning_rate)
 
         return trained_model
