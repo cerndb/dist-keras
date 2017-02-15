@@ -154,9 +154,9 @@ class NetworkWorker(Worker):
     """Abstract class of a worker who shares the variables using the network."""
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000):
+                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=1.0):
         super(NetworkWorker, self).__init__(model, optimizer, loss, features_col,
-                                            label_col, batch_size)
+                                            label_col, batch_size, learning_rate)
         self.master_host = master_host
         self.master_port = master_port
         self.socket = None
