@@ -64,9 +64,9 @@ Furthermore, we would also like to show how you exactly should process "big" dat
 If you want to run the examples using Apache Spark 2.0.0 and higher. You will need to remove the line containing `sqlContext = SQLContext(sc)`. We need to do this because in Spark 2.0+, the SQLContext, and Hive context are now merged in the Spark session.
 
 
-## Algorithms
+## Optimization Algorithms
 
-### Single Trainer
+### Sequential Trainer
 
 This optimizer follows the traditional scheme of training a model, i.e., it uses sequential gradient updates to optimize the parameters. It does this by executing the training procedure on a single Spark executor.
 
@@ -83,7 +83,7 @@ ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
      features_col="features", label_col="label", num_epoch=1, communication_window=12)
 ```
 
-### DynSGD
+### Dynamic SGD
 
 Dynamic SGD, dynamically maintains a learning rate for every worker by incorperating parameter staleness. This optimization scheme is introduced in "Heterogeneity-aware Distributed Parameter Servers" at the SIGMOD 2017 conference [[5]](http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf).
 
@@ -123,7 +123,7 @@ DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
          features_col, label_col, num_epoch, learning_rate, communication_window)
 ```
 
-### Ensemble Training (WIP)
+### Ensemble Training
 
 In ensemble training, we train `n` models in parallel on the same dataset. All models are trained in parallel, but the training of a single model is done in a sequential manner using Keras optimizers. After the training process, one can combine and, for example, average the output of the models.
 
@@ -132,7 +132,7 @@ EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
                 label_col, batch_size, num_ensembles)
 ```
 
-### Model Averaging (WIP)
+### Model Averaging
 
 Model averaging is a data parallel technique which will average the trainable parameters of model replicas after every epoch.
 
@@ -140,6 +140,10 @@ Model averaging is a data parallel technique which will average the trainable pa
 AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
                  label_col, num_epoch, batch_size, num_workers)
 ```
+
+## Optimization Schemes
+
+TODO
 
 ## General note
 

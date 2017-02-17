@@ -37,7 +37,7 @@ class Worker(object):
     """
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32):
+                 batch_size=32, learning_rate=1.0):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
@@ -49,6 +49,15 @@ class Worker(object):
         self.mini_batches = None
         self.is_prefetching = True
         self.worker_id = -1
+        self.learning_rate = learning_rate
+
+    def set_learning_rate(self, learning_rate):
+        """Sets the learning rate of the worker."""
+        self.learning_rate = learning_rate
+
+    def get_learning_rate(self):
+        """Returns the learning rate of the worker."""
+        return self.learning_rate
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
@@ -145,9 +154,9 @@ class NetworkWorker(Worker):
     """Abstract class of a worker who shares the variables using the network."""
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000):
+                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=1.0):
         super(NetworkWorker, self).__init__(model, optimizer, loss, features_col,
-                                            label_col, batch_size)
+                                            label_col, batch_size, learning_rate)
         self.master_host = master_host
         self.master_port = master_port
         self.socket = None
@@ -429,3 +438,87 @@ class DynSGDWorker(NetworkWorker):
                 self.model.set_weights(self.center_variable)
                 W1 = self.center_variable
             self.iteration += 1
+
+
+class ExperimentalWorker(NetworkWorker):
+    """Implements the training procedure for ADAG.
+
+    Introduced by Hermans et al.
+    """
+
+    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
+                 num_workers=2, learning_rate=1.0):
+        # Initialize the parent object.
+        super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+                                                 batch_size, master_host, master_port, learning_rate)
+        # Initialize ADAG parameters.
+        self.communication_window = communication_window
+        self.num_workers = num_workers
+        self.current_num_workers = self.num_workers
+        self.iteration = 1
+        self.beta = (1 - self.communication_window) / self.num_workers
+
+    def pull(self):
+        """Requests the center variable and last update from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the dictionary from the parameter server.
+        data = recv_data(self.socket)
+        self.center_variable = np.asarray(data['model'])
+        self.current_num_workers = data['num_workers']
+
+    def commit(self, residual):
+        """Sends the gradient residual to the parameter server."""
+        # Prepare the datastructure.
+        data = {}
+        data['worker_id'] = self.get_worker_id()
+        data['residual'] = residual
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        # Send the data to the paramter server.
+        send_data(self.socket, data)
+
+    def send_worker_done(self):
+        """Sends the worker done signal to the parameter server."""
+        data = {}
+        data['worker_done'] = self.get_worker_id()
+        # Request a commit from the parameter server.
+        self.socket.sendall(b'c')
+        send_data(self.socket, data)
+
+    def optimize(self):
+        """Optimization procedure of experimental optimizer."""
+        W1 = np.asarray(self.model.get_weights())
+        while True:
+            X, Y = self.get_next_minibatch()
+            self.model.train_on_batch(X, Y)
+            if self.iteration % self.communication_window == 0:
+                W2 = np.asarray(self.model.get_weights())
+                delta = W2 - W1
+                d = self.communication_window - (self.num_workers - self.current_num_workers) * self.beta
+                delta /= d
+                delta *= self.learning_rate
+                self.commit(delta)
+                self.pull()
+                self.model.set_weights(self.center_variable)
+                W1 = self.center_variable
+            self.iteration += 1
+
+    def train(self, worker_id, iterator):
+        """Training procedure of a networked worker with a parameter server."""
+        self.start_prefetching_thread(iterator)
+        self.set_worker_id(worker_id)
+        self.prepare_model()
+        self.connect()
+        self.pull()
+        self.model.set_weights(self.center_variable)
+        try:
+            self.optimize()
+        except:
+            pass
+        self.send_worker_done()
+        self.socket.close()
+        self.prefetching_thread.join()
+
+        return iter([])
