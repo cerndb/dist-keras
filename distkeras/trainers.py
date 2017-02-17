@@ -814,10 +814,12 @@ class Experimental(AsynchronousDistributedTrainer):
     """Experimental optimization scheme for development purposes."""
 
     def __init__(self, keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5,
+                 learning_rate=1.0):
         # Initialize the parent object.
         super(Experimental, self).__init__(keras_model, worker_optimizer, loss, num_workers,
-                                           batch_size, features_col, label_col, num_epoch)
+                                           batch_size, features_col, label_col, num_epoch,
+                                           learning_rate)
         # Set the algorithm parameters.
         self.communication_window = communication_window
 
