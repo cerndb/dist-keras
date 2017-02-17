@@ -111,7 +111,7 @@ class StandardTransformer(Transformer):
         new_stddevs = {}
 
         for k in stddevs:
-            new_stddevs[k[12:-5]] = stddevs[k]
+            new_stddevs[k[11:-5]] = stddevs[k]
 
         return new_stddevs
 
