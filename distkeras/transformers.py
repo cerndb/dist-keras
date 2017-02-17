@@ -7,11 +7,14 @@ a column to a dataframe based on a collection of specified values.
 
 ## BEGIN Imports. ##############################################################
 
+from distkeras.utils import new_dataframe_row
+from distkeras.utils import to_dense_vector
+
 from pyspark.mllib.linalg import DenseMatrix
 from pyspark.mllib.linalg import DenseVector
 
-from distkeras.utils import new_dataframe_row
-from distkeras.utils import to_dense_vector
+from pyspark.sql.functions import mean
+from pyspark.sql.functions import stddev_pop
 
 ## END Imports. ################################################################
 
@@ -73,6 +76,77 @@ class MinMaxTransformer(Transformer):
             dataframe: dataframe. Spark Dataframe.
         """
         return dataframe.rdd.map(self._transform).toDF()
+
+
+
+
+class StandardTransformer(Transformer):
+    """Will transform the specified columns to unit standard deviation (if specified),
+    and centers the data to mean 0 (if specified).
+
+    # Arguments
+        columns: list. List of columns.
+        suffix: string. Suffix name of the column after processing.
+    # Note
+        We assume equal probability of the rows.
+    """
+
+    def __init__(self, columns, suffix="_normalized"):
+        self.columns = columns
+        self.column_suffix = suffix
+        self.current_column = None
+        self.means = {}
+        self.stddevs = {}
+
+    def clean_mean_keys(means):
+        """Cleans the keys of the specified dictionary (mean)."""
+        new_means = {}
+
+        for k in means:
+            new_means[k[4:-1]] = means[k]
+
+        return new_means
+
+    def clean_stddev_keys(stddevs):
+        """Cleans the keys of the specified dictionary (stddev)."""
+        new_stddevs = {}
+
+        for k in stddevs:
+            new_stddevs[k[12:-5]] = stddevs[k]
+
+        return new_stddevs
+
+    def _transform(self, row):
+        """Take the column, and normalize it with the computed means and std devs."""
+        mean = self.means[self.current_column]
+        stddev = self.stddevs[self.current_column]
+        x = row[self.current_column]
+        x_normalized = (x - mean) / stddev
+        output_column = self.current_column + self.column_suffix
+        new_row = new_dataframe_row(row, output_column, x_normalized)
+
+        return new_row
+
+    def transform(self, dataframe):
+        """Applies standardization to the specified columns.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe.
+        """
+        # Compute the means of the specified columns.
+        means = [mean(x) for x in self.columns]
+        means = dataframe.select(means).collect()[0].asDict()
+        self.means = self.clean_mean_keys(means)
+        # Compute the standard deviation of the specified columns.
+        stddevs = [stddev_pop(x) for x in self.columns]
+        stddevs = dataframe.select(stddevs).collect()[0].asDict()
+        self.stddevs = self.clean_stddev_keys(stddevs)
+        # For every feature, add a new column to the dataframe.
+        for column in self.columns:
+            self.current_column = column
+            dataframe = dataframe.rdd.map(self._transform).toDF()
+
+        return dataframe
 
 
 class DenseTransformer(Transformer):
