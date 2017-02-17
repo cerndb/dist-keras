@@ -79,7 +79,6 @@ class MinMaxTransformer(Transformer):
 
 
 
-
 class StandardTransformer(Transformer):
     """Will transform the specified columns to unit standard deviation (if specified),
     and centers the data to mean 0 (if specified).
@@ -98,7 +97,7 @@ class StandardTransformer(Transformer):
         self.means = {}
         self.stddevs = {}
 
-    def clean_mean_keys(means):
+    def clean_mean_keys(self, means):
         """Cleans the keys of the specified dictionary (mean)."""
         new_means = {}
 
@@ -107,7 +106,7 @@ class StandardTransformer(Transformer):
 
         return new_means
 
-    def clean_stddev_keys(stddevs):
+    def clean_stddev_keys(self, stddevs):
         """Cleans the keys of the specified dictionary (stddev)."""
         new_stddevs = {}
 
