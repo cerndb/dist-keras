@@ -130,7 +130,7 @@ class StandardTransformer(Transformer):
         """Centers the data to mean 0."""
         mean = self.means[self.current_column]
         x = row[self.current_column]
-        x_centered = x - mean
+        x_centered = x + mean
         output_column = self.current_column[:-2]
         new_row = new_dataframe_row(row, output_column, x_centered)
 
