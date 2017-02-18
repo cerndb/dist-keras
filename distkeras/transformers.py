@@ -126,6 +126,16 @@ class StandardTransformer(Transformer):
 
         return new_row
 
+    def _transform_mean(self, row):
+        """Centers the data to mean 0."""
+        mean = self.means[self.current_column]
+        x = row[self.current_column]
+        x_centered = x - mean
+        output_column = self.current_column
+        new_row = new_dataframe_row(row, output_column, x_centered)
+
+        return new_row
+
     def transform(self, dataframe):
         """Applies standardization to the specified columns.
 
@@ -144,6 +154,15 @@ class StandardTransformer(Transformer):
         for column in self.columns:
             self.current_column = column
             dataframe = dataframe.rdd.map(self._transform).toDF()
+        # Compute new means, to center them at 0.
+        normalized_columns = [x + self.column_suffix for x in self.columns]
+        means = [mean(x) for x in normalized_columns]
+        means = dataframe.select(means).collect()[0].asDict()
+        self.means = self.clean_mean_keys(means)
+        # Now, subtract the means from the normalized columns.
+        for column in normalized_columns:
+            self.current_column = column
+            dataframe = dataframe.rdd.map(self._transform_mean).toDF()
 
         return dataframe
 
