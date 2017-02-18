@@ -121,7 +121,7 @@ class StandardTransformer(Transformer):
         stddev = self.stddevs[self.current_column]
         x = row[self.current_column]
         x_normalized = (x - mean) / stddev
-        output_column = self.current_column + self.column_suffix
+        output_column = self.current_column + self.column_suffix + "_t"
         new_row = new_dataframe_row(row, output_column, x_normalized)
 
         return new_row
