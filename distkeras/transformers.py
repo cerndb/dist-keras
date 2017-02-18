@@ -131,7 +131,7 @@ class StandardTransformer(Transformer):
         mean = self.means[self.current_column]
         x = row[self.current_column]
         x_centered = x - mean
-        output_column = self.current_column
+        output_column = self.current_column[:-2]
         new_row = new_dataframe_row(row, output_column, x_centered)
 
         return new_row
@@ -161,7 +161,7 @@ class StandardTransformer(Transformer):
         self.means = self.clean_mean_keys(means)
         # Now, subtract the means from the normalized columns.
         for column in normalized_columns:
-            self.current_column = column[:-2]
+            self.current_column = column
             dataframe = dataframe.rdd.map(self._transform_mean).toDF()
 
         return dataframe
