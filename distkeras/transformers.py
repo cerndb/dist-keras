@@ -155,13 +155,13 @@ class StandardTransformer(Transformer):
             self.current_column = column
             dataframe = dataframe.rdd.map(self._transform).toDF()
         # Compute new means, to center them at 0.
-        normalized_columns = [x + self.column_suffix for x in self.columns]
+        normalized_columns = [x + self.column_suffix + "_t" for x in self.columns]
         means = [mean(x) for x in normalized_columns]
         means = dataframe.select(means).collect()[0].asDict()
         self.means = self.clean_mean_keys(means)
         # Now, subtract the means from the normalized columns.
         for column in normalized_columns:
-            self.current_column = column
+            self.current_column = column[:-2]
             dataframe = dataframe.rdd.map(self._transform_mean).toDF()
 
         return dataframe
