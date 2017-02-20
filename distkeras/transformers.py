@@ -69,7 +69,7 @@ class MinMaxTransformer(Transformer):
             new_value = DenseVector(vector)
         else:
             value = row[self.input_column]
-            new_value = self.scale * (vector - self.o_max) + self.n_max
+            new_value = self.scale * (value - self.o_max) + self.n_max
         # Construct a new row with the normalized vector.
         new_row = new_dataframe_row(row, self.output_column, new_value)
 
