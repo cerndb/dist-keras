@@ -65,13 +65,13 @@ class MinMaxTransformer(Transformer):
         """
         if self.is_vector:
             vector = row[self.input_column].toArray()
+            vector = self.scale * (vector - self.o_max) + self.n_max
+            new_value = DenseVector(vector)
         else:
-            vector = row[self.input_column]
-        vector = self.scale * (vector - self.o_max) + self.n_max
-        # Convert to a DenseVector.
-        dense_vector = DenseVector(vector)
+            value = row[self.input_column]
+            new_value = self.scale * (vector - self.o_max) + self.n_max
         # Construct a new row with the normalized vector.
-        new_row = new_dataframe_row(row, self.output_column, dense_vector)
+        new_row = new_dataframe_row(row, self.output_column, new_value)
 
         return new_row
 
