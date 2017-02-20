@@ -40,13 +40,15 @@ class MinMaxTransformer(Transformer):
         n_max: float. New maximum of dataset.
         input_col: string. Name of input column.
         output_col: string. Name of output column.
+        is_vector. boolean. Indicates if the data element is a vector or
+                            a singular value.
 
     # Summary
         New range: [o_min; o_max]
         Old range: [n_min; n_max]
     """
 
-    def __init__(self, o_min, o_max, n_min, n_max, input_col, output_col):
+    def __init__(self, o_min, o_max, n_min, n_max, input_col, output_col, is_vector=True):
         self.o_min = o_min
         self.o_max = o_max
         self.n_min = n_min
@@ -54,13 +56,17 @@ class MinMaxTransformer(Transformer):
         self.scale = (self.n_max - self.n_min) / (self.o_max - self.o_min)
         self.input_column = input_col
         self.output_column = output_col
+        self.is_vector = is_vector
 
     def _transform(self, row):
         """Rescale every instance like this:
 
         x' = \frac{x - min}{max - min}
         """
-        vector = row[self.input_column].toArray()
+        if self.is_vector:
+            vector = row[self.input_column].toArray()
+        else:
+            vector = row[self.input_column]
         vector = self.scale * (vector - self.o_max) + self.n_max
         # Convert to a DenseVector.
         dense_vector = DenseVector(vector)
