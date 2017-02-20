@@ -49,10 +49,10 @@ class MinMaxTransformer(Transformer):
     """
 
     def __init__(self, o_min, o_max, n_min, n_max, input_col, output_col, is_vector=True):
-        self.o_min = o_min
-        self.o_max = o_max
-        self.n_min = n_min
-        self.n_max = n_max
+        self.o_min = float(o_min)
+        self.o_max = float(o_max)
+        self.n_min = float(n_min)
+        self.n_max = float(n_max)
         self.scale = (self.n_max - self.n_min) / (self.o_max - self.o_min)
         self.input_column = input_col
         self.output_column = output_col
