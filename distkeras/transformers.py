@@ -7,6 +7,8 @@ a column to a dataframe based on a collection of specified values.
 
 ## BEGIN Imports. ##############################################################
 
+import numpy as np
+
 from distkeras.utils import new_dataframe_row
 from distkeras.utils import to_dense_vector
 
@@ -83,6 +85,44 @@ class MinMaxTransformer(Transformer):
         """
         return dataframe.rdd.map(self._transform).toDF()
 
+
+class BinaryLabelTransformer(Transformer):
+    """Transformers the specified a column to a binary label, i.e., [0, 1] give
+    a specific label name. Given the specified label, this transformer will generate
+    [1,0], in the other case [0,1].
+
+    # Arguments:
+        input_column: string. Column name of the label identifier.
+        output_column: string. Name of the new label which contains the binary label.
+        label: string. Name of the label which needs to serve as 1.
+    """
+
+    def __init__(self, input_column, output_column, label):
+        self.input_column = input_column
+        self.output_column = output_column
+        self.label = label
+
+    def _transform(self, row):
+        """Appends the desired binary label column."""
+        value = row[self.input_column]
+        vector = np.zeros(2)
+        # Check if the name matches.
+        if value == self.label:
+            vector[0] = 1.0
+        else:
+            vector[1] = 1.0
+        # Convert to a Spark DenseVector
+        vector = DenseVector(vector)
+
+        return new_dataframe_row(row, self.output_column, vector)
+
+    def transform(self, dataframe):
+        """Applies the binary label transformation to the applied dataframe.
+
+        # Arguments
+            dataframe: dataframe. Spark Dataframe.
+        """
+        return dataframe.rdd.map(self._transform).toDF()
 
 
 class StandardTransformer(Transformer):
