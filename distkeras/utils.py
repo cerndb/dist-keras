@@ -12,7 +12,18 @@ from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
 
+import os
+
+import pwd
+
 ## END Import. #################################################################
+
+def get_os_username():
+    """Returns the username of user on the operating system.
+
+    From: http://stackoverflow.com/questions/842059/is-there-a-portable-way-to-get-the-current-username-in-python
+    """
+    return pwd.getpwuid(os.getuid())[0]
 
 def to_dense_vector(value, n_dim=2):
     """Converts the value to a one-hot encoded vector.
