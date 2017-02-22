@@ -67,6 +67,7 @@ conf.set("spark.executor.instances", `num_executors`)
 conf.set("spark.executor.memory", "4g")
 conf.set("spark.locality.wait", "0")
 conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+conf.set("spark.local.dir", "/tmp/" + os.getusername() + "/dist-keras");
 
 # Check if the user is running Spark 2.0 +
 if using_spark_2:
