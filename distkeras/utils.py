@@ -20,9 +20,6 @@ import pwd
 
 ## END Import. #################################################################
 
-def set_keras_base_directory(base_dir='/tmp/' + get_os_username()):
-    """Sets the base directory of Keras."""
-    K._keras_base_dir = base_dir
 
 def get_os_username():
     """Returns the username of user on the operating system.
@@ -30,6 +27,12 @@ def get_os_username():
     From: http://stackoverflow.com/questions/842059/is-there-a-portable-way-to-get-the-current-username-in-python
     """
     return pwd.getpwuid(os.getuid())[0]
+
+
+def set_keras_base_directory(base_dir='/tmp/' + get_os_username()):
+    """Sets the base directory of Keras."""
+    K._keras_base_dir = base_dir
+
 
 def to_dense_vector(value, n_dim=2):
     """Converts the value to a one-hot encoded vector.
