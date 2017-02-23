@@ -9,8 +9,10 @@ algorithms.
 from distkeras.networking import connect
 from distkeras.networking import recv_data
 from distkeras.networking import send_data
+
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
+from distkeras.utils import set_keras_base_directory
 from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
 
@@ -73,6 +75,8 @@ class Worker(object):
 
     def prepare_model(self):
         """Prepares the model for training."""
+        # Set the Keras directory.
+        set_keras_base_directory()
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
         # Compile the model with the specified loss and optimizer.

@@ -13,9 +13,13 @@ from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import DynSGDParameterServer
 from distkeras.parameter_servers import ExperimentalParameterServer
+
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
+from distkeras.utils import set_keras_base_directory
+
 from distkeras.networking import determine_host_address
+
 from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
@@ -23,6 +27,8 @@ from distkeras.workers import DynSGDWorker
 from distkeras.workers import ExperimentalWorker
 from distkeras.workers import EAMSGDWorker
 from distkeras.workers import SequentialWorker
+
+from keras import backend as K
 
 ## END Imports. ################################################################
 
@@ -39,6 +45,7 @@ class Trainer(object):
     """
 
     def __init__(self, keras_model, loss, worker_optimizer):
+        set_keras_base_directory()
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
         self.worker_optimizer = worker_optimizer

@@ -2,9 +2,7 @@
 
 ## BEGIN Import. ###############################################################
 
-import json
-
-import numpy as np
+from keras import backend as K
 
 from keras.models import model_from_json
 
@@ -12,11 +10,19 @@ from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
 
+import json
+
+import numpy as np
+
 import os
 
 import pwd
 
 ## END Import. #################################################################
+
+def set_keras_base_directory(base_dir='/tmp/' + get_os_username()):
+    """Sets the base directory of Keras."""
+    K._keras_base_dir = base_dir
 
 def get_os_username():
     """Returns the username of user on the operating system.
