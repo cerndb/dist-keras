@@ -83,10 +83,10 @@ from pyspark import SparkContext
 import numpy as np
 
 # Define the script variables.
-application_name = {application_name}
+application_name = '{application_name}'
 num_executors = {num_executors}
 num_processes = {num_processes}
-path_data = {path_data}
+path_data = '{path_data}'
 using_spark_2 = {using_spark_2}
 num_workers = num_processes * num_executors
 
