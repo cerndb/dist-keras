@@ -124,7 +124,9 @@ with open(username + "-dist-keras-job-config.serialized", "r") as f:
     serialized_trainer = f.read()
 trainer = unpickle_object(serialized_trainer)
 
-dir(trainer)
+print("Starting training process")
+trained_model = trainer.train(dataset)
+print(trained_model.get_weights())
         """.format(
             application_name=self.job_name,
             num_executors=self.num_executors,
