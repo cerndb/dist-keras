@@ -62,7 +62,11 @@ class Job(object):
         return self.trainer
 
     def generate_model(self):
-        raise NotImplementedError
+        # Serialize the trainer.
+        serialized_trainer = self.trainer.serialize()
+        # Write the model to disk.
+        with open(self.username + "-dist-keras-job-config.serialized", "w") as f:
+            f.write(serialized_trainer)
 
     def generate_code(self):
         # Generate the source code.
@@ -86,6 +90,7 @@ import numpy as np
 application_name = '{application_name}'
 num_executors = {num_executors}
 num_processes = {num_processes}
+username = '{username}'
 path_data = '{path_data}'
 using_spark_2 = {using_spark_2}
 num_workers = num_processes * num_executors
@@ -113,11 +118,19 @@ else:
 # Read the Parquet datafile, and precache the data on the nodes.
 raw_data = reader.read.parquet(path_data)
 dataset = precache(raw_data, num_workers)
+
+# Read the serialized trainer from disk, and deserialize it.
+with open(username + "-dist-keras-job-config.serialized", "r") as f:
+    serialized_trainer = f.read()
+trainer = unpickle_object(serialized_trainer)
+
+dir(trainer)
         """.format(
             application_name=self.job_name,
             num_executors=self.num_executors,
             num_processes=self.num_processes,
             path_data=self.data_path,
+            username=self.username,
             using_spark_2=self.spark_2
         )
         # Write the source code to a file.

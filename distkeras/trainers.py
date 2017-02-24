@@ -104,7 +104,7 @@ class Trainer(object):
         """
         raise NotImplementedError
 
-    def __str__(self):
+    def serialize(self):
         return pickle_object(self)
 
 
