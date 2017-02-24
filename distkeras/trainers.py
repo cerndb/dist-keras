@@ -19,6 +19,8 @@ from distkeras.parameter_servers import ExperimentalParameterServer
 from distkeras.utils import deserialize_keras_model
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import set_keras_base_directory
+from distkeras.utils import pickle_object
+from distkeras.utils import unpickle_object
 
 from distkeras.networking import determine_host_address
 
