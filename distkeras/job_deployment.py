@@ -67,7 +67,7 @@ class Job(object):
     def generate_code(self):
         # Generate the source code.
         source = """
-        # Automatically generated code, do not adapt.
+# Automatically generated code, do not adapt.
 from distkeras.evaluators import *
 from distkeras.predictors import *
 from distkeras.trainers import *
@@ -111,7 +111,7 @@ else:
     reader = sqlContext
 
 # Read the Parquet datafile, and precache the data on the nodes.
-raw_data = reader.reader.parquet(path_data)
+raw_data = reader.read.parquet(path_data)
 dataset = precache(raw_data, num_workers)
         """.format(
             application_name=self.job_name,
