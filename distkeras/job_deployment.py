@@ -26,7 +26,6 @@ class Job(object):
         self.username = username
         self.password = password
         self.trainer = trainer
-        self.initialize_default_parameters()
         self.spark_2 = False
 
     def get_data_path(self):
