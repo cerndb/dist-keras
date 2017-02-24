@@ -119,7 +119,7 @@ class Job(object):
             application_name=self.job_name,
             num_executors=self.num_executors,
             num_processes=self.num_processes,
-            path_data=self.path_data,
+            path_data=self.data_path,
             using_selfpark_2=self.spark_1
         )
         # Write the source code to a file.
