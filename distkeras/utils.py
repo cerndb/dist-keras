@@ -131,12 +131,17 @@ def shuffle(dataset):
     return dataset
 
 
-def precache(dataset):
+def precache(dataset, num_workers):
     """Precaches the specified dataset.
 
     Make sure the specified dataframe has the desired partitioning scheme.
 
     # Arguments
         dataset: dataframe. A Spark Dataframe.
+    # Arguments
+        num_workers: int. Number of workers you are going to use.
     """
+    dataset = dataset.repartition(num_workers)
+    dataset.cache()
+
     return dataset.count()
