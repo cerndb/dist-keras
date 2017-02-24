@@ -10,6 +10,8 @@ from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
 
+import cPickle as pickle
+
 import json
 
 import numpy as np
@@ -61,6 +63,13 @@ def json_to_dataframe_row(string):
 
     return row
 
+def pickle_object(o):
+    """Pickles the specified model and its weights."""
+    return pickle.dumps(o, -1)
+
+def unpickle_object(string):
+    """Unpickles the specified string into a model."""
+    return pickle.loads(string)
 
 def serialize_keras_model(model):
     """Serializes the specified Keras model into a dictionary."""
@@ -69,7 +78,6 @@ def serialize_keras_model(model):
     dictionary['weights'] = model.get_weights()
 
     return dictionary
-
 
 def deserialize_keras_model(dictionary):
     """Deserialized the Keras model using the specified dictionary."""

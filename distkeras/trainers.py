@@ -191,7 +191,7 @@ class SingleTrainer(Trainer):
         p[self.PARAMETER_LABEL] = self.label_column
         p[self.PARAMETER_LOSS] = self.loss
         p[self.PARAMETER_MINI_BATCH_SIZE] = self.batch_size
-        p[self.PARAMETER_MODEL] = self.master_model
+        p[self.PARAMETER_MODEL] = pickle_object(self.master_model)
         p[self.PARAMETER_NUM_EPOCH] = self.num_epoch
         p[self.PARAMETER_OPTIMIZER] = self.TRAINER_IDENTIFIER
         p[self.PARAMETER_WORKER_OPTIMIZER] = self.worker_optimizer
