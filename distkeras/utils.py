@@ -138,7 +138,6 @@ def precache(dataset, num_workers):
 
     # Arguments
         dataset: dataframe. A Spark Dataframe.
-    # Arguments
         num_workers: int. Number of workers you are going to use.
     """
     dataset = dataset.repartition(num_workers)
