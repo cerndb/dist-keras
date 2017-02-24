@@ -16,17 +16,6 @@ from distkeras.utils import serialize_keras_model
 class Job(object):
     """TODO Add documentation"""
 
-    PARAMETER_DISTRIBUTED_OPTIMIZER = "distributed_optimizer"
-    PARAMETER_FEATURES_COLUMN = "features_column"
-    PARAMETER_KERAS_MODEL = "keras_model"
-    PARAMETER_LABEL_COLUMN = "label_column"
-    PARAMETER_LOSS = "loss"
-    PARAMETER_MINI_BATCH_SIZE = "mini_batch_size"
-    PARAMETER_NUM_EPOCH = "num_epoch"
-    PARAMETER_NUM_WORKERS = "num_workers"
-    PARAMETER_TRAINING_FRACTION = "training_fraction"
-    PARAMETER_WORKER_OPTIMIZER = "worker_optimizer"
-
     def __init__(self, host, username, password):
         self.host = host
         self.username = username

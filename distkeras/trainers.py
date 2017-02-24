@@ -3,11 +3,13 @@ Keras model in a distributed manner (with exception of the SingleTrainer)."""
 
 ## BEGIN Imports. ##############################################################
 
+import json
+
+import numpy as np
+
 import threading
 
 import time
-
-import numpy as np
 
 from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.parameter_servers import DeltaParameterServer
@@ -43,6 +45,16 @@ class Trainer(object):
         worker_optimizer: string. String representing worker optimizer.
                           See https://keras.io/optimizers/
     """
+
+    PARAMETER_FEATURES = "features"
+    PARAMETER_LABEL = "label"
+    PARAMETER_LOSS = "loss"
+    PARAMETER_MINI_BATCH_SIZE = "mini_batch_size"
+    PARAMETER_MODEL = "model"
+    PARAMETER_NUM_EPOCH = "num_epoch"
+    PARAMETER_NUM_WORKERS = "num_workers"
+    PARAMETER_OPTIMIZER = "optimizer"
+    PARAMETER_WORKER_OPTIMIZER = "worker_optimizer"
 
     def __init__(self, keras_model, loss, worker_optimizer):
         set_keras_base_directory()
@@ -118,6 +130,8 @@ class SingleTrainer(Trainer):
         batch_size: int. Mini-batch size.
     """
 
+    TRAINER_IDENTIFIER = "sequential_trainer"
+
     def __init__(self, keras_model, worker_optimizer, loss, features_col="features",
                  label_col="label", num_epoch=1, batch_size=32):
         super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer)
@@ -169,6 +183,20 @@ class SingleTrainer(Trainer):
         self.record_training_end()
 
         return deserialize_keras_model(self.master_model)
+
+    def __str__(self):
+        """Serializes the trainer."""
+        p = {}
+        p[self.PARAMETER_FEATURES] = self.features_column
+        p[self.PARAMETER_LABEL] = self.label_column
+        p[self.PARAMETER_LOSS] = self.loss
+        p[self.PARAMETER_MINI_BATCH_SIZE] = self.batch_size
+        p[self.PARAMETER_MODEL] = self.master_model
+        p[self.PARAMETER_NUM_EPOCH] = self.num_epoch
+        p[self.PARAMETER_OPTIMIZER] = self.TRAINER_IDENTIFIER
+        p[self.PARAMETER_WORKER_OPTIMIZER] = self.worker_optimizer
+
+        return json.dumps(p)
 
 
 class AveragingTrainer(Trainer):
