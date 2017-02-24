@@ -124,7 +124,7 @@ class Job(object):
         )
         # Write the source code to a file.
         with open(self.username + "-dist-keras-job.py", "w") as f:
-            f.write(s)
+            f.write(source)
 
     def copy_code(self):
         raise NotImplementedError
