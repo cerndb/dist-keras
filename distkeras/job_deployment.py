@@ -62,22 +62,71 @@ class Job(object):
     def get_trainer(self):
         return self.trainer
 
+    def generate_model(self):
+        raise NotImplementedError
+
     def generate_code(self):
         # Generate the source code.
         source = """
         # Automatically generated code, do not adapt.
-        from distkeras.trainers import *
-        from distkeras.predictors import *
-        from distkeras.transformers import *
         from distkeras.evaluators import *
-        from distkeras.utils import *
+        from distkeras.predictors import *
         from distkeras.trainers import *
+        from distkeras.trainers import *
+        from distkeras.transformers import *
+        from distkeras.utils import *
+
         from keras import *
 
+        from pyspark import SparkConf
+        from pyspark import SparkContext
+
         import numpy as np
-        """
+
+        # Define the script variables.
+        application_name = {application_name}
+        num_executors = {num_executors}
+        num_processes = {num_processes}
+        path_data = {path_data}
+        using_spark_2 = {using_spark_2}
+        num_workers = num_processes * num_executors
+
+        # Allocate a Spark Context, and a Spark SQL context.
+        conf = SparkConf()
+        conf.set("spark.app.name", application_name)
+        conf.set("spark.master", "yarn-client")
+        conf.set("spark.executor.cores", num_processes)
+        conf.set("spark.executor.instances", num_executors)
+        conf.set("spark.executor.memory", "5g")
+        conf.set("spark.locality.wait", "0")
+        conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+
+        # Read the dataset from HDFS. For now we assume Parquet files.
+        if using_spark_2:
+            sc = SparkSession.builder.config(conf=conf) \
+                             .appName(application_name) \
+                              .getOrCreate()
+            reader = sc
+        else:
+            sc = SparkContext(conf=conf)
+            from pyspark import SQLContext
+            sqlContext = SQLContext(sc)
+            reader = sqlContext
+
+        # Read the Parquet datafile, and precache the data on the nodes.
+        raw_data = reader.reader.parquet(path_data)
+        dataset = precache(raw_data, num_workers)
+        """.format(
+            application_name=self.job_name,
+            num_executors=self.num_executors,
+            num_processes=self.num_processes,
+            path_data=self.path_data,
+            using_selfpark_2=self.spark_1,
+            num_executors=self.num_executors
+        )
         # Write the source code to a file.
-        # TODO Implement.
+        with open(self.username + "-dist-keras-job.py", "w") as f:
+            f.write(s)
 
     def copy_code(self):
         raise NotImplementedError
