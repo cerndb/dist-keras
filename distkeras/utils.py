@@ -63,13 +63,16 @@ def json_to_dataframe_row(string):
 
     return row
 
+
 def pickle_object(o):
     """Pickles the specified model and its weights."""
     return pickle.dumps(o, -1)
 
+
 def unpickle_object(string):
     """Unpickles the specified string into a model."""
     return pickle.loads(string)
+
 
 def serialize_keras_model(model):
     """Serializes the specified Keras model into a dictionary."""
@@ -78,6 +81,7 @@ def serialize_keras_model(model):
     dictionary['weights'] = model.get_weights()
 
     return dictionary
+
 
 def deserialize_keras_model(dictionary):
     """Deserialized the Keras model using the specified dictionary."""
@@ -142,5 +146,6 @@ def precache(dataset, num_workers):
     """
     dataset = dataset.repartition(num_workers)
     dataset.cache()
+    dataset.count()
 
-    return dataset.count()
+    return dataset

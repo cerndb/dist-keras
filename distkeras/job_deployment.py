@@ -10,21 +10,45 @@ import os
 import subprocess
 
 from distkeras.utils import serialize_keras_model
+from distkeras.utils import get_os_username
 
 ## END Imports. ################################################################
 
 class Job(object):
     """TODO Add documentation"""
 
-    def __init__(self, host, username, password):
+    def __init__(self, job_name, data_path, host, username, password, trainer):
         self.host = host
+        self.job_name = job_name
+        self.num_executors = 20
+        self.num_processes = 1
+        self.data_path = data_path
         self.username = username
         self.password = password
-        self.parameters = {}
+        self.trainer = trainer
         self.initialize_default_parameters()
+        self.spark_2 = False
 
-    def initialize_default_parameters(self):
-        raise NotImplementedError
+    def get_data_path(self):
+        return self.data_path
+
+    def set_spark_2(self, using_spark_2):
+        self.spark_2 = using_spark_2
+
+    def uses_spark_2(self):
+        return self.spark_2
+
+    def set_num_executors(self, num_executors):
+        self.num_executors = num_executors
+
+    def set_num_processes(self, num_processes):
+        self.num_processes = num_processes
+
+    def num_executors(self):
+        return self.num_executors
+
+    def num_processes(self):
+        return self.num_processes
 
     def get_host(self):
         return self.host
@@ -35,8 +59,25 @@ class Job(object):
     def get_password(self):
         return self.password
 
+    def get_trainer(self):
+        return self.trainer
+
     def generate_code(self):
-        raise NotImplementedError
+        # Generate the source code.
+        source = """
+        # Automatically generated code, do not adapt.
+        from distkeras.trainers import *
+        from distkeras.predictors import *
+        from distkeras.transformers import *
+        from distkeras.evaluators import *
+        from distkeras.utils import *
+        from distkeras.trainers import *
+        from keras import *
+
+        import numpy as np
+        """
+        # Write the source code to a file.
+        # TODO Implement.
 
     def copy_code(self):
         raise NotImplementedError
