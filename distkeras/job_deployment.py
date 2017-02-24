@@ -121,8 +121,7 @@ class Job(object):
             num_executors=self.num_executors,
             num_processes=self.num_processes,
             path_data=self.path_data,
-            using_selfpark_2=self.spark_1,
-            num_executors=self.num_executors
+            using_selfpark_2=self.spark_1
         )
         # Write the source code to a file.
         with open(self.username + "-dist-keras-job.py", "w") as f:
