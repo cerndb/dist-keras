@@ -27,6 +27,8 @@ class Job(object):
         self.password = password
         self.trainer = trainer
         self.spark_2 = False
+        self.filename_generated = self.username + "-dist-keras-job.py"
+        self.filename_model = self.username + "-dist-keras-job-config.serialized"
 
     def get_data_path(self):
         return self.data_path
@@ -65,7 +67,7 @@ class Job(object):
         # Serialize the trainer.
         serialized_trainer = self.trainer.serialize()
         # Write the model to disk.
-        with open(self.username + "-dist-keras-job-config.serialized", "w") as f:
+        with open(self.filename_model, "w") as f:
             f.write(serialized_trainer)
 
     def generate_code(self):
@@ -136,14 +138,25 @@ print(trained_model.get_weights())
             using_spark_2=self.spark_2
         )
         # Write the source code to a file.
-        with open(self.username + "-dist-keras-job.py", "w") as f:
+        with open(self.filename_generated, "w") as f:
             f.write(source)
 
     def copy_code(self):
-        raise NotImplementedError
+        # Copy the generated code to the remote location.
+        os.system('scp "%s" "%s:%s"' % (self.filename_generated , self.host,
+                                        "~/" + self.filename_generated))
+
+    def copy_model(self):
+        # Copy the generated model to the remote location.
+        os.system('scp "%s" "%s:%s"' % (self.filename_model , self.host,
+                                        "~/" + self.filename_model))
 
     def copy_result(self):
         raise NotImplementedError
+
+    def run_job(self):
+        # Run the job on the remote system.
+        os.system('ssh "%s@%s" -C python ' + self.filename_generated % (self.username, self.host))
 
     def process_result(self):
         raise NotImplementedError
@@ -151,6 +164,8 @@ print(trained_model.get_weights())
     def run(self):
         self.generate_code()
         self.copy_code()
+        self.copy_model()
+        self.run_job()
         self.copy_result()
 
         return self.process_result()
