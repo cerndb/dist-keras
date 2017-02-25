@@ -223,7 +223,7 @@ class NetworkWorker(Worker):
         d['history'] = h
         d['worker_id'] = self.worker_id
         d['iteration'] = self.iteration
-        self.training_history.append(h)
+        self.training_history.append(d)
 
     def optimize(self):
         """Optimization procedure of a network worker."""
