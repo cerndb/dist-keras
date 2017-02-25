@@ -219,6 +219,10 @@ class NetworkWorker(Worker):
 
     def add_history(self, h):
         """Appends the specified history data."""
+        d = {}
+        d['history'] = h
+        d['worker_id'] = self.worker_id
+        d['iteration'] = self.iteration
         self.training_history.append(h)
 
     def optimize(self):
