@@ -84,14 +84,6 @@ class Trainer(object):
         """Returns all history object aggregated during training."""
         return self.history
 
-    def has_history(self):
-        """Check if there is any history available."""
-        return len(self.history) > 0
-
-    def add_history(self, history):
-        """Adds an history object to the history list."""
-        self.history.append(history)
-
     def train(self, dataframe, shuffle=False):
         """Trains the specified model using the specified dataframe.
 
@@ -486,7 +478,7 @@ class DistributedTrainer(Trainer):
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -587,7 +579,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
