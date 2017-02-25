@@ -166,6 +166,7 @@ class NetworkWorker(Worker):
         self.socket = None
         self.center_variable = None
         self.disable_nagle = True
+        self.training_history = []
         self.worker_id = 0
 
     def connect(self):
@@ -216,6 +217,10 @@ class NetworkWorker(Worker):
         """Returns the port of the master parameter server."""
         return self.master_port
 
+    def add_history(self, h):
+        """Appends the specified history data."""
+        self.training_history.append(h)
+
     def optimize(self):
         """Optimization procedure of a network worker."""
         raise NotImplementedError
@@ -235,7 +240,7 @@ class NetworkWorker(Worker):
         self.socket.close()
         self.prefetching_thread.join()
 
-        return iter([])
+        return iter(self.training_history)
 
 
 class ADAGWorker(NetworkWorker):
@@ -269,7 +274,8 @@ class ADAGWorker(NetworkWorker):
         W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
-            self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
