@@ -152,6 +152,8 @@ class SequentialWorker(Worker):
         while True:
             X, Y = self.get_next_minibatch()
             self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
 
 
 class NetworkWorker(Worker):
@@ -319,6 +321,8 @@ class DOWNPOURWorker(NetworkWorker):
                 self.model.set_weights(self.center_variable)
                 W1 = self.center_variable
             self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             self.iteration += 1
 
 
@@ -354,6 +358,8 @@ class AEASGDWorker(NetworkWorker):
                 self.model.set_weights(W)
                 self.commit(E)
             self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             self.iteration += 1
 
 
@@ -397,6 +403,8 @@ class EAMSGDWorker(NetworkWorker):
             W += r_t
             self.model.set_weights(W)
             self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             gradient = np.asarray(self.model.get_weights()) - W
             r = r_t - self.learning_rate * gradient
             W_copy -= r
@@ -444,6 +452,8 @@ class DynSGDWorker(NetworkWorker):
         while True:
             X, Y = self.get_next_minibatch()
             self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
