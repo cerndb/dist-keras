@@ -27,6 +27,8 @@ import base64
 
 import urllib2
 
+import time
+
 ## END Imports. ################################################################
 
 class Punchcard(object):
@@ -91,16 +93,16 @@ class Punchcard(object):
 
             return '', 403
 
-
-
         @self.application.route('/api/state')
         def job_state():
             secret = request.args.get('secret')
             job = self.get_submitted_job(secret)
             # Check if the job exists.
             if job is not None:
-                print(job.is_running())
-                return '', 200
+                d = {}
+                d['job_name'] = job.get_job_name()
+                d['running'] = job.is_running()
+                return json.dumps(d), 200
 
             return '', 404
 
@@ -111,6 +113,7 @@ class Punchcard(object):
             if job is not None and not job.is_running():
                 with self.mutex:
                     del self.jobs[job]
+                print("Job destroyed")
                 return '', 200
 
             return '', 400
@@ -132,6 +135,9 @@ class PunchcardJob(object):
         self.trainer = trainer
         self.is_running = True
         self.thread = None
+
+    def get_job_name(self):
+        return self.job_name
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -158,12 +164,22 @@ class Job(object):
         self.num_processes = 1
         self.data_path = data_path
         self.trainer = trainer
+        self.trained_model = None
 
     def set_num_executors(self, num_executors):
         self.num_executors = num_executors
 
     def set_num_processes(self, num_processes):
         self.num_processes = num_processes
+
+    def get_trained_model(self):
+        return self.trained_model
+
+    def is_finished(self):
+        raise NotImplementedError
+
+    def destroy_remote_job(self):
+        raise NotImplementedError
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -173,7 +189,6 @@ class Job(object):
         self.thread.join()
 
     def send(self, address):
-        # Prepare the data to send.
         data = {}
         data['secret'] = self.secret
         data['job_name'] = self.job_name
@@ -181,12 +196,16 @@ class Job(object):
         data['num_processes'] = self.num_processes
         data['data_path'] = self.data_path
         data['trainer'] = pickle_object(self.trainer).encode('hex_codec')
-        # Prepare the request.
         request = urllib2.Request(address + "/api/submit")
         request.add_header('Content-Type', 'application/json')
-        # Submit the request.
-        response = urllib2.urlopen(request, json.dumps(data))
+        urllib2.urlopen(request, json.dumps(data))
+        self.start()
+
 
     def run(self):
-        # TODO Do polling and stuff
-        raise NotImplementedError
+        # Start polling for job state.
+        while not self.is_finished():
+            time.sleep(1)
+        print("Finished!")
+        print("Destroying the job")
+        self.destroy_remote_job()
