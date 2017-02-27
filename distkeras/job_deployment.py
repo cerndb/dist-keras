@@ -6,14 +6,16 @@ Hadoop / Spark clusters."""
 ## BEGIN Imports. ##############################################################
 
 from distkeras.utils import get_os_username
-from distkeras.utils import serialize_keras_model
 from distkeras.utils import pickle_object
+from distkeras.utils import serialize_keras_model
 from distkeras.utils import unpickle_object
 
 from flask import Flask
 from flask import request
 
 from threading import Lock
+
+import base64
 
 import json
 
@@ -23,11 +25,9 @@ import subprocess
 
 import threading
 
-import base64
+import time
 
 import urllib2
-
-import time
 
 ## END Imports. ################################################################
 
@@ -149,10 +149,8 @@ class PunchcardJob(object):
         self.thread.join()
 
     def run(self):
-        print("Hey its me, I'm running!'")
-        time.sleep(10)
-        print("THE REMOTE JOB IS DONE")
         # TODO Implement.
+        # Job is done, set the running flag to false.
         self.is_running = False
 
 
