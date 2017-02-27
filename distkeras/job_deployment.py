@@ -112,8 +112,7 @@ class Punchcard(object):
             job = self.get_submitted_job(secret)
             if job is not None and not job.running():
                 with self.mutex:
-                    del self.jobs[job]
-                print("Job destroyed")
+                    del self.jobs[secret]
                 return '', 200
 
             return '', 400
@@ -214,7 +213,7 @@ class Job(object):
 
 
     def run(self):
-        # Start polling for job state.
+        time.sleep(1)
         while not self.is_finished():
             time.sleep(1)
         self.destroy_remote_job()
