@@ -152,6 +152,7 @@ class PunchcardJob(object):
     def run(self):
         print("Hey its me, I'm running!'")
         time.sleep(10)
+        print("THE REMOTE JOB IS DONE")
         # TODO Implement.
         self.is_running = False
 
@@ -186,7 +187,9 @@ class Job(object):
         return data['running']
 
     def destroy_remote_job(self):
-        raise NotImplementedError
+        address = self.address + '/api/destroy?secret=' + self.secret
+        request = urllib2.Request(address)
+        response = urllib2.urlopen(request)
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -214,6 +217,4 @@ class Job(object):
         # Start polling for job state.
         while not self.is_finished():
             time.sleep(1)
-        print("Finished!")
-        print("Destroying the job")
         self.destroy_remote_job()
