@@ -46,9 +46,9 @@ class Punchcard(object):
         return secrets
 
     def valid_secret(self, secret, secrets):
-        print(secrets)
-        for k in secrets:
-            description = secrets[k]
+        num_secrets = len(secrets)
+        for i in range(0, num_secrets):
+            description = secrets[i]
             if description['secret'] == secret:
                 return True
         return False
