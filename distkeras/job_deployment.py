@@ -40,7 +40,8 @@ class Punchcard(object):
 
     def read_secrets(self):
         with open(self.secrets_path) as f:
-            secrets = json.loads(f.read())
+            secrets_raw = f.read()
+        secrets = json.loads(secrets_raw)
 
         return secrets
 
