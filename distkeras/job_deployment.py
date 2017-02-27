@@ -151,6 +151,7 @@ class PunchcardJob(object):
 
     def run(self):
         print("Hey its me, I'm running!'")
+        time.sleep(10)
         # TODO Implement.
         self.is_running = False
 
