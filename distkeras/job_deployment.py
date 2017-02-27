@@ -75,7 +75,7 @@ class Punchcard(object):
             num_executors = data['num_executors']
             num_processes = data['num_processes']
             data_path = data['data_path']
-            trainer = unpickle_object(str(bin(data['trainer']))
+            trainer = unpickle_object(str(bin(data['trainer'])))
             # Fetch the parameters for the job.
             secrets = self.read_secrets()
             with self.mutex:
