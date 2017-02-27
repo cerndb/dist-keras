@@ -11,6 +11,7 @@ from distkeras.utils import pickle_object
 from distkeras.utils import unpickle_object
 
 from flask import Flask
+from flask import request
 
 from threading import Lock
 
