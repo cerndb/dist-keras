@@ -56,43 +56,50 @@ class Punchcard(object):
 
         return job
 
-    @self.application.route('/submit', methods=['POST'])
-    def submit_job(self):
-        # Parse the incoming JSON data.
-        data = json.loads(request.data)
-        # Fetch the required job arguments.
-        secret = data['secret']
-        job_name = data['job_name']
-        num_executors = data['num_executors']
-        num_processes = data['num_processes']
-        data_path = data['data_path']
-        trainer = unpickle_object(data['trainer'])
-        # Fetch the parameters for the job.
-        secrets = self.read_secrets()
-        with self.mutex:
-            if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
-                job = Job(secret, job_name, data_path, num_executors, num_processes, trainer)
-                self.jobs[secret] = job
-                job.start()
+    def define_routes(self):
 
-    @self.application.route('/state')
-    def job_state(self):
-        secret = request.args.get('secret')
-        job = self.get_submitted_job(secret)
-        # Check if the job exists.
-        if job is not None:
-            print(job.is_running())
-            raise NotImplementedError
+        ## BEGIN Route definitions. ############################################
 
-    @self.application.route('/destroy')
-    def destroy_job(self):
-        secret = request.args.get('secret')
-        job = self.get_submitted_job(secret)
-        if job is not None and not job.is_running():
+        @self.application.route('/submit', methods=['POST'])
+        def submit_job(self):
+            # Parse the incoming JSON data.
+            data = json.loads(request.data)
+            # Fetch the required job arguments.
+            secret = data['secret']
+            job_name = data['job_name']
+            num_executors = data['num_executors']
+            num_processes = data['num_processes']
+            data_path = data['data_path']
+            trainer = unpickle_object(data['trainer'])
+            # Fetch the parameters for the job.
+            secrets = self.read_secrets()
             with self.mutex:
-                del self.jobs[job]
+                if self.valid_selfecret(secret, secrets) and not self.secret_in_use(secret):
+                    job = Job(secret, job_name, data_path, num_executors, num_processes, trainer)
+                    self.jobs[secret] = job
+                    job.start()
+
+        @self.application.route('/state')
+        def job_state(self):
+            secret = request.args.get('secret')
+            job = self.get_submitted_job(secret)
+            # Check if the job exists.
+            if job is not None:
+                print(job.is_running())
+                raise NotImplementedError
+
+        @self.application.route('/destroy')
+        def destroy_job(self):
+            secret = request.args.get('secret')
+            job = self.get_submitted_job(secret)
+            if job is not None and not job.is_running():
+                with self.mutex:
+                    del self.jobs[job]
+
+        ## END Route definitions. ##############################################
 
     def run(self):
+        self.define_routes()
         self.application.run('0.0.0.0', self.port)
 
 
