@@ -39,6 +39,7 @@ class Punchcard(object):
         self.port = port
         self.mutex = threading.Lock()
         self.jobs = {}
+        self.models = {}
 
     def read_secrets(self):
         with open(self.secrets_path) as f:
@@ -57,6 +58,10 @@ class Punchcard(object):
 
     def secret_in_use(self, secret):
         return secret in self.jobs
+
+    def set_trained_model(self, job, model):
+        with self.mutex:
+            self.models[job.get_secret()] = model
 
     def get_submitted_job(self, secret):
         with self.mutex:
@@ -86,7 +91,8 @@ class Punchcard(object):
             secrets = self.read_secrets()
             with self.mutex:
                 if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
-                    job = PunchcardJob(job_name, data_path, num_executors, num_processes, trainer)
+                    job = PunchcardJob(secret, job_name, data_path, num_executors, num_processes, trainer)
+                    job.set_manager(this)
                     self.jobs[secret] = job
                     job.start()
                     return '', 200
@@ -112,8 +118,12 @@ class Punchcard(object):
             job = self.get_submitted_job(secret)
             if job is not None and not job.running():
                 with self.mutex:
+                    model = pickle_object(self.models[secret].encode('hex_codec'))
+                    d = {}
+                    d['model'] = model
                     del self.jobs[secret]
-                return '', 200
+                    del self.models[secret]
+                return json.dumps(d), 200
 
             return '', 400
 
@@ -126,7 +136,8 @@ class Punchcard(object):
 
 class PunchcardJob(object):
 
-    def __init__(self, job_name, data_path, num_executors, num_processes, trainer):
+    def __init__(self, secret, job_name, data_path, num_executors, num_processes, trainer):
+        self.secret = secret
         self.job_name = job_name
         self.data_path = data_path
         self.num_executors = num_executors
@@ -134,9 +145,19 @@ class PunchcardJob(object):
         self.trainer = trainer
         self.is_running = True
         self.thread = None
+        self.manager = None
+
+    def set_manager(self, manager):
+        self.manager = manager
+
+    def get_manager(self):
+        return self.manager
 
     def get_job_name(self):
         return self.job_name
+
+    def get_secret(self):
+        return self.secret
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -150,6 +171,8 @@ class PunchcardJob(object):
 
     def run(self):
         # TODO Implement.
+        model = None
+        self.manager.set_trained_model(model)
         # Job is done, set the running flag to false.
         self.is_running = False
 
@@ -187,6 +210,8 @@ class Job(object):
         address = self.address + '/api/destroy?secret=' + self.secret
         request = urllib2.Request(address)
         response = urllib2.urlopen(request)
+        data = json.load(response)
+        self.trained_model = unpickle_object(data['model'].decode('hex_codec'))
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
