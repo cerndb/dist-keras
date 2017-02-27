@@ -7,6 +7,8 @@ Hadoop / Spark clusters."""
 
 from distkeras.utils import get_os_username
 from distkeras.utils import serialize_keras_model
+from distkeras.utils import pickle_object
+from distkeras.utils import unpickle_object
 
 from flask import Flask
 
