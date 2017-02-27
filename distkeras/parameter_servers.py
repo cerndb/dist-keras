@@ -86,7 +86,7 @@ class SocketParameterServer(ParameterServer):
         port: int. Listing port number.
     """
 
-    def __init__(self, model, port):
+    def __init__(self, model, port=None):
         super(SocketParameterServer, self).__init__(model)
         self.master_port = port
         self.socket = None
@@ -102,7 +102,13 @@ class SocketParameterServer(ParameterServer):
         file_descriptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Disable Nagle's algorithm.
         file_descriptor.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        file_descriptor.bind(('0.0.0.0', self.master_port))
+        # Check if the master port needs to be assigned by the OS.
+        if self.master_port is None:
+            file_descriptor.bind('0.0.0.0', 0)
+            # Retrieve the port assigned by the OS.
+            self.master_port = file_descriptor.getsockname()[1]
+        else:
+            file_descriptor.bind(('0.0.0.0', self.master_port))
         # Listen to the socket.
         file_descriptor.listen(5)
         # Assign the socket.
