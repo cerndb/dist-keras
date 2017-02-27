@@ -81,8 +81,8 @@ class Punchcard(object):
             # Fetch the parameters for the job.
             secrets = self.read_secrets()
             with self.mutex:
-                if self.valid_selfecret(secret, secrets) and not self.secret_in_use(secret):
-                    job = Job(secret, job_name, data_path, num_executors, num_processes, trainer)
+                if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
+                    job = PunchcardJob(job_name, data_path, num_executors, num_processes, trainer)
                     self.jobs[secret] = job
                     job.start()
 
@@ -110,6 +110,32 @@ class Punchcard(object):
         self.application.run('0.0.0.0', self.port)
 
 
+class PunchcardJob(object):
+
+    def __init__(self, job_name, data_path, num_executors, num_processes, trainer):
+        self.job_name = job_name
+        self.data_path = data_path
+        self.num_executors = num_executors
+        self.num_processes = num_processes
+        self.trainer = trainer
+        self.is_running = True
+        self.thread = None
+
+    def start(self):
+        self.thread = threading.Thread(target=self.run)
+        self.thread.start()
+
+    def is_running(self):
+        return self.is_running
+
+    def join(self):
+        self.thread.join()
+
+    def run(self):
+        # TODO Implement.
+        self.is_running = False
+
+
 class Job(object):
 
     def __init__(self, secret, job_name, data_path, num_executors, num_processes, trainer):
@@ -119,32 +145,12 @@ class Job(object):
         self.num_processes = 1
         self.data_path = data_path
         self.trainer = trainer
-        self.is_running = True
-        self.thread = None
-
-    def get_secret(self):
-        return self.secret
-
-    def is_running(self):
-        return self.is_running
-
-    def get_data_path(self):
-        return self.data_path
 
     def set_num_executors(self, num_executors):
         self.num_executors = num_executors
 
     def set_num_processes(self, num_processes):
         self.num_processes = num_processes
-
-    def num_executors(self):
-        return self.num_executors
-
-    def num_processes(self):
-        return self.num_processes
-
-    def get_trainer(self):
-        return self.trainer
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -168,18 +174,6 @@ class Job(object):
         # Submit the request.
         response = urllib2.urlopen(request, json.dumps(data))
 
-    def generate_code(self):
-        raise NotImplementedError
-
-    def execute_job(self):
-        raise NotImplementedError
-
-    def process_result(self):
-        raise NotImplementedError
-
     def run(self):
-        self.generate_code()
-        self.execute_job()
-        self.process_result()
-        # Job done, set flag.
-        self.is_running = False
+        # TODO Do polling and stuff
+        raise NotImplementedError
