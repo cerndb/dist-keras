@@ -172,7 +172,8 @@ class PunchcardJob(object):
     def run(self):
         # TODO Implement.
         model = None
-        self.manager.set_trained_model(model)
+        self.manager.set_trained_model(self, model)
+        time.sleep(10)
         # Job is done, set the running flag to false.
         self.is_running = False
 
