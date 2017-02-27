@@ -163,7 +163,7 @@ class Job(object):
         request = urllib2.Request(address + "/api/submit")
         request.add_header('Content-Type', 'application/json')
         # Submit the request.
-        response = urllib2.urlopen(request, json.dumps(d))
+        response = urllib2.urlopen(request, json.dumps(data))
 
     def generate_code(self):
         raise NotImplementedError
