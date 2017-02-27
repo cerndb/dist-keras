@@ -144,6 +144,7 @@ class PunchcardJob(object):
         self.thread.join()
 
     def run(self):
+        print("Hey its me, I'm running!'")
         # TODO Implement.
         self.is_running = False
 
