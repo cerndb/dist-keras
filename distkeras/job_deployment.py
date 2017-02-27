@@ -92,7 +92,7 @@ class Punchcard(object):
             with self.mutex:
                 if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
                     job = PunchcardJob(secret, job_name, data_path, num_executors, num_processes, trainer)
-                    job.set_manager(this)
+                    job.set_manager(self)
                     self.jobs[secret] = job
                     job.start()
                     return '', 200
