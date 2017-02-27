@@ -65,7 +65,7 @@ class Punchcard(object):
         ## BEGIN Route definitions. ############################################
 
         @self.application.route('/api/submit', methods=['POST'])
-        def submit_job(self):
+        def submit_job():
             # Parse the incoming JSON data.
             data = json.loads(request.data)
             # Fetch the required job arguments.
@@ -84,7 +84,7 @@ class Punchcard(object):
                     job.start()
 
         @self.application.route('/api/state')
-        def job_state(self):
+        def job_state():
             secret = request.args.get('secret')
             job = self.get_submitted_job(secret)
             # Check if the job exists.
@@ -93,7 +93,7 @@ class Punchcard(object):
                 raise NotImplementedError
 
         @self.application.route('/api/destroy')
-        def destroy_job(self):
+        def destroy_job():
             secret = request.args.get('secret')
             job = self.get_submitted_job(secret)
             if job is not None and not job.is_running():
