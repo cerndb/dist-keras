@@ -23,6 +23,8 @@ import subprocess
 
 import threading
 
+import base64
+
 import urllib2
 
 ## END Imports. ################################################################
@@ -75,8 +77,7 @@ class Punchcard(object):
             num_executors = data['num_executors']
             num_processes = data['num_processes']
             data_path = data['data_path']
-            print(data['trainer'])
-            trainer = unpickle_object(str(bin(data['trainer'])))
+            trainer = unpickle_object(data['trainer'].decode('hex_codec'))
             # Fetch the parameters for the job.
             secrets = self.read_secrets()
             with self.mutex:
