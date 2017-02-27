@@ -5,39 +5,114 @@ Hadoop / Spark clusters."""
 
 ## BEGIN Imports. ##############################################################
 
+from distkeras.utils import get_os_username
+from distkeras.utils import serialize_keras_model
+
+from flask import Flask
+
+from threading import Lock
+
+import json
+
+import urllib2
+
 import os
 
 import subprocess
 
-from distkeras.utils import serialize_keras_model
-from distkeras.utils import get_os_username
-
 ## END Imports. ################################################################
 
-class Job(object):
-    """TODO Add documentation"""
+class Punchcard(object):
 
-    def __init__(self, job_name, data_path, host, username, password, trainer):
-        self.host = host
+    def __init__(self, secrets_path="secrets.json", port=80):
+        self.application = Flask(__name__)
+        self.secrets_path = secrets_path
+        self.port = port
+        self.mutex = threading.Lock()
+        self.jobs = {}
+
+    def read_secrets(self):
+        with open(self.secrets_path) as f:
+            secrets = json.loads(f.read())
+
+        return secrets
+
+    def valid_secret(self, secret, secrets):
+        for k in secrets:
+            description = secrets[k]
+            if description['secret'] == secret:
+                return True
+        return False
+
+    def secret_in_use(self, secret):
+        return secret in self.jobs
+
+    def get_submitted_job(self, secret):
+        with self.mutex:
+            job = self.secret_in_use(secret) ? self.jobs[secret] : None
+
+        return job
+
+    @self.application.route('/submit', methods=['POST'])
+    def submit_job(self):
+        # Parse the incoming JSON data.
+        data = json.loads(request.data)
+        # Fetch the required job arguments.
+        secret = data['secret']
+        job_name = data['job_name']
+        num_executors = data['num_executors']
+        num_processes = data['num_processes']
+        data_path = data['data_path']
+        trainer = unpickle_object(data['trainer'])
+        # Fetch the parameters for the job.
+        secrets = self.read_secrets()
+        with self.mutex:
+            if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
+                job = Job(secret, job_name, data_path, num_executors, num_processes, trainer)
+                self.jobs[secret] = job
+                job.start()
+
+    @self.application.route('/state')
+    def job_state(self):
+        secret = request.args.get('secret')
+        job = self.get_submitted_job(secret)
+        # Check if the job exists.
+        if job is not None:
+            print(job.is_running())
+            raise NotImplementedError
+
+    @self.application.route('/destroy')
+    def destroy_job(self):
+        secret = request.args.get('secret')
+        job = self.get_submitted_job(secret)
+        if job is not None and not job.is_running():
+            with self.mutex:
+                del self.jobs[job]
+
+    def run(self):
+        self.application.run('0.0.0.0', self.port)
+
+
+class Job(object):
+
+    def __init__(self, secret, job_name, data_path, num_executors, num_processes, trainer):
+        self.secret = secret
         self.job_name = job_name
         self.num_executors = 20
         self.num_processes = 1
         self.data_path = data_path
-        self.username = username
-        self.password = password
         self.trainer = trainer
-        self.spark_2 = False
-        self.filename_generated = self.username + "-dist-keras-job.py"
-        self.filename_model = self.username + "-dist-keras-job-config.serialized"
+        self.is_running = True
+        self.thread = None
+
+    def get_secret(self):
+        return self.secret
+
+    def is_running(self):
+        return self.is_running
 
     def get_data_path(self):
         return self.data_path
-
-    def set_spark_2(self, using_spark_2):
-        self.spark_2 = using_spark_2
-
-    def uses_spark_2(self):
-        return self.spark_2
 
     def set_num_executors(self, num_executors):
         self.num_executors = num_executors
@@ -51,121 +126,43 @@ class Job(object):
     def num_processes(self):
         return self.num_processes
 
-    def get_host(self):
-        return self.host
-
-    def get_username(self):
-        return self.username
-
-    def get_password(self):
-        return self.password
-
     def get_trainer(self):
         return self.trainer
 
-    def generate_model(self):
-        # Serialize the trainer.
-        serialized_trainer = self.trainer.serialize()
-        # Write the model to disk.
-        with open(self.filename_model, "w") as f:
-            f.write(serialized_trainer)
+    def start(self):
+        self.thread = threading.Thread(target=self.run)
+        self.thread.start()
+
+    def join(self):
+        self.thread.join()
+
+    def send(self, address):
+        # Prepare the data to send.
+        data = {}
+        data['secret'] = self.secret
+        data['job_name'] = self.job_name
+        data['num_executors'] = self.num_executors
+        data['num_processes'] = self.num_processes
+        data['data_path'] = self.data_path
+        data['trainer'] = pickle_object(self.trainer)
+        # Prepare the request.
+        request = urllib2.Request(address + "/api/submit")
+        request.add_header('Content-Type', 'application/json')
+        # Submit the request.
+        response = urllib2.urlopen(request, json.dumps(d))
 
     def generate_code(self):
-        # Generate the source code.
-        source = """
-# Automatically generated code, do not adapt.
-from distkeras.evaluators import *
-from distkeras.predictors import *
-from distkeras.trainers import *
-from distkeras.trainers import *
-from distkeras.transformers import *
-from distkeras.utils import *
-
-from keras import *
-
-from pyspark import SparkConf
-from pyspark import SparkContext
-
-import numpy as np
-
-# Define the script variables.
-application_name = '{application_name}'
-num_executors = {num_executors}
-num_processes = {num_processes}
-username = '{username}'
-path_data = '{path_data}'
-using_spark_2 = {using_spark_2}
-num_workers = num_processes * num_executors
-
-# Allocate a Spark Context, and a Spark SQL context.
-conf = SparkConf()
-conf.set("spark.app.name", application_name)
-conf.set("spark.master", "yarn-client")
-conf.set("spark.executor.cores", num_processes)
-conf.set("spark.executor.instances", num_executors)
-conf.set("spark.executor.memory", "5g")
-conf.set("spark.locality.wait", "0")
-conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-
-# Read the dataset from HDFS. For now we assume Parquet files.
-if using_spark_2:
-    sc = SparkSession.builder.config(conf=conf).appName(application_name).getOrCreate()
-    reader = sc
-else:
-    sc = SparkContext(conf=conf)
-    from pyspark import SQLContext
-    sqlContext = SQLContext(sc)
-    reader = sqlContext
-
-# Read the Parquet datafile, and precache the data on the nodes.
-raw_data = reader.read.parquet(path_data)
-dataset = precache(raw_data, num_workers)
-
-# Read the serialized trainer from disk, and deserialize it.
-with open(username + "-dist-keras-job-config.serialized", "r") as f:
-    serialized_trainer = f.read()
-trainer = unpickle_object(serialized_trainer)
-
-print("Starting training process")
-trained_model = trainer.train(dataset)
-print(trained_model.get_weights())
-        """.format(
-            application_name=self.job_name,
-            num_executors=self.num_executors,
-            num_processes=self.num_processes,
-            path_data=self.data_path,
-            username=self.username,
-            using_spark_2=self.spark_2
-        )
-        # Write the source code to a file.
-        with open(self.filename_generated, "w") as f:
-            f.write(source)
-
-    def copy_code(self):
-        # Copy the generated code to the remote location.
-        os.system('scp "%s" "%s:%s"' % (self.filename_generated , self.host,
-                                        "~/" + self.filename_generated))
-
-    def copy_model(self):
-        # Copy the generated model to the remote location.
-        os.system('scp "%s" "%s:%s"' % (self.filename_model , self.host,
-                                        "~/" + self.filename_model))
-
-    def copy_result(self):
         raise NotImplementedError
 
-    def run_job(self):
-        # Run the job on the remote system.
-        os.system('ssh "%s@%s" -C python ' + self.filename_generated % (self.username, self.host))
+    def execute_job(self):
+        raise NotImplementedError
 
     def process_result(self):
         raise NotImplementedError
 
     def run(self):
         self.generate_code()
-        self.copy_code()
-        self.copy_model()
-        self.run_job()
-        self.copy_result()
-
-        return self.process_result()
+        self.execute_job()
+        self.process_result()
+        # Job done, set flag.
+        self.is_running = False
