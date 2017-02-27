@@ -14,13 +14,13 @@ from threading import Lock
 
 import json
 
-import urllib2
-
 import os
 
 import subprocess
 
 import threading
+
+import urllib2
 
 ## END Imports. ################################################################
 
