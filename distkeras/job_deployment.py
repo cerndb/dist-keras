@@ -166,6 +166,7 @@ class Job(object):
         self.data_path = data_path
         self.trainer = trainer
         self.trained_model = None
+        self.address = None
 
     def set_num_executors(self, num_executors):
         self.num_executors = num_executors
@@ -177,7 +178,12 @@ class Job(object):
         return self.trained_model
 
     def is_finished(self):
-        raise NotImplementedError
+        address = self.address + '/api/state?secret=' + self.secret
+        request = urllib2.Request(address)
+        response = urllib2.urlopen(request)
+        data = json.load(response)
+
+        return data['running']
 
     def destroy_remote_job(self):
         raise NotImplementedError
@@ -200,6 +206,7 @@ class Job(object):
         request = urllib2.Request(address + "/api/submit")
         request.add_header('Content-Type', 'application/json')
         urllib2.urlopen(request, json.dumps(data))
+        self.address = address
         self.start()
 
 
