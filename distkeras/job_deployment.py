@@ -101,7 +101,7 @@ class Punchcard(object):
             if job is not None:
                 d = {}
                 d['job_name'] = job.get_job_name()
-                d['running'] = job.is_running()
+                d['running'] = job.running()
                 return json.dumps(d), 200
 
             return '', 404
@@ -110,7 +110,7 @@ class Punchcard(object):
         def destroy_job():
             secret = request.args.get('secret')
             job = self.get_submitted_job(secret)
-            if job is not None and not job.is_running():
+            if job is not None and not job.running():
                 with self.mutex:
                     del self.jobs[job]
                 print("Job destroyed")
@@ -143,7 +143,7 @@ class PunchcardJob(object):
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-    def is_running(self):
+    def running(self):
         return self.is_running
 
     def join(self):
