@@ -49,7 +49,10 @@ class Punchcard(object):
 
     def get_submitted_job(self, secret):
         with self.mutex:
-            job = self.secret_in_use(secret) ? self.jobs[secret] : None
+            if self.secret_in_use(secret):
+                job = self.jobs[secret]
+            else:
+                job = None
 
         return job
 
