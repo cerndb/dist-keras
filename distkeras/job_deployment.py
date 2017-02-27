@@ -87,6 +87,11 @@ class Punchcard(object):
                     job = PunchcardJob(job_name, data_path, num_executors, num_processes, trainer)
                     self.jobs[secret] = job
                     job.start()
+                    return '', 200
+
+            return '', 403
+
+
 
         @self.application.route('/api/state')
         def job_state():
@@ -95,7 +100,9 @@ class Punchcard(object):
             # Check if the job exists.
             if job is not None:
                 print(job.is_running())
-                raise NotImplementedError
+                return '', 200
+
+            return '', 404
 
         @self.application.route('/api/destroy')
         def destroy_job():
@@ -104,6 +111,9 @@ class Punchcard(object):
             if job is not None and not job.is_running():
                 with self.mutex:
                     del self.jobs[job]
+                return '', 200
+
+            return '', 400
 
         ## END Route definitions. ##############################################
 
