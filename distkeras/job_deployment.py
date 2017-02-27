@@ -158,7 +158,7 @@ class Job(object):
         data['num_executors'] = self.num_executors
         data['num_processes'] = self.num_processes
         data['data_path'] = self.data_path
-        data['trainer'] = pickle_object(self.trainer)
+        data['trainer'] = pickle_object(self.trainer).encode('hex_codec')
         # Prepare the request.
         request = urllib2.Request(address + "/api/submit")
         request.add_header('Content-Type', 'application/json')
