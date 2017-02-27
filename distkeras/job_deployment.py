@@ -184,7 +184,7 @@ class Job(object):
         response = urllib2.urlopen(request)
         data = json.load(response)
 
-        return data['running']
+        return not data['running']
 
     def destroy_remote_job(self):
         address = self.address + '/api/destroy?secret=' + self.secret
