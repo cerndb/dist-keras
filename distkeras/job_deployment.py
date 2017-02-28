@@ -170,7 +170,7 @@ class PunchcardJob(object):
 
     def read_trained_model(self):
         home = expanduser("~")
-        with open(home + "/models/" + self.secret), "r") as f:
+        with open(home + "/models/" + self.secret, "r") as f:
             self.trained_model = unpickle_object(f.read().decode('hex_codec'))
 
     def serialize_trainer(self):
