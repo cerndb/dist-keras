@@ -118,9 +118,12 @@ class Punchcard(object):
             if job is not None and not job.running():
                 with self.mutex:
                     model = self.jobs[secret].get_trained_model()
+                    history = self.jobs[secret].get_history()
                     model = pickle_object(model).encode('hex_codec')
+                    history = pickle_object(history).encode('hex_codec')
                     d = {}
                     d['model'] = model
+                    d['history'] = history
                     del self.jobs[secret]
                 return json.dumps(d), 200
 
@@ -145,12 +148,16 @@ class PunchcardJob(object):
         self.is_running = True
         self.thread = None
         self.trained_model = None
+        self.history = None
 
     def get_job_name(self):
         return self.job_name
 
     def get_secret(self):
         return self.secret
+
+    def get_history(self):
+        return self.history
 
     def get_trained_model(self):
         return self.trained_model
@@ -171,19 +178,18 @@ class PunchcardJob(object):
     def read_trained_model(self):
         home = expanduser("~")
         with open(home + "/models/" + self.secret, "r") as f:
-            self.trained_model = unpickle_object(f.read().decode('hex_codec'))
+            self.trained_model = unpickle_object(f.read())
+
+    def read_history(self):
+        home = expanduser("~")
+        with open(home + "/histories/" + self.secret, "r") as f:
+            self.history = unpickle_object(f.read())
 
     def serialize_trainer(self):
         trainer = pickle_object(self.trainer)
         home = expanduser("~")
         with open(home + "/trainers/" + self.secret, "w") as f:
             f.write(trainer)
-
-    def cleanup(self):
-        home = expanduser('~')
-        path = home + "/models/" + self.secret
-        if os.path.exists(path):
-            os.remove(path)
 
     def generate_code(self):
         source = """
@@ -225,6 +231,10 @@ with open(home + "/trainers/" + secret, "r") as f:
 trained_model = trainer.train(dataset)
 with open(home + "/models/" + secret, "w") as f:
     f.write(pickle_object(trained_model))
+# Save the history of the training process.
+histories = trainer.get_history()
+with open(home + "/models/" + secret, "w") as f:
+    f.write(pickle_object(histories))
 sc.stop()
         """.format(
             secret=self.secret,
@@ -242,7 +252,6 @@ sc.stop()
         self.generate_code()
         self.run_job()
         self.read_trained_model()
-        self.cleanup()
         self.is_running = False
 
 
@@ -256,6 +265,7 @@ class Job(object):
         self.data_path = data_path
         self.trainer = trainer
         self.trained_model = None
+        self.history = None
         self.address = None
 
     def set_num_executors(self, num_executors):
@@ -266,6 +276,9 @@ class Job(object):
 
     def get_trained_model(self):
         return self.trained_model
+
+    def get_history(self):
+        return self.history
 
     def is_finished(self):
         address = self.address + '/api/state?secret=' + self.secret
@@ -281,6 +294,7 @@ class Job(object):
         response = urllib2.urlopen(request)
         data = json.load(response)
         self.trained_model = unpickle_object(data['model'].decode('hex_codec'))
+        self.history = unpickle_object(data['history'].decode('hex_codec'))
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
