@@ -104,7 +104,7 @@ class SocketParameterServer(ParameterServer):
         file_descriptor.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         # Check if the master port needs to be assigned by the OS.
         if self.master_port is None:
-            file_descriptor.bind('0.0.0.0', 0)
+            file_descriptor.bind(('0.0.0.0', 0))
             # Retrieve the port assigned by the OS.
             self.master_port = file_descriptor.getsockname()[1]
         else:
