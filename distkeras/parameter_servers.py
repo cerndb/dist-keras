@@ -106,7 +106,7 @@ class SocketParameterServer(ParameterServer):
         if self.master_port is None:
             file_descriptor.bind(('0.0.0.0', 0))
             # Retrieve the port assigned by the OS.
-            self.master_port = file_descriptor.getsockname()[1]
+            self.master_port = int(file_descriptor.getsockname()[1])
         else:
             file_descriptor.bind(('0.0.0.0', self.master_port))
         # Listen to the socket.
