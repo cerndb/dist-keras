@@ -192,7 +192,6 @@ class PunchcardJob(object):
         conf.set("spark.executor.memory", "5g")
         conf.set("spark.locality.wait", "0")
         conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-        conf.set("spark.submit.deployMode", "cluster")
         sc = SparkContext(conf=conf)
         sqlContext = SQLContext(sc)
         # Read the dataset from HDFS. For now we assume Parquet files.
