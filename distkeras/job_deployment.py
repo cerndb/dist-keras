@@ -198,6 +198,7 @@ class PunchcardJob(object):
         # Read the dataset from HDFS. For now we assume Parquet files.
         raw_data = sqlContext.read.parquet(path_data)
         dataset = precache(raw_data, num_workers)
+        self.trained_model = self.trainer.train(dataset)
         sc.stop()
         self.is_running = False
 
