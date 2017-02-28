@@ -129,9 +129,10 @@ class Punchcard(object):
             job = self.get_submitted_job(secret)
             if job is not None and not job.running():
                 with self.mutex:
-                    model = pickle_object(self.models[secret].encode('hex_codec'))
+                    model = self.jobs[secret].get_trained_model
+                    model = pickle_object(model).encode('hex_codec')
                     d = {}
-                    d['model'] = self.jobs[secret].get_trained_model()
+                    d['model'] = model
                     del self.jobs[secret]
                 return json.dumps(d), 200
 
