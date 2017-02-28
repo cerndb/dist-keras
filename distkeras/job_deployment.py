@@ -168,6 +168,11 @@ class PunchcardJob(object):
     def run_job(self):
         print("Running job noaw")
 
+    def read_trained_model(self):
+        home = expanduser("~")
+        with open(home + "/models/" + self.secret), "r") as f:
+            self.trained_model = unpickle_object(f.read().decode('hex_codec'))
+
     def serialize_trainer(self):
         trainer = pickle_object(self.trainer)
         home = expanduser("~")
@@ -211,8 +216,7 @@ conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
 sc = SparkContext(conf=conf)
 sqlContext = SQLContext(sc)
 # Read the dataset from HDFS. For now we assume Parquet files.
-raw_data = sqlContext.read.parquet(path_data)
-dataset = precache(raw_data, num_workers)
+dataset = sqlContext.read.parquet(path_data)
 # Deserialize the trainer object.
 home = expanduser("~")
 with open(home + "/trainers/" + secret, "r") as f:
@@ -237,6 +241,7 @@ sc.stop()
         self.serialize_trainer()
         self.generate_code()
         self.run_job()
+        self.read_trained_model()
         self.cleanup()
         self.is_running = False
 
