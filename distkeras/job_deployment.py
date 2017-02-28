@@ -166,7 +166,7 @@ class PunchcardJob(object):
         self.thread.join()
 
     def run_job(self):
-        print("Running job noaw")
+        os.system("python ~/jobs/" + self.secret + ".py")
 
     def read_trained_model(self):
         home = expanduser("~")
