@@ -424,6 +424,7 @@ class DistributedTrainer(Trainer):
         """Executes the parameter server service."""
         self.parameter_server.start()
         self.parameter_server.initialize()
+        self.master_port = self.parameter_server.master_port
         self.parameter_server.run()
 
     def stop_service(self):

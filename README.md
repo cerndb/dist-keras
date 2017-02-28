@@ -141,10 +141,6 @@ AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
                  label_col, num_epoch, batch_size, num_workers)
 ```
 
-## Optimization Schemes
-
-TODO
-
 ## Job deployment
 
 TODO
@@ -158,6 +154,10 @@ TODO
 TODO
 
 ### Submitting a job to a remote cluster
+
+TODO
+
+## Optimization Schemes
 
 TODO
 
