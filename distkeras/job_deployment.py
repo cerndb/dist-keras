@@ -26,9 +26,8 @@ from distkeras.utils import *
 from keras import *
 from pyspark import SparkConf
 from pyspark import SparkContext
-from pyspark.sql import SparkSession
 import numpy as np
-
+from pyspark import SQLContext
 import json
 
 import os
@@ -193,9 +192,10 @@ class PunchcardJob(object):
         conf.set("spark.locality.wait", "0")
         conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
         conf.set("spark.submit.deployMode", "cluster")
+        sc = SparkContext(conf=conf)
+        sqlContext = SQLContext(sc)
         # Read the dataset from HDFS. For now we assume Parquet files.
-        sc = SparkSession.builder.config(conf=conf).appName(application_name).getOrCreate()
-        raw_data = sc.read.parquet(path_data)
+        raw_data = sqlContext.read.parquet(path_data)
         dataset = precache(raw_data, num_workers)
         self.is_running = False
 
