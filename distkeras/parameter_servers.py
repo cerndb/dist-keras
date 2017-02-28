@@ -86,7 +86,7 @@ class SocketParameterServer(ParameterServer):
         port: int. Listing port number.
     """
 
-    def __init__(self, model, port=None):
+    def __init__(self, model, port=5000):
         super(SocketParameterServer, self).__init__(model)
         self.master_port = port
         self.socket = None

@@ -174,6 +174,12 @@ class PunchcardJob(object):
         with open(home + "/trainers/" + self.secret, "w") as f:
             f.write(trainer)
 
+    def cleanup(self):
+        home = expanduser('~')
+        path = home + "/models/" + self.secret
+        if os.path.exists(path):
+            os.remove(path)
+
     def generate_code(self):
         source = """
 from distkeras.evaluators import *
@@ -191,7 +197,7 @@ secret = '{secret}'
 application_name = '{job_name}'
 num_executors = {num_executors}
 num_processes = {num_processes}
-path_data = {data_path}
+path_data = '{data_path}'
 num_workers = num_processes * num_executors
 # Allocate a Spark Context, and a Spark SQL context.
 conf = SparkConf()
@@ -231,6 +237,7 @@ sc.stop()
         self.serialize_trainer()
         self.generate_code()
         self.run_job()
+        self.cleanup()
         self.is_running = False
 
 

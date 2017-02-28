@@ -348,7 +348,7 @@ class DistributedTrainer(Trainer):
         self.parameter_server = None
         self.parameter_server_thread = None
         self.master_host = determine_host_address()
-        self.master_port = None
+        self.master_port = 5000
         self.learning_rate = 1.0
 
     def set_minibatch_size(self, size):
@@ -424,7 +424,6 @@ class DistributedTrainer(Trainer):
         """Executes the parameter server service."""
         self.parameter_server.start()
         self.parameter_server.initialize()
-        self.master_port = self.parameter_server.master_port
         self.parameter_server.run()
 
     def stop_service(self):
