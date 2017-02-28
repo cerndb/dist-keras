@@ -242,7 +242,7 @@ class Job(object):
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-    def join(self):
+    def wait_completion(self):
         self.thread.join()
 
     def send(self, address):
