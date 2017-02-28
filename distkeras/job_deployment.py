@@ -17,21 +17,9 @@ from threading import Lock
 
 import base64
 
-from distkeras.evaluators import *
-from distkeras.predictors import *
-from distkeras.trainers import *
-from distkeras.trainers import *
-from distkeras.transformers import *
-from distkeras.utils import *
-from keras import *
-from pyspark import SparkConf
-from pyspark import SparkContext
-import numpy as np
-from pyspark import SQLContext
 import json
 
 import os
-
 from os.path import expanduser
 
 import subprocess
@@ -177,28 +165,72 @@ class PunchcardJob(object):
     def join(self):
         self.thread.join()
 
+    def run_job(self):
+        print("Running job noaw")
+
+    def serialize_trainer(self):
+        trainer = pickle_object(self.trainer)
+        home = expanduser("~")
+        with open(home + "/trainers/" + self.secret, "w") as f:
+            f.write(trainer)
+
+    def generate_code(self):
+        source = """
+from distkeras.evaluators import *
+from distkeras.predictors import *
+from distkeras.trainers import *
+from distkeras.trainers import *
+from distkeras.transformers import *
+from distkeras.utils import *
+from keras import *
+from pyspark import SparkConf
+from pyspark import SparkContext
+from pyspark import SQLContext
+from os.path import expanduser
+secret = '{secret}'
+application_name = '{job_name}'
+num_executors = {num_executors}
+num_processes = {num_processes}
+path_data = {data_path}
+num_workers = num_processes * num_executors
+# Allocate a Spark Context, and a Spark SQL context.
+conf = SparkConf()
+conf.set("spark.app.name", application_name)
+conf.set("spark.master", "yarn-client")
+conf.set("spark.executor.cores", num_processes)
+conf.set("spark.executor.instances", num_executors)
+conf.set("spark.executor.memory", "5g")
+conf.set("spark.locality.wait", "0")
+conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+sc = SparkContext(conf=conf)
+sqlContext = SQLContext(sc)
+# Read the dataset from HDFS. For now we assume Parquet files.
+raw_data = sqlContext.read.parquet(path_data)
+dataset = precache(raw_data, num_workers)
+# Deserialize the trainer object.
+home = expanduser("~")
+with open(home + "/trainers/" + secret, "r") as f:
+    trainer = unpickle_object(f.read())
+# Train the model, and save it afterwards.
+trained_model = trainer.train(dataset)
+with open(home + "/models/" + secret, "w") as f:
+    f.write(pickle_object(trained_model))
+sc.stop()
+        """.format(
+            secret=self.secret,
+            job_name=self.job_name,
+            num_executors=self.num_executors,
+            num_processes=self.num_processes,
+            data_path=self.data_path
+        )
+        home = expanduser("~")
+        with open(home + "/jobs/" + self.secret + ".py", "w") as f:
+            f.write(source)
+
     def run(self):
-        application_name = self.job_name
-        num_executors = self.num_executors
-        num_processes = self.num_processes
-        path_data = self.data_path
-        num_workers = num_processes * num_executors
-        # Allocate a Spark Context, and a Spark SQL context.
-        conf = SparkConf()
-        conf.set("spark.app.name", application_name)
-        conf.set("spark.master", "yarn-client")
-        conf.set("spark.executor.cores", num_processes)
-        conf.set("spark.executor.instances", num_executors)
-        conf.set("spark.executor.memory", "5g")
-        conf.set("spark.locality.wait", "0")
-        conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-        sc = SparkContext(conf=conf)
-        sqlContext = SQLContext(sc)
-        # Read the dataset from HDFS. For now we assume Parquet files.
-        raw_data = sqlContext.read.parquet(path_data)
-        dataset = precache(raw_data, num_workers)
-        self.trained_model = self.trainer.train(dataset)
-        sc.stop()
+        self.serialize_trainer()
+        self.generate_code()
+        self.run_job()
         self.is_running = False
 
 
