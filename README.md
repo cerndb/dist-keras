@@ -145,6 +145,10 @@ AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
 
 TODO
 
+## Job deployment
+
+TODO
+
 ## General note
 
 It is known that adding more asynchronous workers deteriorates the statistical performance of the model. There have been some studies which examinate this particular effect. However, some of them conclude that actually adding more asynchronous workers contributes to something what they call **implicit momentum** [[3]](https://arxiv.org/pdf/1605.09774.pdf). However, this is subject to further investigation.
