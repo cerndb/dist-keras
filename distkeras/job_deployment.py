@@ -260,5 +260,5 @@ class Job(object):
     def run(self):
         time.sleep(1)
         while not self.is_finished():
-            time.sleep(1)
+            time.sleep(10)
         self.destroy_remote_job()
