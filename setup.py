@@ -17,7 +17,7 @@ setup(name='dist-keras',
       version='0.1.0',
       author_email='joeri@joerihermans.com',
       license='GPLv3',
-      install_requires=['theano', 'tensorflow', 'keras'],
+      install_requires=['theano', 'tensorflow', 'keras', 'flask'],
       packages=['distkeras'],
       package_data={'distkeras': ['distkeras/*.py']},
       # Keywords related to the project.
