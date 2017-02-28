@@ -26,7 +26,7 @@ from distkeras.utils import *
 from keras import *
 from pyspark import SparkConf
 from pyspark import SparkContext
-from pyspark import SparkSession
+from pyspark.sql import SparkSession
 import numpy as np
 
 import json
