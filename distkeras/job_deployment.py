@@ -159,6 +159,62 @@ class PunchcardJob(object):
     def get_secret(self):
         return self.secret
 
+    def generate_code(self):
+        source = """
+# Automatically generated code, do not adapt.
+from distkeras.evaluators import *
+from distkeras.predictors import *
+from distkeras.trainers import *
+from distkeras.trainers import *
+from distkeras.transformers import *
+from distkeras.utils import *
+from keras import *
+from pyspark import SparkConf
+from pyspark import SparkContext
+from pyspark import SparkSession
+import numpy as np
+# Define the script variables.
+application_name = '{application_name}'
+num_executors = {num_executors}
+num_processes = {num_processes}
+path_data = '{path_data}'
+using_spark_2 = {using_spark_2}
+num_workers = num_processes * num_executors
+# Allocate a Spark Context, and a Spark SQL context.
+conf = SparkConf()
+conf.set("spark.app.name", application_name)
+conf.set("spark.master", "yarn-client")
+conf.set("spark.executor.cores", num_processes)
+conf.set("spark.executor.instances", num_executors)
+conf.set("spark.executor.memory", "5g")
+conf.set("spark.locality.wait", "0")
+conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+# Read the dataset from HDFS. For now we assume Parquet files.
+sc = SparkSession.builder.config(conf=conf).appName(application_name).getOrCreate()
+raw_data = sc.read.parquet(path_data)
+dataset = precache(raw_data, num_workers)
+        """.format(
+            application_name=self.job_name,
+            num_executors=self.num_executors,
+            num_processes=self.num_processes,
+            path_data=self.data_path
+        )
+        # Write the source code to a file.
+        with open(self.secret + "-dist-keras-job.py", "w") as f:
+            f.write(source)
+
+    def start_job(self):
+        raise NotImplementedError
+
+    def wait_for_result(self):
+        raise NotImplementedError
+
+    def load_result(self):
+        raise NotImplementedError
+
+    def remove_result(self):
+        raise NotImplementedError
+
     def start(self):
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
@@ -170,11 +226,12 @@ class PunchcardJob(object):
         self.thread.join()
 
     def run(self):
-        # TODO Implement.
-        model = None
+        self.generate_code()
+        self.start_job()
+        self.wait_for_result()
+        model = self.load_result()
         self.manager.set_trained_model(self, model)
-        time.sleep(10)
-        # Job is done, set the running flag to false.
+        self.remove_result()
         self.is_running = False
 
 
