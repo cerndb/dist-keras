@@ -178,7 +178,6 @@ application_name = '{application_name}'
 num_executors = {num_executors}
 num_processes = {num_processes}
 path_data = '{path_data}'
-using_spark_2 = {using_spark_2}
 num_workers = num_processes * num_executors
 # Allocate a Spark Context, and a Spark SQL context.
 conf = SparkConf()
@@ -200,7 +199,7 @@ dataset = precache(raw_data, num_workers)
             path_data=self.data_path
         )
         # Write the source code to a file.
-        with open(self.secret + "-dist-keras-job.py", "w") as f:
+        with open("~/jobs/" + self.secret + "-dist-keras-job.py", "w") as f:
             f.write(source)
 
     def start_job(self):
