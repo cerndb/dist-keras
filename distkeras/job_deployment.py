@@ -17,6 +17,18 @@ from threading import Lock
 
 import base64
 
+from distkeras.evaluators import *
+from distkeras.predictors import *
+from distkeras.trainers import *
+from distkeras.trainers import *
+from distkeras.transformers import *
+from distkeras.utils import *
+from keras import *
+from pyspark import SparkConf
+from pyspark import SparkContext
+from pyspark import SparkSession
+import numpy as np
+
 import json
 
 import os
@@ -41,7 +53,6 @@ class Punchcard(object):
         self.port = port
         self.mutex = threading.Lock()
         self.jobs = {}
-        self.models = {}
 
     def read_secrets(self):
         with open(self.secrets_path) as f:
@@ -94,7 +105,6 @@ class Punchcard(object):
             with self.mutex:
                 if self.valid_secret(secret, secrets) and not self.secret_in_use(secret):
                     job = PunchcardJob(secret, job_name, data_path, num_executors, num_processes, trainer)
-                    job.set_manager(self)
                     self.jobs[secret] = job
                     job.start()
                     return '', 200
@@ -122,9 +132,8 @@ class Punchcard(object):
                 with self.mutex:
                     model = pickle_object(self.models[secret].encode('hex_codec'))
                     d = {}
-                    d['model'] = model
+                    d['model'] = self.jobs[secret].get_trained_model()
                     del self.jobs[secret]
-                    del self.models[secret]
                 return json.dumps(d), 200
 
             return '', 400
@@ -147,13 +156,7 @@ class PunchcardJob(object):
         self.trainer = trainer
         self.is_running = True
         self.thread = None
-        self.manager = None
-
-    def set_manager(self, manager):
-        self.manager = manager
-
-    def get_manager(self):
-        return self.manager
+        self.trained_model = None
 
     def get_job_name(self):
         return self.job_name
@@ -161,61 +164,8 @@ class PunchcardJob(object):
     def get_secret(self):
         return self.secret
 
-    def generate_code(self):
-        source = """
-# Automatically generated code, do not adapt.
-from distkeras.evaluators import *
-from distkeras.predictors import *
-from distkeras.trainers import *
-from distkeras.trainers import *
-from distkeras.transformers import *
-from distkeras.utils import *
-from keras import *
-from pyspark import SparkConf
-from pyspark import SparkContext
-from pyspark import SparkSession
-import numpy as np
-# Define the script variables.
-application_name = '{application_name}'
-num_executors = {num_executors}
-num_processes = {num_processes}
-path_data = '{path_data}'
-num_workers = num_processes * num_executors
-# Allocate a Spark Context, and a Spark SQL context.
-conf = SparkConf()
-conf.set("spark.app.name", application_name)
-conf.set("spark.master", "yarn-client")
-conf.set("spark.executor.cores", num_processes)
-conf.set("spark.executor.instances", num_executors)
-conf.set("spark.executor.memory", "5g")
-conf.set("spark.locality.wait", "0")
-conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-# Read the dataset from HDFS. For now we assume Parquet files.
-sc = SparkSession.builder.config(conf=conf).appName(application_name).getOrCreate()
-raw_data = sc.read.parquet(path_data)
-dataset = precache(raw_data, num_workers)
-        """.format(
-            application_name=self.job_name,
-            num_executors=self.num_executors,
-            num_processes=self.num_processes,
-            path_data=self.data_path
-        )
-        # Write the source code to a file.
-        home = expanduser("~")
-        with open(home + "/jobs/" + self.secret + ".py", "w") as f:
-            f.write(source)
-
-    def start_job(self):
-        raise NotImplementedError
-
-    def wait_for_result(self):
-        raise NotImplementedError
-
-    def load_result(self):
-        raise NotImplementedError
-
-    def remove_result(self):
-        raise NotImplementedError
+    def get_trained_model(self):
+        return self.trained_model
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -228,12 +178,25 @@ dataset = precache(raw_data, num_workers)
         self.thread.join()
 
     def run(self):
-        self.generate_code()
-        self.start_job()
-        self.wait_for_result()
-        model = self.load_result()
-        self.manager.set_trained_model(self, model)
-        self.remove_result()
+        application_name = self.job_name
+        num_executors = self.num_executors
+        num_processes = self.num_processes
+        path_data = self.data_path
+        num_workers = num_processes * num_executors
+        # Allocate a Spark Context, and a Spark SQL context.
+        conf = SparkConf()
+        conf.set("spark.app.name", application_name)
+        conf.set("spark.master", "yarn-client")
+        conf.set("spark.executor.cores", num_processes)
+        conf.set("spark.executor.instances", num_executors)
+        conf.set("spark.executor.memory", "5g")
+        conf.set("spark.locality.wait", "0")
+        conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+        conf.set("spark.submit.deployMode", "cluster")
+        # Read the dataset from HDFS. For now we assume Parquet files.
+        sc = SparkSession.builder.config(conf=conf).appName(application_name).getOrCreate()
+        raw_data = sc.read.parquet(path_data)
+        dataset = precache(raw_data, num_workers)
         self.is_running = False
 
 
@@ -293,7 +256,6 @@ class Job(object):
         urllib2.urlopen(request, json.dumps(data))
         self.address = address
         self.start()
-
 
     def run(self):
         time.sleep(1)
