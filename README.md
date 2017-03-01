@@ -216,7 +216,6 @@ List of possible future additions.
 - Save Keras model to HDFS.
 - Load Keras model from HDFS.
 - Compression / decompression of network transmissions.
-- Monitoring of loss and training.
 - Stop on target loss.
 - Multiple parameter servers for large Deep Networks.
 - Python 3 compatibility.
