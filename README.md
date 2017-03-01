@@ -164,7 +164,7 @@ history = job.get_history()
 
 ### Punchcard Server
 
-Job scheduling, and execution is handled by our `Punchcard` server. This server will accept requests from a remote location given a specific `secret`, which is basically a long identification string of a specific user. However, a user can have multiple secrets. At the moment, a job is only executed from if there are no other jobs running for the specified secret.
+Job scheduling, and execution is handled by our `Punchcard` server. This server will accept requests from a remote location given a specific `secret`, which is basically a long identification string of a specific user. However, a user can have multiple secrets. At the moment, a job is only executed if there are no other jobs running for the specified secret.
 
 In order to submit jobs to `Punchcard` we need to specify a secrets file. This file is basically a JSON structure, it will have the following structure:
 
