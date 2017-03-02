@@ -14,8 +14,6 @@ from distkeras.utils import unpickle_object
 from flask import Flask
 from flask import request
 
-from keras import backend as K
-
 from os.path import expanduser
 
 from threading import Lock
@@ -300,7 +298,6 @@ class Job(object):
         return not data['running']
 
     def destroy_remote_job(self):
-        K.clear_session()
         address = self.address + '/api/destroy?secret=' + self.secret
         request = urllib2.Request(address)
         response = urllib2.urlopen(request)

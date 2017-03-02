@@ -6,6 +6,8 @@ from keras import backend as K
 
 from keras.models import model_from_json
 
+from keras import backend as K
+
 from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
@@ -76,6 +78,7 @@ def unpickle_object(string):
 
 def serialize_keras_model(model):
     """Serializes the specified Keras model into a dictionary."""
+    K.clear_session()
     dictionary = {}
     dictionary['model'] = model.to_json()
     dictionary['weights'] = model.get_weights()
@@ -85,6 +88,7 @@ def serialize_keras_model(model):
 
 def deserialize_keras_model(dictionary):
     """Deserialized the Keras model using the specified dictionary."""
+    K.clear_session()
     architecture = dictionary['model']
     weights = dictionary['weights']
     model = model_from_json(architecture)
