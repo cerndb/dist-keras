@@ -180,7 +180,7 @@ class PunchcardJob(object):
     def read_trained_model(self):
         home = expanduser("~")
         with open(home + "/models/" + self.secret, "r") as f:
-            self.trained_model = deserialize_keras_model(json.loads(f.read()))
+            self.trained_model = deserialize_keras_model(unpickle_object(f.read()))
 
     def read_history(self):
         home = expanduser("~")
@@ -232,7 +232,7 @@ with open(home + "/trainers/" + secret, "r") as f:
 # Train the model, and save it afterwards.
 trained_model = trainer.train(dataset)
 with open(home + "/models/" + secret, "w") as f:
-    f.write(json.dumps(serialize_keras_model(trained_model)))
+    f.write(pickle_object(serialize_keras_model(trained_model)))
 # Save the history of the training process.
 histories = trainer.get_history()
 with open(home + "/histories/" + secret, "w") as f:
