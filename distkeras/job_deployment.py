@@ -295,7 +295,9 @@ class Job(object):
         request = urllib2.Request(address)
         response = urllib2.urlopen(request)
         data = json.load(response)
-        self.trained_model = deserialize_keras_model(unpickle_object(data['model'].decode('hex_codec')))
+        model = unpickle_object(data['model'].decode('hex_codec'))
+        print(model)
+        self.trained_model = deserialize_keras_model(model)
         self.history = unpickle_object(data['history'].decode('hex_codec'))
 
     def start(self):
