@@ -5,14 +5,16 @@ Hadoop / Spark clusters."""
 
 ## BEGIN Imports. ##############################################################
 
+from distkeras.utils import deserialize_keras_model
 from distkeras.utils import get_os_username
 from distkeras.utils import pickle_object
 from distkeras.utils import serialize_keras_model
-from distkeras.utils import deserialize_keras_model
 from distkeras.utils import unpickle_object
 
 from flask import Flask
 from flask import request
+
+from os.path import expanduser
 
 from threading import Lock
 
@@ -21,7 +23,6 @@ import base64
 import json
 
 import os
-from os.path import expanduser
 
 import subprocess
 
@@ -303,6 +304,9 @@ class Job(object):
 
     def wait_completion(self):
         self.thread.join()
+
+    def cancel(self):
+        raise NotImplementedError
 
     def send(self, address):
         data = {}
