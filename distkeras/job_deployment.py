@@ -237,7 +237,7 @@ with open(home + "/models/" + secret, "w") as f:
     f.write(pickle_object(serialize_keras_model(trained_model)))
 # Save the history of the training process.
 histories = trainer.get_history()
-with open(home + "/models/" + secret, "w") as f:
+with open(home + "/histories/" + secret, "w") as f:
     f.write(pickle_object(histories))
 sc.stop()
         """.format(
