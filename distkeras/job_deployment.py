@@ -120,7 +120,7 @@ class Punchcard(object):
                 with self.mutex:
                     model = self.jobs[secret].get_trained_model()
                     history = self.jobs[secret].get_history()
-                    model = pickle_object(model).encode('hex_codec')
+                    model = pickle_object(serialize_keras_model(model)).encode('hex_codec')
                     history = pickle_object(history).encode('hex_codec')
                     d = {}
                     d['model'] = model
@@ -294,7 +294,7 @@ class Job(object):
         request = urllib2.Request(address)
         response = urllib2.urlopen(request)
         data = json.load(response)
-        self.trained_model = unpickle_object(data['model'].decode('hex_codec'))
+        self.trained_model = deserialize_keras_model(unpickle_object(data['model'].decode('hex_codec')))
         self.history = unpickle_object(data['history'].decode('hex_codec'))
 
     def start(self):
