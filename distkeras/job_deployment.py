@@ -185,10 +185,8 @@ class PunchcardJob(object):
 
     def read_trained_model(self):
         home = expanduser("~")
-        path = home + "/models/" + self.secret
-        with open(path, "r") as f:
+        with open(home + "/models/" + self.secret, "r") as f:
             self.trained_model = deserialize_keras_model(unpickle_object(f.read()))
-        os.remove(path)
 
     def read_history(self):
         home = expanduser("~")
