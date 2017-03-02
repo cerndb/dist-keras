@@ -177,6 +177,12 @@ class PunchcardJob(object):
     def run_job(self):
         os.system("python ~/jobs/" + self.secret + ".py")
 
+    def clean_up(self):
+        home = expanduser("~")
+        os.remove(home + "/models/" + self.secret)
+        os.remove(home + "/histories/" + self.secret)
+        os.remove(home + "/trainers/" + self.secret)
+
     def read_trained_model(self):
         home = expanduser("~")
         path = home + "/models/" + self.secret
@@ -256,6 +262,7 @@ sc.stop()
         self.generate_code()
         self.run_job()
         self.read_trained_model()
+        self.clean_up()
         self.is_running = False
 
 
