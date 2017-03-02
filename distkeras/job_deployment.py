@@ -224,7 +224,7 @@ conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
 sc = SparkContext(conf=conf)
 sqlContext = SQLContext(sc)
 # Read the dataset from HDFS. For now we assume Parquet files.
-dataset = sqlContext.read.parquet(path_data)
+dataset = sqlContext.read.parquet(path_data).repartition(num_workers)
 # Deserialize the trainer object.
 home = expanduser("~")
 with open(home + "/trainers/" + secret, "r") as f:
