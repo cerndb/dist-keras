@@ -78,7 +78,6 @@ def unpickle_object(string):
 
 def serialize_keras_model(model):
     """Serializes the specified Keras model into a dictionary."""
-    K.clear_session()
     dictionary = {}
     dictionary['model'] = model.to_json()
     dictionary['weights'] = model.get_weights()
