@@ -202,7 +202,7 @@ class SocketParameterServer(ParameterServer):
 
     def finalize(self):
         """Method that is called when the parameter server stops."""
-        pass
+        print("Not executed")
 
     def cleanup_connections(self):
         """Clean all existing connections up."""
@@ -233,11 +233,12 @@ class DeltaParameterServer(SocketParameterServer):
         delta = data['delta']
         # Update the center variable with the delta.
         with self.mutex:
-            self.center_variable += self.center_variable + delta
+            self.center_variable = self.center_variable + delta
         # Next iteration.
         self.next_update()
 
     def finalize(self):
+        print("Executed")
         # Set the final weights of the model.
         self.model.set_weights(self.center_variable)
 
@@ -268,6 +269,7 @@ class ADAGParameterServer(SocketParameterServer):
         self.next_update()
 
     def finalize(self):
+        print("Executed")
         # Set the weights of the model.
         self.model.set_weights(self.center_variable)
 
