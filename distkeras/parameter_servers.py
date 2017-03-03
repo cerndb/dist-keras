@@ -254,18 +254,15 @@ class ADAGParameterServer(SocketParameterServer):
     def __init__(self, model, master_port):
         super(ADAGParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
-        self.num_matrixes = len(self.center_variable)
-        self.mutexes = [threading.Lock() for i in range(0, self.num_matrixes)]
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the data from the dictionary.
         r = data['residual']
-        # Update the submatrixes.
-        for i in range(0, self.num_matrixes):
-            with self.mutexes[i]:
-                self.center_variable[i] += r[i]
+        with self.mutex:
+            # Update the center variable.
+            self.center_variable += r
         # Increment the number of parameter server updates.
         self.next_update()
 
