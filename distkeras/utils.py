@@ -85,6 +85,38 @@ def serialize_keras_model(model):
     return dictionary
 
 
+def history_executors_average(history):
+    """Returns the averaged training metrics for all the executors."""
+    max_iteration = max(history, key=lambda x: x['iteration'])['iteration']
+    max_executor = max(history, key=lambda x: x['worker_id'])['worker_id']
+    histories = []
+    averaged_history = []
+    # Fetch the histories of the individual executors.
+    for i in range(0, max_executor):
+        histories.append(history_executor(history, i))
+    # Construct the averaged history.
+    for i in range(0, max_iteration):
+        num_executors = 0
+        sum = np.zeros(2)
+        for j in range(0, max_executor):
+            if len(histories[j]) - 1 >= i:
+                num_executors += 1
+                sum += histories[j][i]['history']
+        # Average the history.
+        sum /= num_executors
+        averaged_history.append(sum)
+
+    return averaged_history
+
+
+def history_executor(history, id):
+    """Returns the history of a specific executor."""
+    executor_history = [h for h in history if h['worker_id'] == id]
+    executor_history.sort(key=lambda x: x['iteration'])
+
+    return executor_history
+
+
 def deserialize_keras_model(dictionary):
     """Deserialized the Keras model using the specified dictionary."""
     K.clear_session()

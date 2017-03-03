@@ -15,9 +15,11 @@ from distkeras.parameter_servers import DynSGDParameterServer
 from distkeras.parameter_servers import ExperimentalParameterServer
 
 from distkeras.utils import deserialize_keras_model
+from distkeras.utils import history_executor
+from distkeras.utils import history_executors_average
+from distkeras.utils import pickle_object
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import set_keras_base_directory
-from distkeras.utils import pickle_object
 from distkeras.utils import unpickle_object
 
 from distkeras.networking import determine_host_address
@@ -83,6 +85,14 @@ class Trainer(object):
     def get_history(self):
         """Returns all history object aggregated during training."""
         return self.history
+
+    def get_averaged_history(self):
+        """Returns the averaged history of the center variable."""
+        return history_executors_average(self.history)
+
+    def get_executor_history(self, executor_id):
+        """Returns the history of a specific executor."""
+        return history_executor(self.history, executor_id)
 
     def train(self, dataframe, shuffle=False):
         """Trains the specified model using the specified dataframe.
