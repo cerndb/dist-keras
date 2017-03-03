@@ -233,7 +233,7 @@ class DeltaParameterServer(SocketParameterServer):
         delta = data['delta']
         # Update the center variable with the delta.
         with self.mutex:
-            self.center_variable += delta
+            self.center_variable += self.center_variable + delta
         # Next iteration.
         self.next_update()
 
@@ -263,7 +263,7 @@ class ADAGParameterServer(SocketParameterServer):
         r = data['residual']
         with self.mutex:
             # Update the center variable.
-            self.center_variable += r
+            self.center_variable = self.center_variable + r
         # Increment the number of parameter server updates.
         self.next_update()
 
