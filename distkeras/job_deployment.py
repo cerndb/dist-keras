@@ -261,7 +261,7 @@ sc.stop()
         self.run_job()
         self.read_trained_model()
         self.read_history()
-        #self.clean_up()
+        self.clean_up()
         self.is_running = False
 
 
