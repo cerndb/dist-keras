@@ -260,6 +260,7 @@ sc.stop()
         self.generate_code()
         self.run_job()
         self.read_trained_model()
+        self.read_history()
         self.clean_up()
         self.is_running = False
 
