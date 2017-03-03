@@ -224,6 +224,7 @@ class DeltaParameterServer(SocketParameterServer):
 
     def __init__(self, model, master_port):
         super(DeltaParameterServer, self).__init__(model, master_port)
+        self.center_variable = np.asarray(self.model.get_weight())
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
@@ -232,13 +233,13 @@ class DeltaParameterServer(SocketParameterServer):
         delta = data['delta']
         # Update the center variable with the delta.
         with self.mutex:
-            # Fetch the center variable.
-            center_variable = self.model.get_weights()
-            center_variable = center_variable + delta
-            # Set the new parameters of the model.
-            self.model.set_weights(center_variable)
+            self.center_variable += delta
         # Next iteration.
         self.next_update()
+
+    def finalize(self):
+        # Set the final weights of the model.
+        self.model.set_weights(self.center_variable)
 
 
 class ADAGParameterServer(SocketParameterServer):
