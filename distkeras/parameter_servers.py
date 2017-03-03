@@ -194,10 +194,15 @@ class SocketParameterServer(ParameterServer):
         # Check if a socket is allocated.
         if self.socket:
             self.cleanup_connections()
+            self.finalize()
             self.socket.close()
             self.cancel_accept()
             self.socket = None
         self.connections = []
+
+    def finalize(self):
+        """Method that is called when the parameter server stops."""
+        pass
 
     def cleanup_connections(self):
         """Clean all existing connections up."""
@@ -248,20 +253,25 @@ class ADAGParameterServer(SocketParameterServer):
 
     def __init__(self, model, master_port):
         super(ADAGParameterServer, self).__init__(model, master_port)
+        self.center_variable = np.asarray(self.model.get_weights())
+        self.num_matrixes = len(self.center_variable)
+        self.mutexes = [threading.Lock() for i in range(0, self.num_matrixes)]
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the data from the dictionary.
         r = data['residual']
-        with self.mutex:
-            # Update the center variable.
-            center_variable = self.model.get_weights()
-            center_variable = center_variable + r
-            # Set the new parameters of the model.
-            self.model.set_weights(center_variable)
+        # Update the submatrixes.
+        for i in range(0, self.num_matrixes):
+            with self.mutexes[i]:
+                self.center_variable[i] += r[i]
         # Increment the number of parameter server updates.
         self.next_update()
+
+    def finalize(self):
+        # Set the weights of the model.
+        self.model.set_weights(self.center_variable)
 
 
 class DynSGDParameterServer(SocketParameterServer):
