@@ -237,6 +237,20 @@ class DeltaParameterServer(SocketParameterServer):
         # Next iteration.
         self.next_update()
 
+    def handle_pull(self, conn, addr):
+        """Handles parameter requests coming from the workers. This will
+        actually send the model parameters to the requesting host.
+
+        # Arguments:
+            conn: socket. The opened connection.
+            addr: addr. Address of the remote host.
+        """
+        # Fetch the raw center variables.
+        with self.mutex:
+            cv = copy.deepcopy(self.center_variable)
+        # Send the data over the socket.
+        send_data(conn, cv)
+
     def finalize(self):
         print("Executed")
         # Set the final weights of the model.
@@ -267,6 +281,20 @@ class ADAGParameterServer(SocketParameterServer):
             self.center_variable = self.center_variable + r
         # Increment the number of parameter server updates.
         self.next_update()
+
+    def handle_pull(self, conn, addr):
+        """Handles parameter requests coming from the workers. This will
+        actually send the model parameters to the requesting host.
+
+        # Arguments:
+            conn: socket. The opened connection.
+            addr: addr. Address of the remote host.
+        """
+        # Fetch the raw center variables.
+        with self.mutex:
+            cv = copy.deepcopy(self.center_variable)
+        # Send the data over the socket.
+        send_data(conn, cv)
 
     def finalize(self):
         print("Executed")
