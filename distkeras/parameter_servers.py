@@ -271,7 +271,7 @@ class ADAGParameterServer(SocketParameterServer):
         super(ADAGParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
         self.num_layers = len(self.center_variable)
-        self.locks = [threading.Lock() for i in range(0, self.num_layers))]
+        self.locks = [threading.Lock() for i in range(0, self.num_layers)]
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
