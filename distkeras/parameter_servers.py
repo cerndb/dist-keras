@@ -364,13 +364,30 @@ class ExperimentalParameterServer(SocketParameterServer):
     def __init__(self, model, master_port):
         super(ExperimentalParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
+        self.staleness = {}
+        self.worker_commit = {}
+
+    def add_staleness(self, worker_id):
+        # Fetch the last update.
+        if worker_id not in self.worker_commit:
+            self.worker_commit[worker_id] = 0
+            last_update = 0
+        else:
+            last_update = self.worker_commit[worker_id]
+        du = self.num_updates - last_update
+        if du in self.staleness:
+            self.staleness[du] += 1
+        else:
+            self.staleness[du] = 1
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the data from the dictionary.
         r = data['residual']
+        worker_id = r['worker_id']
         with self.mutex:
+            self.add_staleness(worker_id)
             # Update the center variable.
             self.center_variable = self.center_variable + r
         # Increment the number of parameter server updates.
