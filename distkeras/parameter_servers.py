@@ -374,7 +374,7 @@ class ExperimentalParameterServer(SocketParameterServer):
             last_update = 0
         else:
             last_update = self.worker_commit[worker_id]
-        du = self.num_updates - last_update
+        du = self.num_updates - last_update + 1
         self.worker_commit[worker_id] = self.num_updates
         if du in self.staleness:
             self.staleness[du] += 1
