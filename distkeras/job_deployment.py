@@ -113,6 +113,17 @@ class Punchcard(object):
 
             return '', 404
 
+        @self.application.route('/api/cancel')
+        def cancel():
+            secret = request.args.get('secret')
+            job = self.get_submitted_job(secret)
+            if job is not None and job.running():
+                with self.mutex:
+                    job.cancel()
+                    del self.jobs[secret]
+
+            return '', 200
+
         @self.application.route('/api/destroy')
         def destroy_job():
             secret = request.args.get('secret')
@@ -167,7 +178,11 @@ class PunchcardJob(object):
     def start(self):
         self.trainer.determine_new_master()
         self.thread = threading.Thread(target=self.run)
+        self.thread.setDaemon(True)
         self.thread.start()
+
+    def cancel(self):
+        self.thread.exit()
 
     def running(self):
         return self.is_running
@@ -316,7 +331,9 @@ class Job(object):
         self.thread.join()
 
     def cancel(self):
-        raise NotImplementedError
+        address = self.address + '/api/cancel?secret=' + self.secret
+        request = urllib2.Request(address)
+        urllib2.urlopen(request)
 
     def send(self, address):
         data = {}
