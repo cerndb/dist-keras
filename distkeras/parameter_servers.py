@@ -385,7 +385,7 @@ class ExperimentalParameterServer(SocketParameterServer):
         data = recv_data(conn)
         # Extract the data from the dictionary.
         r = data['residual']
-        worker_id = r['worker_id']
+        worker_id = data['worker_id']
         with self.mutex:
             self.add_staleness(worker_id)
             # Update the center variable.
