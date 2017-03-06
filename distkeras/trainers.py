@@ -408,6 +408,14 @@ class DistributedTrainer(Trainer):
         """
         raise NotImplementedError
 
+    def set_master(self, master):
+        """Sets the master address of the parameter server."""
+        self.master_host = master
+
+    def determine_new_master(self):
+        """Sets the new master address to the current host."""
+        self.master_host = determine_host_address()
+
     def allocate_parameter_server(self):
         """Allocates the parameter server.
 

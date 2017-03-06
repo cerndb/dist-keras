@@ -165,6 +165,7 @@ class PunchcardJob(object):
         return self.trained_model
 
     def start(self):
+        self.trainer.determine_new_master()
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
