@@ -297,7 +297,6 @@ class ADAGParameterServer(SocketParameterServer):
         send_data(conn, cv)
 
     def finalize(self):
-        print("Executed")
         # Set the weights of the model.
         self.model.set_weights(self.center_variable)
 
