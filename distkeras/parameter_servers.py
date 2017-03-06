@@ -270,18 +270,15 @@ class ADAGParameterServer(SocketParameterServer):
     def __init__(self, model, master_port):
         super(ADAGParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
-        self.num_layers = len(self.center_variable)
-        self.locks = [threading.Lock() for i in range(0, self.num_layers)]
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
         # Extract the data from the dictionary.
         r = data['residual']
-        # Set the data using layer locks.
-        for i in range(0, self.num_layers):
-            with self.locks[i]:
-                self.center_variable[i] += r[i]
+        with self.mutex:
+            # Update the center variable.
+            self.center_variable = self.center_variable + r
         # Increment the number of parameter server updates.
         self.next_update()
 
@@ -293,12 +290,9 @@ class ADAGParameterServer(SocketParameterServer):
             conn: socket. The opened connection.
             addr: addr. Address of the remote host.
         """
-        cv = np.copy(self.center_variable)
-        cv.fill(0.0)
-        # Copy all layers, using layer locks.
-        for i in range(0, self.num_layers):
-            with self.locks[i]:
-                cv[i] = np.copy(self.center_variable[i])
+        # Fetch the raw center variables.
+        with self.mutex:
+            cv = copy.deepcopy(self.center_variable)
         # Send the data over the socket.
         send_data(conn, cv)
 
