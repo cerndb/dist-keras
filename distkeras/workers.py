@@ -481,16 +481,6 @@ class ExperimentalWorker(NetworkWorker):
         self.num_workers = num_workers
         self.current_num_workers = self.num_workers
         self.iteration = 1
-        self.beta = (1 - self.communication_window) / self.num_workers
-
-    def pull(self):
-        """Requests the center variable and last update from the parameter server."""
-        # Request a pull from the parameter server.
-        self.socket.sendall(b'p')
-        # Fetch the dictionary from the parameter server.
-        data = recv_data(self.socket)
-        self.center_variable = np.asarray(data['model'])
-        self.current_num_workers = data['num_workers']
 
     def commit(self, residual):
         """Sends the gradient residual to the parameter server."""
@@ -503,46 +493,19 @@ class ExperimentalWorker(NetworkWorker):
         # Send the data to the paramter server.
         send_data(self.socket, data)
 
-    def send_worker_done(self):
-        """Sends the worker done signal to the parameter server."""
-        data = {}
-        data['worker_done'] = self.get_worker_id()
-        # Request a commit from the parameter server.
-        self.socket.sendall(b'c')
-        send_data(self.socket, data)
-
     def optimize(self):
-        """Optimization procedure of experimental optimizer."""
+        """Optimization procedure of ADAG."""
         W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
-            self.model.train_on_batch(X, Y)
+            h = self.model.train_on_batch(X, Y)
+            self.add_history(h)
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                d = self.communication_window - (self.num_workers - self.current_num_workers) * self.beta
-                delta /= d
-                delta *= self.learning_rate
+                delta /= self.communication_window
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)
                 W1 = self.center_variable
             self.iteration += 1
-
-    def train(self, worker_id, iterator):
-        """Training procedure of a networked worker with a parameter server."""
-        self.start_prefetching_thread(iterator)
-        self.set_worker_id(worker_id)
-        self.prepare_model()
-        self.connect()
-        self.pull()
-        self.model.set_weights(self.center_variable)
-        try:
-            self.optimize()
-        except:
-            pass
-        self.send_worker_done()
-        self.socket.close()
-        self.prefetching_thread.join()
-
-        return iter([])

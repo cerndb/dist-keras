@@ -252,7 +252,6 @@ class DeltaParameterServer(SocketParameterServer):
         send_data(conn, cv)
 
     def finalize(self):
-        print("Executed")
         # Set the final weights of the model.
         self.model.set_weights(self.center_variable)
 
@@ -353,21 +352,33 @@ class DynSGDParameterServer(SocketParameterServer):
 
 
 class ExperimentalParameterServer(SocketParameterServer):
-    """Experiment parameter server for development purposes."""
+    """A parameter server which integrates the incoming gradient residuals into
+       the model, and integrates them using the ADAG scheme.
+
+    # Arguments
+        model: string. Keras model.
+               See: distkeras.utils.serialize_keras_model
+        master_port: int. Port number of the parameter server.
+    """
 
     def __init__(self, model, master_port):
         super(ExperimentalParameterServer, self).__init__(model, master_port)
-        self.num_workers = -1
+        self.center_variable = np.asarray(self.model.get_weights())
 
-    def set_num_workers(self, num_workers):
-        """Sets the number of workers."""
-        self.num_workers = num_workers
+    def handle_commit(self, conn, addr):
+        # Receive the parameters from the remote node.
+        data = recv_data(conn)
+        # Extract the data from the dictionary.
+        r = data['residual']
+        with self.mutex:
+            # Update the center variable.
+            self.center_variable = self.center_variable + r
+        # Increment the number of parameter server updates.
+        self.next_update()
 
     def handle_pull(self, conn, addr):
         """Handles parameter requests coming from the workers. This will
         actually send the model parameters to the requesting host.
-
-        This is a specific implementation for DynSGD.
 
         # Arguments:
             conn: socket. The opened connection.
@@ -375,28 +386,10 @@ class ExperimentalParameterServer(SocketParameterServer):
         """
         # Fetch the raw center variables.
         with self.mutex:
-            center_variable = self.model.get_weights()
-            cv = copy.deepcopy(center_variable)
-        # Allocate a new dictionary.
-        data = {}
-        # Store the model (m).
-        data['model'] = cv
-        # Store the number workers concurrently updating the PS.
-        data['num_workers'] = self.num_workers
+            cv = copy.deepcopy(self.center_variable)
         # Send the data over the socket.
-        send_data(conn, data)
+        send_data(conn, cv)
 
-    def handle_commit(self, conn, addr):
-        data = recv_data(conn)
-        # Check if the data contains end of a process.
-        if "worker_done" in data:
-            self.num_workers -= 1
-        else:
-            # Fetch the residual.
-            r = data['residual']
-            with self.mutex:
-                center_variable = self.model.get_weights()
-                center_variable = center_variable + r
-                self.model.set_weights(center_variable)
-            # Increment the number of parameter server updates.
-            self.next_update()
+    def finalize(self):
+        # Set the weights of the model.
+        self.model.set_weights(self.center_variable)
