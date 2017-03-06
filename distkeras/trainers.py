@@ -840,10 +840,10 @@ class Experimental(AsynchronousDistributedTrainer):
                  learning_rate=1.0):
         # Initialize the parent object.
         super(Experimental, self).__init__(keras_model, worker_optimizer, loss, num_workers,
-                                           batch_size, features_col, label_col, num_epoch,
-                                           learning_rate)
+                                           batch_size, features_col, label_col, num_epoch)
         # Set the algorithm parameters.
         self.communication_window = communication_window
+        self.learning_rate = learning_rate
 
     def allocate_worker(self):
         """Allocate experimental worker."""
