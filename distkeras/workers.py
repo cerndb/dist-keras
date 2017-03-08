@@ -480,6 +480,7 @@ class ExperimentalWorker(NetworkWorker):
         self.communication_window = communication_window
         self.num_workers = num_workers
         self.current_num_workers = self.num_workers
+        self.inverse_learning_rate = 1 / self.learning_rate
         self.iteration = 1
 
     def commit(self, residual):
@@ -514,7 +515,7 @@ class ExperimentalWorker(NetworkWorker):
                 center_variable_old = self.center_variable
                 self.pull()
                 cv_diff = np.abs(self.center_variable - center_variable_old)
-                d = 1 / (self.learning_rate * cv_diff + 1)
+                d = 1 / (self.inverse_learning_rate * cv_diff + 1)
                 delta = np.multiply(d, delta)
                 self.commit(delta)
                 self.pull()
