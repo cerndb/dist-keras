@@ -517,7 +517,7 @@ class ExperimentalWorker(NetworkWorker):
                 d = 1 / (self.learning_rate * np.power(cv_diff, 2) + 1)
                 delta = np.multiply(d, delta)
                 self.commit(delta)
-                self.pull()
+                self.center_variable += delta
                 self.model.set_weights(self.center_variable)
                 W1 = self.center_variable
             self.iteration += 1
