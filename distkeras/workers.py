@@ -493,6 +493,13 @@ class ExperimentalWorker(NetworkWorker):
         # Send the data to the paramter server.
         send_data(self.socket, data)
 
+    def pull(self):
+        """Requests the center variable from the parameter server."""
+        # Request a pull from the parameter server.
+        self.socket.sendall(b'p')
+        # Fetch the center variable from the parameter server.
+        self.center_variable = np.asarray(recv_data(self.socket))
+
     def optimize(self):
         """Optimization procedure of ADAG."""
         W1 = np.asarray(self.model.get_weights())
@@ -504,6 +511,10 @@ class ExperimentalWorker(NetworkWorker):
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
                 delta /= self.communication_window
+                center_variable_old = self.center_variable
+                self.pull()
+                d = 1 / (np.abs(self.center_variable - center_variable_old) + 1)
+                delta = np.multiply(d, delta)
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)
