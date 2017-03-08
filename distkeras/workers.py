@@ -513,7 +513,8 @@ class ExperimentalWorker(NetworkWorker):
                 delta /= self.communication_window
                 center_variable_old = self.center_variable
                 self.pull()
-                d = 1 / (np.abs(self.center_variable - center_variable_old) + 1)
+                cv_diff = np.abs(self.center_variable - center_variable_old)
+                d = 1 / (self.learning_rate * np.power(cv_diff, 2) + 1)
                 delta = np.multiply(d, delta)
                 self.commit(delta)
                 self.pull()
