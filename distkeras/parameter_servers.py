@@ -361,9 +361,10 @@ class ExperimentalParameterServer(SocketParameterServer):
         master_port: int. Port number of the parameter server.
     """
 
-    def __init__(self, model, master_port):
+    def __init__(self, model, master_port, learning_rate):
         super(ExperimentalParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
+        self.inverse_learning_rate = 1.0 / learning_rate
         self.staleness = {}
         self.worker_commit = {}
 
@@ -387,8 +388,12 @@ class ExperimentalParameterServer(SocketParameterServer):
         # Extract the data from the dictionary.
         r = data['residual']
         worker_id = data['worker_id']
+        stale_cv = data['stale_center_variable']
         with self.mutex:
             self.add_staleness(worker_id)
+            diff_cv = np.subtract(self.center_variable, stale_cv)
+            d = 1 / (self.inverse_learning_rate * np.power(diff_cv, 2) + 1)
+            r = np.multiply(d, r)
             # Update the center variable.
             self.center_variable = self.center_variable + r
         # Increment the number of parameter server updates.

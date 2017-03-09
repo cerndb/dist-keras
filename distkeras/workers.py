@@ -489,6 +489,7 @@ class ExperimentalWorker(NetworkWorker):
         data = {}
         data['worker_id'] = self.get_worker_id()
         data['residual'] = residual
+        data['stale_center_variable'] = self.center_variable
         # Request a commit from the parameter server.
         self.socket.sendall(b'c')
         # Send the data to the paramter server.
@@ -512,11 +513,6 @@ class ExperimentalWorker(NetworkWorker):
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
                 delta /= self.communication_window
-                center_variable_old = self.center_variable
-                self.pull()
-                cv_diff = np.subtract(self.center_variable, center_variable_old)
-                d = 1 / (self.inverse_learning_rate * np.power(cv_diff, 2) + 1)
-                delta = np.multiply(d, delta)
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)

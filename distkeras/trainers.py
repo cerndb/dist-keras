@@ -856,6 +856,6 @@ class Experimental(AsynchronousDistributedTrainer):
 
     def allocate_parameter_server(self):
         """Allocate experimental parameter server."""
-        parameter_server = ExperimentalParameterServer(self.master_model, self.master_port)
+        parameter_server = ExperimentalParameterServer(self.master_model, self.master_port, self.learning_rate)
 
         return parameter_server
