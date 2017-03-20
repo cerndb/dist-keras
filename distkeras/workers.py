@@ -285,7 +285,7 @@ class ADAGWorker(NetworkWorker):
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
-                delta /= (1 + (W2 - self.center_variable))
+                delta /= self.communication_window
                 self.commit(delta)
                 self.pull()
                 self.model.set_weights(self.center_variable)
