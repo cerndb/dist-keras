@@ -102,7 +102,8 @@ class Worker(object):
                     X = np.asarray([x[self.features_column] for x in feature_iterator])
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
-        except:
+        except Exception as e:
+            print(e)
             self.is_prefetching = False
 
     def optimize(self):
@@ -241,8 +242,8 @@ class NetworkWorker(Worker):
         self.model.set_weights(self.center_variable)
         try:
             self.optimize()
-        except:
-            pass
+        except Exception as e:
+            print(e)
         self.socket.close()
         self.prefetching_thread.join()
 
