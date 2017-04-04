@@ -190,6 +190,7 @@ class SocketParameterServer(ParameterServer):
                 self.connections.append(thread)
             except Exception as e:
                 print(e)
+        print("Parameter server stopping")
 
     def stop(self):
         """Stop the parameter server. This will also cleanup all existing connections."""
