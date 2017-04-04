@@ -481,7 +481,7 @@ class DistributedTrainer(Trainer):
         # Assign the dataset.
         dataset = dataframe
         # Build a dataset which fits the number of epochs.
-        for i in range(0, self.num_epoch):
+        for i in range(1, self.num_epoch):
             dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
@@ -582,7 +582,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Assign the dataset.
         dataset = dataframe
         # Build the dataset with the number of epochs.
-        for i in range(0, self.num_epoch):
+        for i in range(1, self.num_epoch):
             dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
