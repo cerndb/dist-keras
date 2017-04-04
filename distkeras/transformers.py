@@ -246,7 +246,8 @@ class ReshapeTransformer(Transformer):
     def _transform(self, row):
         """Transforms the vector to a dense matrix while putting it in a new column."""
         vector = row[self.input_column]
-        reshaped = vector.toArray().reshape(self.shape).tolist()
+        vector = np.asarray(vector)
+        reshaped = vector.reshape(self.shape).tolist()
         new_row = new_dataframe_row(row, self.output_column, reshaped)
 
         return new_row
