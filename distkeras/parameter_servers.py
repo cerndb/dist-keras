@@ -161,7 +161,6 @@ class SocketParameterServer(ParameterServer):
             while self.running:
                 # Fetch the current action.
                 action = conn.recv(1).decode()
-                print("Handling action")
                 # Check if the action is a commit (most of the cases).
                 if action == 'c':
                     # Handle the commit.
@@ -181,7 +180,6 @@ class SocketParameterServer(ParameterServer):
         """Main event loop of the parameter server."""
         # Listen for incoming connections.
         while self.running:
-            print("Accepting connection")
             try:
                 # Accept incoming connections.
                 conn, addr = self.socket.accept()
@@ -192,7 +190,6 @@ class SocketParameterServer(ParameterServer):
                 self.connections.append(thread)
             except Exception as e:
                 print(e)
-        print("Parameter server stopping")
 
     def stop(self):
         """Stop the parameter server. This will also cleanup all existing connections."""
