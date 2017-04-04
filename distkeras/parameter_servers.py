@@ -147,8 +147,8 @@ class SocketParameterServer(ParameterServer):
             # Connect to the listening socket to cancel the accept.
             file_descriptor.connect(("localhost", self.master_port))
             file_descriptor.close()
-        except Exception:
-            pass
+        except Exception as e:
+            print(e)
 
     def handle_connection(self, conn, addr):
         """
@@ -157,16 +157,19 @@ class SocketParameterServer(ParameterServer):
         in the following functionality. Classes which implement these interfaces
         should not worry about connection handling.
         """
-        while self.running:
-            # Fetch the current action.
-            action = conn.recv(1).decode()
-            # Check if the action is a commit (most of the cases).
-            if action == 'c':
-                # Handle the commit.
-                self.handle_commit(conn, addr)
-            elif action == 'p':
-                # Handle the pull.
-                self.handle_pull(conn, addr)
+        try:
+            while self.running:
+                # Fetch the current action.
+                action = conn.recv(1).decode()
+                # Check if the action is a commit (most of the cases).
+                if action == 'c':
+                    # Handle the commit.
+                    self.handle_commit(conn, addr)
+                elif action == 'p':
+                    # Handle the pull.
+                    self.handle_pull(conn, addr)
+        except Exception as e:
+            print(e)
 
     def start(self):
         """Starts the parameter server."""
@@ -185,8 +188,8 @@ class SocketParameterServer(ParameterServer):
                 thread.start()
                 # Store the connection in the dictionary.
                 self.connections.append(thread)
-            except Exception:
-                pass
+            except Exception as e:
+                print(e)
 
     def stop(self):
         """Stop the parameter server. This will also cleanup all existing connections."""
