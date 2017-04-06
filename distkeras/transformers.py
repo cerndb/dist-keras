@@ -284,7 +284,7 @@ class OneHotTransformer(Transformer):
         """
         label = row[self.input_column]
         vector = to_one_hot_encoded_dense(label, self.output_dimensionality)
-        new_row = new_dataframe_row(row, self.output_column, vector)
+        new_row = new_dataframe_row(row, self.output_column, vector.tolist())
 
         return new_row
 
