@@ -38,13 +38,14 @@ def set_keras_base_directory(base_dir='/tmp/' + get_os_username()):
     K._keras_base_dir = base_dir
 
 
-def to_dense_vector(value, n_dim=2):
+def to_one_hot_encoded_dense(value, n_dim=2):
     """Converts the value to a one-hot encoded vector.
 
     # Arguments
         value: float. Value of the single "hot" value.
         n_dim: int. Dimension of the output vector.
     """
+    value = int(value)
     vector = np.zeros(n_dim)
     vector[value] = 1.0
 

@@ -10,7 +10,7 @@ a column to a dataframe based on a collection of specified values.
 import numpy as np
 
 from distkeras.utils import new_dataframe_row
-from distkeras.utils import to_dense_vector
+from distkeras.utils import to_one_hot_encoded_dense
 
 from pyspark.mllib.linalg import DenseMatrix
 from pyspark.mllib.linalg import DenseVector
@@ -283,7 +283,7 @@ class OneHotTransformer(Transformer):
         Only for internal use.
         """
         label = row[self.input_column]
-        vector = to_dense_vector(label, self.output_dimensionality)
+        vector = to_one_hot_encoded_dense(label, self.output_dimensionality)
         new_row = new_dataframe_row(row, self.output_column, vector)
 
         return new_row
