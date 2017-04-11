@@ -227,7 +227,7 @@ class DeltaParameterServer(SocketParameterServer):
 
     def __init__(self, model, master_port):
         super(DeltaParameterServer, self).__init__(model, master_port)
-        self.center_variable = np.asarray(self.model.get_weight())
+        self.center_variable = np.asarray(self.model.get_weights())
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
