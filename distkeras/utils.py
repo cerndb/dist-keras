@@ -120,7 +120,6 @@ def history_executor(history, id):
 
 def deserialize_keras_model(dictionary):
     """Deserialized the Keras model using the specified dictionary."""
-    K.clear_session()
     architecture = dictionary['model']
     weights = dictionary['weights']
     model = model_from_json(architecture)
