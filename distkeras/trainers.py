@@ -265,6 +265,8 @@ class AveragingTrainer(Trainer):
         self.record_training_start()
         for i in range(0, self.num_epoch):
             worker = self.allocate_worker()
+            # Set the maximum number of mini-batches.
+            worker.set_max_prefetch(self.max_mini_batches_prefetch)
             models = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
             self.average_models(models)
         # End the training procedure.
@@ -318,6 +320,8 @@ class EnsembleTrainer(Trainer):
         """
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the maximum number of mini-batches.
+        worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
         # Check if the dataframe needs to be shuffled before training.
@@ -483,6 +487,8 @@ class DistributedTrainer(Trainer):
         self.start_service()
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the maximum number of mini-batches.
+        worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
         # Assign the dataset.
@@ -584,6 +590,8 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         self.start_service()
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the maximum number of mini-batches.
+        worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
         # Assign the dataset.
