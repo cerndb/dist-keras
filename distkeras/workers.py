@@ -46,12 +46,16 @@ class Worker(object):
         self.features_column = features_col
         self.label_column = label_col
         self.batch_size = batch_size
-        self.max_mini_batches = 1000
+        self.max_mini_batches = 100
         self.prefetching_thread = None
         self.mini_batches = None
         self.is_prefetching = True
         self.worker_id = -1
         self.learning_rate = learning_rate
+
+    def set_max_prefetch(self, max_mini_batches):
+        """Sets the maximum number of mini-batches that can be prefetched."""
+        self.max_mini_batches = max_mini_batches
 
     def set_learning_rate(self, learning_rate):
         """Sets the learning rate of the worker."""

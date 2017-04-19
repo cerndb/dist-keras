@@ -57,6 +57,11 @@ class Trainer(object):
         self.training_time_start = 0
         self.training_time_end = 0
         self.training_time = 0
+        self.max_mini_batches_prefetch = 100
+
+    def set_max_prefetch(self, max_mini_batches):
+        """Sets the maximum amount of mini-batches that can be prefetched by a worker."""
+        self.max_mini_batches_prefetch = max_mini_batches
 
     def set_model(self, model):
         """Sets the master model to be used by the trainer."""
@@ -168,6 +173,8 @@ class SingleTrainer(Trainer):
         dataset.cache()
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the maximum number of mini-batches.
+        worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Start recording training time.
         self.record_training_start()
         # Fetch the trained model.
