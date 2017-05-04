@@ -12,7 +12,7 @@ from pyspark.mllib.linalg import DenseVector
 from pyspark.sql import Row
 from pyspark.sql.functions import rand
 
-import cPickle as pickle
+import pickle
 
 import json
 
