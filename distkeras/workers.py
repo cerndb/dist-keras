@@ -24,7 +24,7 @@ import numpy as np
 
 import threading
 
-import Queue
+import queue
 
 import random
 
@@ -92,7 +92,7 @@ class Worker(object):
 
     def start_prefetching_thread(self, iterator):
         """Starts the data prefetching thread."""
-        self.mini_batches = Queue.Queue()
+        self.mini_batches = queue.Queue()
         self.iterator = iterator
         self.prefetching_thread = threading.Thread(target=self.prefetching)
         self.prefetching_thread.start()
