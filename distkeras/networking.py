@@ -22,7 +22,7 @@ def recvall(connection, num_bytes):
         connection: socket. Opened socket.
         num_bytes: int. Number of bytes to read.
     """
-    byte_buffer = ''
+    byte_buffer = b''
     buffer_size = 0
     bytes_left = num_bytes
     # Iterate until we received all data.
@@ -51,7 +51,7 @@ def recv_data(connection):
     # Arguments
         connection: socket. Opened socket.
     """
-    data = ''
+    data = b''
     # Fetch the serialized data length.
     length = int(recvall(connection, 20).decode())
     # Fetch the serialized data.
