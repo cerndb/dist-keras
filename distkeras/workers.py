@@ -156,7 +156,6 @@ class SequentialWorker(Worker):
         """
         while True:
             X, Y = self.get_next_minibatch()
-            self.model.train_on_batch(X, Y)
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
 
@@ -325,7 +324,6 @@ class DOWNPOURWorker(NetworkWorker):
                 self.pull()
                 self.model.set_weights(self.center_variable)
                 W1 = self.center_variable
-            self.model.train_on_batch(X, Y)
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
             self.iteration += 1
@@ -362,7 +360,6 @@ class AEASGDWorker(NetworkWorker):
                 W = W - E
                 self.model.set_weights(W)
                 self.commit(E)
-            self.model.train_on_batch(X, Y)
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
             self.iteration += 1
@@ -407,7 +404,6 @@ class EAMSGDWorker(NetworkWorker):
             W = np.asarray(self.model.get_weights())
             W += r_t
             self.model.set_weights(W)
-            self.model.train_on_batch(X, Y)
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
             gradient = np.asarray(self.model.get_weights()) - W
@@ -456,7 +452,6 @@ class DynSGDWorker(NetworkWorker):
         W1 = np.asarray(self.model.get_weights())
         while True:
             X, Y = self.get_next_minibatch()
-            self.model.train_on_batch(X, Y)
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
             if self.iteration % self.communication_window == 0:
