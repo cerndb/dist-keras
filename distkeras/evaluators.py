@@ -72,10 +72,10 @@ class MseEvaluator(Evaluator):
         mse = udf(mse_func, DoubleType())
         
         # apply to each predicted row
-        df = df.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column])) 
+        dataframe = dataframe.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column])) 
         
         # average over all results.
-        mse_score = df.groupBy().avg(self.score_col).collect()[0][0]
+        mse_score = dataframe.groupBy().avg(self.score_col).collect()[0][0]
 
         #cast to float and return
         return float(mse_score)
