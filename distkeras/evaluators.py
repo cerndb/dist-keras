@@ -74,8 +74,8 @@ class MseEvaluator(Evaluator):
         # apply to each predicted row
         dataframe = dataframe.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column])) 
         
-        # average over all results.
-        mse_score = dataframe.groupBy().avg(self.score_col).collect()[0][0]
+        # average over all score results.
+        mse_score = dataframe.select(self.score_col).groupBy().avg(self.score_col).collect()[0][0]
 
         #cast to float and return
         return float(mse_score)
