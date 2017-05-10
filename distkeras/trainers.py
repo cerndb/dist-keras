@@ -124,7 +124,7 @@ class SingleTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -195,7 +195,7 @@ class AveragingTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -284,7 +284,7 @@ class EnsembleTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         batch_size: int. Mini-batch size.
         num_ensembles: int. Number of ensembles to train.
@@ -351,7 +351,7 @@ class DistributedTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -537,7 +537,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -631,7 +631,7 @@ class AEASGD(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -679,7 +679,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -719,7 +719,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
-        features_col: string. Name of the features column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -768,7 +768,7 @@ class ADAG(AsynchronousDistributedTrainer):
                           See: https://keras.io/optimizers/
         loss: string. String representing the loss function.
               See: https://keras.io/objectives/
-        features_col: string. Name of the label column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -814,7 +814,7 @@ class DynSGD(AsynchronousDistributedTrainer):
                           See: https://keras.io/optimizers/
         loss: string. String representing the loss function.
               See: https://keras.io/objectives/
-        features_col: string. Name of the label column.
+        features_col: string or list of strings. Name(s) of the features column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.

@@ -47,10 +47,11 @@ class Worker(object):
 
     def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
                  batch_size=32, learning_rate=1.0):
+        assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
-        self.features_column = features_col
+        self.features_column = [features_col] if isinstance(features_col, str) else features_col
         self.label_column = label_col
         self.batch_size = batch_size
         self.max_mini_batches = 100
@@ -59,6 +60,7 @@ class Worker(object):
         self.is_prefetching = True
         self.worker_id = -1
         self.learning_rate = learning_rate
+        self.num_inputs = len(self.features_column)
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum number of mini-batches that can be prefetched."""
@@ -109,8 +111,11 @@ class Worker(object):
             while True:
                 if self.mini_batches.qsize() < self.max_mini_batches:
                     batch = [next(self.iterator) for _ in range(self.batch_size)]
-                    feature_iterator, label_iterator = tee(batch, 2)
-                    X = np.asarray([x[self.features_column] for x in feature_iterator])
+                    iterator_copies = tee(batch, self.num_inputs + 1)
+                    feature_iterators = iterator_copies[:-1]
+                    label_iterator = iterator_copies[-1]
+                    X = [np.asarray([x[self.features_column] for x in iterator]) 
+                        for iterator in feature_iterators]
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
         except Exception as e:
