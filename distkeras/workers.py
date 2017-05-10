@@ -24,7 +24,14 @@ import numpy as np
 
 import threading
 
-import queue
+import sys
+
+# "queue" module in python 3 is named "Queue" in python 2
+use_python3 = sys.version_info[0] == 3
+if use_python3:
+    import queue
+else:
+    import Queue as queue
 
 import random
 
