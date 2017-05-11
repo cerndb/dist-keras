@@ -68,10 +68,7 @@ class MseEvaluator(Evaluator):
 
     def evaluate(self, dataframe):
         # spark mse udf function 
-        def mse_func(x,y):
-            return float((DenseVector(x-y).values**2).mean())
-        
-        mse = udf(mse_func, DoubleType())        
+        mse = udf(lambda x,y: float((DenseVector(x-y).values**2).mean()), DoubleType())        
         # apply to each predicted row
         dataframe = dataframe.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column]))         
         # average over all score results.
