@@ -50,6 +50,7 @@ class AccuracyEvaluator(Evaluator):
 
         return float(validated_instances) / float(num_instances)
 
+    
 class MseEvaluator(Evaluator):
     """Computes the MSE accuracy of the prediction based on the label.
        It adds a new column on the dataframe, default: mse_score
@@ -69,11 +70,10 @@ class MseEvaluator(Evaluator):
         # spark mse udf function 
         def mse_func(x,y):
             return float((DenseVector(x-y).values**2).mean())
-        mse = udf(mse_func, DoubleType())
         
+        mse = udf(mse_func, DoubleType())        
         # apply to each predicted row
-        dataframe = dataframe.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column])) 
-        
+        dataframe = dataframe.withColumn(self.score_col, mse(dataframe[self.label_column],dataframe[self.prediction_column]))         
         # average over all score results.
         mse_score = dataframe.select(self.score_col).groupBy().avg(self.score_col).collect()[0][0]
 
