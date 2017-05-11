@@ -47,12 +47,13 @@ class Worker(object):
     This class provides basic functionality and properties all workers share.
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, learning_rate=1.0):
         assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
+        self.metrics= metrics
         self.features_column = [features_col] if isinstance(features_col, str) else features_col
         self.label_column = label_col
         self.batch_size = batch_size
@@ -95,7 +96,7 @@ class Worker(object):
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
         # Compile the model with the specified loss and optimizer.
-        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
+        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
 
     def get_next_minibatch(self):
         """Returns the next mini-batch."""
@@ -156,10 +157,10 @@ class SequentialWorker(Worker):
     Will train a model on a single worker node.
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
-                 batch_size=32):
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], 
+                 features_col="features", label_col="label", batch_size=32):
         # Initialize the parent class.
-        super(SequentialWorker, self).__init__(model, optimizer, loss, features_col,
+        super(SequentialWorker, self).__init__(model, optimizer, loss, metrics, features_col,
                                                label_col, batch_size)
 
     def optimize(self):
@@ -177,9 +178,9 @@ class SequentialWorker(Worker):
 class NetworkWorker(Worker):
     """Abstract class of a worker who shares the variables using the network."""
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, learning_rate=1.0):
-        super(NetworkWorker, self).__init__(model, optimizer, loss, features_col,
+        super(NetworkWorker, self).__init__(model, optimizer, loss, metrics, features_col,
                                             label_col, batch_size, learning_rate)
         self.master_host = master_host
         self.master_port = master_port
@@ -274,10 +275,10 @@ class ADAGWorker(NetworkWorker):
     Introduced by Hermans et al.
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
         # Initialize the parent object.
-        super(ADAGWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(ADAGWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                          batch_size, master_host, master_port)
         # Initialize ADAG parameters.
         self.communication_window = communication_window
@@ -319,10 +320,10 @@ class DOWNPOURWorker(NetworkWorker):
     http://static.googleusercontent.com/media/research.google.com/en//archive/large_deep_networks_nips2012.pdf
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=3):
         # Initialize the parent object.
-        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                              batch_size, master_host, master_port)
         self.communication_window = communication_window
         self.iteration = 1
@@ -351,11 +352,11 @@ class AEASGDWorker(NetworkWorker):
     https://arxiv.org/pdf/1412.6651.pdf
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=['accuracy'], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
                  learning_rate=0.01, communication_window=32):
         # Initialize the parent object.
-        super(AEASGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(AEASGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                            batch_size, master_host, master_port)
         # Initialize AEASGD specific variables.
         self.rho = rho
@@ -387,11 +388,11 @@ class EAMSGDWorker(NetworkWorker):
     https://arxiv.org/pdf/1412.6651.pdf
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=['accuracy'], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
                  learning_rate=0.01, momentum=0.9, communication_window=32):
         # Initialize the parent object.
-        super(EAMSGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(EAMSGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                            batch_size, master_host, master_port)
         # Initialize EAMSGD specific variables.
         self.rho = rho
@@ -431,10 +432,10 @@ class EAMSGDWorker(NetworkWorker):
 class DynSGDWorker(NetworkWorker):
     """Implements the training procedure for DynSGD."""
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
         # Initialize the parent object.
-        super(DynSGDWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(DynSGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                            batch_size, master_host, master_port)
         # Initialize DynSGD parameters.
         self.communication_window = communication_window
@@ -485,11 +486,11 @@ class ExperimentalWorker(NetworkWorker):
     Introduced by Hermans et al.
     """
 
-    def __init__(self, model, optimizer, loss, features_col="features", label_col="label",
+    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
                  num_workers=2, learning_rate=1.0):
         # Initialize the parent object.
-        super(ExperimentalWorker, self).__init__(model, optimizer, loss, features_col, label_col,
+        super(ExperimentalWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
                                                  batch_size, master_host, master_port, learning_rate)
         # Initialize ADAG parameters.
         self.communication_window = communication_window

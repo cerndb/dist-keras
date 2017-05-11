@@ -71,7 +71,7 @@ If you want to run the examples using Apache Spark 2.0.0 and higher. You will ne
 This optimizer follows the traditional scheme of training a model, i.e., it uses sequential gradient updates to optimize the parameters. It does this by executing the training procedure on a single Spark executor.
 
 ```python
-SingleTrainer(model, features_col, label_col, batch_size, optimizer, loss)
+SingleTrainer(model, features_col, label_col, batch_size, optimizer, loss, metrics)
 ```
 
 ### ADAG (Currently Recommended)
@@ -79,7 +79,7 @@ SingleTrainer(model, features_col, label_col, batch_size, optimizer, loss)
 DOWNPOUR variant which is able to achieve significantly better statistical performance while being less sensitive to hyperparameters. This optimizer was developed using insights gained while developing this framework. More research regarding parameter staleness is still being conducted to further improve this optimizer.
 
 ```python
-ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+ADAG(keras_model, worker_optimizer, loss, metrics, num_workers=2, batch_size=32,
      features_col="features", label_col="label", num_epoch=1, communication_window=12)
 ```
 
@@ -88,7 +88,7 @@ ADAG(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
 Dynamic SGD, dynamically maintains a learning rate for every worker by incorperating parameter staleness. This optimization scheme is introduced in "Heterogeneity-aware Distributed Parameter Servers" at the SIGMOD 2017 conference [[5]](http://net.pku.edu.cn/~cuibin/Papers/2017SIGMOD.pdf).
 
 ```python
-DynSGD(keras_model, worker_optimizer, loss, num_workers=2, batch_size=32,
+DynSGD(keras_model, worker_optimizer, loss, metrics, num_workers=2, batch_size=32,
        features_col="features", label_col="label", num_epoch=1, communication_window=10)
 ```
 
@@ -100,7 +100,7 @@ In this section we show the asynchronous version of EASGD. Instead of waiting on
 
 
 ```python
-AEASGD(keras_model, worker_optimizer, loss, num_workers, batch_size, features_col,
+AEASGD(keras_model, worker_optimizer, loss, metrics, num_workers, batch_size, features_col,
        label_col, num_epoch, communication_window, rho, learning_rate)
 ```
 
@@ -109,7 +109,7 @@ AEASGD(keras_model, worker_optimizer, loss, num_workers, batch_size, features_co
 Asynchronous EAMSGD is a variant of asynchronous EASGD. It is based on the Nesterov's momentum scheme, where the update of the local worker is modified to incorepare a momentum term [[2]](https://arxiv.org/pdf/1412.6651.pdf) .
 
 ```python
-EAMSGD(keras_model, worker_optimizer, loss, num_workers, batch_size,
+EAMSGD(keras_model, worker_optimizer, loss, metrics, num_workers, batch_size,
        features_col, label_col, num_epoch, communication_window, rho,
        learning_rate, momentum)
 ```
@@ -119,7 +119,7 @@ EAMSGD(keras_model, worker_optimizer, loss, num_workers, batch_size,
 An asynchronous stochastic gradient descent procedure introduced by Dean et al., supporting a large number of model replicas and leverages adaptive learning rates. This implementation is based on the pseudocode provided by [[1]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf) .
 
 ```python
-DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
+DOWNPOUR(keras_model, worker_optimizer, loss, metrics, num_workers, batch_size,
          features_col, label_col, num_epoch, learning_rate, communication_window)
 ```
 
@@ -128,7 +128,7 @@ DOWNPOUR(keras_model, worker_optimizer, loss, num_workers, batch_size,
 In ensemble training, we train `n` models in parallel on the same dataset. All models are trained in parallel, but the training of a single model is done in a sequential manner using Keras optimizers. After the training process, one can combine and, for example, average the output of the models.
 
 ```python
-EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
+EnsembleTrainer(keras_model, worker_optimizer, loss, metrics, features_col,
                 label_col, batch_size, num_ensembles)
 ```
 
@@ -137,7 +137,7 @@ EnsembleTrainer(keras_model, worker_optimizer, loss, features_col,
 Model averaging is a data parallel technique which will average the trainable parameters of model replicas after every epoch.
 
 ```python
-AveragingTrainer(keras_model, worker_optimizer, loss, features_col,
+AveragingTrainer(keras_model, worker_optimizer, loss, metrics, features_col,
                  label_col, num_epoch, batch_size, num_workers)
 ```
 
@@ -149,7 +149,7 @@ In order to submit a job to a remote cluster, you simply run the following code:
 
 ```python
 # Define the distributed optimization procedure, and its parameters.
-trainer = ADAG(keras_model=mlp, worker_optimizer=optimizer_mlp, loss=loss_mlp, num_workers=20,
+trainer = ADAG(keras_model=mlp, worker_optimizer=optimizer_mlp, loss=loss_mlp, metrics = ["accuracy"], num_workers=20,
                batch_size=32, communication_window=15, num_epoch=1,
                features_col="features_normalized_dense", label_col="label_encoded")
 
