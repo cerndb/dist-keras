@@ -369,6 +369,7 @@ class ExperimentalParameterServer(SocketParameterServer):
         self.center_variable = np.asarray(self.model.get_weights())
         self.inverse_learning_rate = 1.0 / learning_rate
         self.staleness = {}
+        self.worker_staleness = {}
         self.worker_commit = {}
         self.worker_scale_magnitude = {}
 
@@ -381,6 +382,9 @@ class ExperimentalParameterServer(SocketParameterServer):
             last_update = self.worker_commit[worker_id]
         du = self.num_updates - last_update + 1
         self.worker_commit[worker_id] = self.num_updates
+        if worker_id not in self.worker_staleness:
+            self.worker_staleness[worker_id] = []
+        self.worker_staleness[worker_id].append(du)
         if du in self.staleness:
             self.staleness[du] += 1
         else:
