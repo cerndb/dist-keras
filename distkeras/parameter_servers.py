@@ -370,6 +370,7 @@ class ExperimentalParameterServer(SocketParameterServer):
         self.inverse_learning_rate = 1.0 / learning_rate
         self.staleness = {}
         self.worker_commit = {}
+        self.worker_scale_magnitude = {}
 
     def add_staleness(self, worker_id):
         # Fetch the last update.
@@ -385,6 +386,12 @@ class ExperimentalParameterServer(SocketParameterServer):
         else:
             self.staleness[du] = 1
 
+    def add_magnitude(self, worker_id, d):
+        if worker_id not in self.worker_scale_magnitude:
+            self.worker_scale_magnitude[worker_id] = []
+        magnitude = np.linalg.norm(d)
+        self.worker_scale_magnitude[worker_id].append(magnitude)
+
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
         data = recv_data(conn)
@@ -396,6 +403,7 @@ class ExperimentalParameterServer(SocketParameterServer):
             self.add_staleness(worker_id)
             diff_cv = np.subtract(self.center_variable, stale_cv)
             d = 1 / (self.inverse_learning_rate * np.power(diff_cv, 2) + 1)
+            self.add_magnitude(worker_id, d)
             r = np.multiply(d, r)
             # Update the center variable.
             self.center_variable = self.center_variable + r
