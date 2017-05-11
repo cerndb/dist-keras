@@ -386,18 +386,18 @@ class ExperimentalParameterServer(SocketParameterServer):
         else:
             self.staleness[du] = 1
             
-    def norm(self, weights):
+    def average(self, weights):
         num_matrices = len(weights)
         n = np.zeros(num_matrices)
         for i in range(0, num_matrices):
-            n[i] = np.linalg.norm(weights[i], ord=2)
+            n[i] = np.average(weights[i])
         
         return n
 
     def add_magnitude(self, worker_id, d):
         if worker_id not in self.worker_scale_magnitude:
             self.worker_scale_magnitude[worker_id] = []
-        magnitude = self.norm(d)
+        magnitude = self.average(d)
         self.worker_scale_magnitude[worker_id].append(magnitude)
 
     def handle_commit(self, conn, addr):
