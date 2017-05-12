@@ -368,41 +368,6 @@ class ExperimentalParameterServer(SocketParameterServer):
         super(ExperimentalParameterServer, self).__init__(model, master_port)
         self.center_variable = np.asarray(self.model.get_weights())
         self.inverse_learning_rate = 1.0 / learning_rate
-        self.staleness = {}
-        self.worker_staleness = {}
-        self.worker_commit = {}
-        self.worker_scale_magnitude = {}
-
-    def add_staleness(self, worker_id):
-        # Fetch the last update.
-        if worker_id not in self.worker_commit:
-            self.worker_commit[worker_id] = 0
-            last_update = 0
-        else:
-            last_update = self.worker_commit[worker_id]
-        du = self.num_updates - last_update + 1
-        self.worker_commit[worker_id] = self.num_updates
-        if worker_id not in self.worker_staleness:
-            self.worker_staleness[worker_id] = []
-        self.worker_staleness[worker_id].append(du)
-        if du in self.staleness:
-            self.staleness[du] += 1
-        else:
-            self.staleness[du] = 1
-            
-    def average(self, weights):
-        num_matrices = len(weights)
-        n = np.zeros(num_matrices)
-        for i in range(0, num_matrices):
-            n[i] = np.average(weights[i])
-        
-        return n
-
-    def add_magnitude(self, worker_id, d):
-        if worker_id not in self.worker_scale_magnitude:
-            self.worker_scale_magnitude[worker_id] = []
-        magnitude = self.average(d)
-        self.worker_scale_magnitude[worker_id].append(magnitude)
 
     def handle_commit(self, conn, addr):
         # Receive the parameters from the remote node.
@@ -412,10 +377,8 @@ class ExperimentalParameterServer(SocketParameterServer):
         worker_id = data['worker_id']
         stale_cv = data['stale_center_variable']
         with self.mutex:
-            self.add_staleness(worker_id)
             diff_cv = np.subtract(self.center_variable, stale_cv)
             d = 1 / (self.inverse_learning_rate * np.power(diff_cv, 2) + 1)
-            self.add_magnitude(worker_id, d)
             r = np.multiply(d, r)
             # Update the center variable.
             self.center_variable = self.center_variable + r
