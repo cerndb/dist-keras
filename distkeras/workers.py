@@ -37,8 +37,6 @@ import random
 
 import socket
 
-import time
-
 ## END Imports. ################################################################
 
 class Worker(object):
@@ -238,7 +236,6 @@ class NetworkWorker(Worker):
         d['history'] = h
         d['worker_id'] = self.worker_id
         d['iteration'] = self.iteration
-        d['timestamp'] = time.time()
         self.training_history.append(d)
 
     def optimize(self):
