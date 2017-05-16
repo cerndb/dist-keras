@@ -399,7 +399,7 @@ class DistributedTrainer(Trainer):
 
     def model_service(self):
         """Runs the model service thread."""
-        self.allocate_model_sevice_socket()
+        self.allocate_model_service_socket()
         while self.model_service_running:
             try:
                 # Accept incoming connections.
