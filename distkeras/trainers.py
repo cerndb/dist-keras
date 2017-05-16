@@ -9,6 +9,8 @@ import threading
 
 import time
 
+import socket
+
 from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import DynSGDParameterServer
@@ -23,6 +25,7 @@ from distkeras.utils import set_keras_base_directory
 from distkeras.utils import unpickle_object
 
 from distkeras.networking import determine_host_address
+from distkeras.networking import send_data
 
 from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
@@ -371,6 +374,51 @@ class DistributedTrainer(Trainer):
         self.master_host = determine_host_address()
         self.master_port = 5000
         self.learning_rate = 1.0
+        self.model_service_thread = None
+        self.model_service_port = 5001
+        self.model_service_socket = None
+        self.model_service_running = True
+
+    def model_service_request(self, conn, addr):
+        """Handles the model request for a particular connection."""
+        # Send the serialized model to the requestor.
+        send_data(conn, self.master_model)
+        # Close the connection.
+        conn.close()
+
+    def allocate_model_service_socket(self):
+        """Allocates a socket for the model service."""
+        # Prepare a socket.
+        file_descriptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Disable Nagle's algorithm.
+        file_descriptor.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # Bind to the specified port.
+        file_descriptor.bind(('0.0.0.0', self.model_service_port))
+        file_descriptor.listen(5)
+        self.model_service_socket = file_descriptor
+
+    def model_service(self):
+        """Runs the model service thread."""
+        self.allocate_model_sevice_socket()
+        while self.model_service_running:
+            try:
+                # Accept incoming connections.
+                conn, addr = self.model_service_socket.accept()
+                # Handle the connection.
+                thread = threading.Thread(target=self.model_service_request, args=(conn, addr))
+                thread.start()
+            except Exception as e:
+                print(e)
+        self.model_service_socket.close()
+        self.model_service_socket = None
+
+    def set_model_service_port(self, port):
+        """Sets the port from which the serialized base model can be fetched."""
+        self.model_service_port = port
+
+    def get_model_service_port(self):
+        """Returns the port from which the serialized base model can be fetched."""
+        return self.model_service_port
 
     def set_minibatch_size(self, size):
         """Sets the size of the mini-batch."""
@@ -460,6 +508,9 @@ class DistributedTrainer(Trainer):
         self.parameter_server.stop()
         self.parameter_server_thread.join()
         self.parameter_server_thread = None
+        self.model_service_running = False
+        self.model_service_thread.join()
+        self.model_service_thread = None
 
     def start_service(self):
         """Starts the parameter server service."""
@@ -470,6 +521,9 @@ class DistributedTrainer(Trainer):
         # Allocate a new parameter service thread.
         self.parameter_server_thread = threading.Thread(target=self.service)
         self.parameter_server_thread.start()
+        # Allocate a new model service thread.
+        self.model_service_thread = threading.Thread(target=self.model_service)
+        self.model_service_thread.start()
 
     def train(self, dataframe, shuffle=False):
         """Training procedure of a distributed optimization process.
@@ -659,7 +713,7 @@ class AEASGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
-        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = AEASGDWorker(self.worker_optimizer, self.loss,
                               self.features_column, self.label_column, self.batch_size,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.communication_window)
@@ -700,7 +754,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
-        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = DOWNPOURWorker(self.worker_optimizer, self.loss,
                                 self.features_column, self.label_column, self.batch_size,
                                 self.master_host, self.master_port, self.communication_window)
 
@@ -749,7 +803,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
-        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = EAMSGDWorker(self.worker_optimizer, self.loss,
                               self.features_column, self.label_column, self.batch_size,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
@@ -788,7 +842,7 @@ class ADAG(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate an Adag worker."""
-        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = ADAGWorker(self.worker_optimizer, self.loss,
                             self.features_column, self.label_column, self.batch_size,
                             self.master_host, self.master_port, self.communication_window)
 
@@ -834,7 +888,7 @@ class DynSGD(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
-        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = DynSGDWorker(self.worker_optimizer, self.loss,
                               self.features_column, self.label_column, self.batch_size,
                               self.master_host, self.master_port, self.communication_window)
 
@@ -862,7 +916,7 @@ class Experimental(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate experimental worker."""
-        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
+        worker = ExperimentalWorker(self.worker_optimizer, self.loss,
                                     self.features_column, self.label_column, self.batch_size,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
