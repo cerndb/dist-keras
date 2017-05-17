@@ -43,7 +43,8 @@ class ModelPredictor(Predictor):
 
     def __init__(self, keras_model, features_col="features", output_col="prediction"):
         super(ModelPredictor, self).__init__(keras_model)
-        self.features_column = features_col
+        assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
+        self.features_column = [features_col] if isinstance(features_col, str) else features_col
         self.output_column = output_col
 
     def _predict(self, iterator):
@@ -54,7 +55,7 @@ class ModelPredictor(Predictor):
         """
         model = deserialize_keras_model(self.model)
         for row in iterator:
-            features = np.asarray([row[self.features_column]])
+            features = [np.asarray([row[c]]) for c in self.features_column]
             prediction = model.predict(features)
             dense_prediction = DenseVector(prediction[0])
             new_row = new_dataframe_row(row, self.output_column, dense_prediction)
