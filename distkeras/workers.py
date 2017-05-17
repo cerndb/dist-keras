@@ -117,8 +117,8 @@ class Worker(object):
                     iterator_copies = tee(batch, self.num_inputs + 1)
                     feature_iterators = iterator_copies[:-1]
                     label_iterator = iterator_copies[-1]
-                    X = [np.asarray([x[self.features_column] for x in iterator]) 
-                        for iterator in feature_iterators]
+                    X = [np.asarray([x[self.features_column[i]] for x in iterator]) 
+                        for i, iterator in enumerate(feature_iterators)]
                     Y = np.asarray([x[self.label_column] for x in label_iterator])
                     self.mini_batches.put([X, Y])
         except Exception as e:
