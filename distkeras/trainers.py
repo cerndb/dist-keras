@@ -589,6 +589,11 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                      the network. It is recommended to shuffle the dataset before
                      training and store it.
         """
+        # Check if a parameter server has been allocated.
+        if self.parameter_server is not None:
+            # Cleanup the old parameter server.
+            self.parameter_server.stop()
+            self.parameter_server = None
         # Allocate the parameter server.
         self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
