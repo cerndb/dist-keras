@@ -108,7 +108,7 @@ class Worker(object):
 
     def prefetching(self):
         try:
-            while True:
+            while self.is_prefetching:
                 if self.mini_batches.qsize() < self.max_mini_batches:
                     batch = [next(self.iterator) for _ in range(self.batch_size)]
                     feature_iterator, label_iterator = tee(batch, 2)
@@ -137,8 +137,10 @@ class Worker(object):
         # Start the optimization procedure.
         try:
             self.optimize()
-        except:
-            pass
+        except Exception as e:
+            # Stop the prefetching process.
+            self.is_prefetching = False
+            print(e)
         # Wait for the prefetching thread to stop.
         self.prefetching_thread.join()
 
@@ -256,6 +258,8 @@ class NetworkWorker(Worker):
         try:
             self.optimize()
         except Exception as e:
+            # Stop the prefetching process.
+            self.is_prefetching = False
             print(e)
         self.socket.close()
         self.prefetching_thread.join()
