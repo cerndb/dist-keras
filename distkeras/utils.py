@@ -194,17 +194,6 @@ def get_tmp_directory():
     return '/tmp/' + get_os_username() + '/dist-keras/'
 
 
-def run_command(command):
-    """Executes the specified shell command, and returns the output line by line.
-    From: https://stackoverflow.com/questions/4760215/running-shell-command-from-python-and-capturing-the-output
-    """
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
-
-    return iter(p.stdout.readline, b'')
-
-
 def send_file(address, local_file_path, remote_file_path):
     """Copies the specified local file to the remote file path."""
     remote_path, remote_file_name = os.path.split(remote_file_path)
@@ -219,12 +208,25 @@ def delete_remote_file(address, path):
     os.system("ssh -oStrictHostKeyChecking=no " + address + " 'rm -r " + path + "'")
 
 
+def run_command(command):
+    """Executes the specified shell command, and returns the output line by line.
+    From: https://stackoverflow.com/questions/4760215/running-shell-command-from-python-and-capturing-the-output
+    """
+    output = subprocess.check_output(command).decode("utf-8")
+
+    return output
+
 def fetch_yarn_nodes():
     """Retrieves the active YARN nodes."""
     hosts = []
-    command = "yarn node -list | awk '{print $1}' | awk 'NR > 2' | uniq | sort"
-    for line in run_command(command):
-        hosts.append(line)
-        print(line)
+    command = "yarn node -list".split(" ")
+    output = run_command(command)
+    output = output.split("\n")
+    num_lines = len(output)
+    for i in range(2, num_lines):
+        line = output[i]
+        host = line[:line.find(' ')][:line.find(':')]
+        if host is not '':
+            hosts.append(host)
 
     return hosts
