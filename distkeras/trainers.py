@@ -66,7 +66,7 @@ class Trainer(object):
         self.training_time_end = 0
         self.training_time = 0
         self.max_mini_batches_prefetch = 100
-        self.preplace_model = False
+        self.preplaced_model = False
         self.preplaced_model_hosts = None
         self.preplaced_model_path = None
 
@@ -74,20 +74,20 @@ class Trainer(object):
         """Sets the maximum amount of mini-batches that can be prefetched by a worker."""
         self.max_mini_batches_prefetch = max_mini_batches
 
-    def preplace_model(self, hosts, destination_path, local_file=get_tmp_directory() + 'model', parallel_workers=5):
+    def preplace_model(self, hosts, destination_path, local_path=get_tmp_directory() + 'model', parallel_workers=5):
         """Preplaces the serialized model at the specified destination using
         the specified hosts.
         """
         # Indicate that we will be preplacing the serialized Keras model.
-        self.preplace_model = True
+        self.preplaced_model = True
         # Write the serialized Keras model to a local file.
         serialized = pickle_object(self.master_model)
-        with open(local_file, "w") as file:
+        with open(local_path, "w") as file:
             file.write(serialized)
         # Send the serialized file to the remote hosts in parallel.
         pool = multiprocessing.Pool(parallel_workers)
         for host in hosts:
-            pool.apply_async(send_file, (host, local_file, destination_path, ))
+            pool.apply_async(send_file, (host, local_path, destination_path, ))
         pool.close()
         pool.join()
         # Set the used hosts, and the destination path.
@@ -99,7 +99,7 @@ class Trainer(object):
     def delete_preplaced_models(self, parallel_workers=5):
         """Removes the preplaced models from the remote hosts."""
         # Check if a model has been preplaced.
-        if self.preplace_model:
+        if self.preplaced_model:
             # Delete the models from the hosts in a parallel manner.
             pool = multiprocessing.Pool(parallel_workers)
             for host in self.preplaced_model_hosts:
