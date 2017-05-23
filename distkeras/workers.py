@@ -15,6 +15,7 @@ from distkeras.utils import serialize_keras_model
 from distkeras.utils import set_keras_base_directory
 from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
+from distkeras.utils import unpickle_object
 
 from itertools import tee
 
@@ -61,6 +62,11 @@ class Worker(object):
         self.is_prefetching = True
         self.worker_id = -1
         self.learning_rate = learning_rate
+        self.preplaced_model_path = None
+
+    def set_preplaced_model_path(self, path):
+        """Sets the path of the preplaced model."""
+        self.preplaced_model_path = path
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum number of mini-batches that can be prefetched."""
@@ -70,9 +76,26 @@ class Worker(object):
         """Sets the learning rate of the worker."""
         self.learning_rate = learning_rate
 
+    def load_preplaced_model(self):
+        """Loads the preplaced model from the specified path."""
+        serialized = b''
+        # Read the binary file.
+        with open(self.preplaced_model_path, 'rb') as file:
+            serialized = file.read()
+        # Deserialize the file.
+        serialized = unpickle_object(serialized)
+        self.model = serialized
+
     def get_learning_rate(self):
         """Returns the learning rate of the worker."""
         return self.learning_rate
+
+    def fetch_preplaced_model(self):
+        """Checks if a preplaced model has been deployed, if so
+        load the model from local disk.
+        """
+        if self.model is not None and self.preplaced_model_path is not None:
+            self.load_preplaced_model()
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
@@ -131,6 +154,7 @@ class Worker(object):
             iterator: iterator. Data iterator.
         """
         # Prepare the optimization procedure.
+        self.fetch_preplaced_model()
         self.start_prefetching_thread(iterator)
         self.set_worker_id(worker_id)
         self.prepare_model()
@@ -268,7 +292,7 @@ class NetworkWorker(Worker):
 
     def train(self, worker_id, iterator):
         """Training procedure of a networked worker with a parameter server."""
-        self.fetch_model()
+        self.fetch_preplaced_model()
         self.start_prefetching_thread(iterator)
         self.set_worker_id(worker_id)
         self.prepare_model()

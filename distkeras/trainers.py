@@ -587,8 +587,14 @@ class DistributedTrainer(Trainer):
         self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
         self.start_service()
+        # Check if the model has been preplaced.
+        if self.preplaced_model:
+            # Reset the master model so it doesn't get serialized.
+            self.master_model = None
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the preallocated model path in the worker.
+        worker.set_preplaced_model_path(self.preplaced_model_path)
         # Set the maximum number of mini-batches.
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
@@ -695,8 +701,14 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         self.parameter_server = self.allocate_parameter_server()
         # Start the communication service.
         self.start_service()
+        # Check if the model has been preplaced.
+        if self.preplaced_model:
+            # Reset the master model so it doesn't get serialized.
+            self.master_model = None
         # Allocate a worker.
         worker = self.allocate_worker()
+        # Set the preallocated model path in the worker.
+        worker.set_preplaced_model_path(self.preplaced_model_path)
         # Set the maximum number of mini-batches.
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
@@ -807,7 +819,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
-        worker = DOWNPOURWorker(self.worker_optimizer, self.loss,
+        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss,
                                 self.features_column, self.label_column, self.batch_size,
                                 self.master_host, self.master_port, self.communication_window)
 
@@ -856,7 +868,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
-        worker = EAMSGDWorker(self.worker_optimizer, self.loss,
+        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss,
                               self.features_column, self.label_column, self.batch_size,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
@@ -895,7 +907,7 @@ class ADAG(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate an Adag worker."""
-        worker = ADAGWorker(self.worker_optimizer, self.loss,
+        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss,
                             self.features_column, self.label_column, self.batch_size,
                             self.master_host, self.master_port, self.communication_window)
 
@@ -941,7 +953,7 @@ class DynSGD(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
-        worker = DynSGDWorker(self.worker_optimizer, self.loss,
+        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss,
                               self.features_column, self.label_column, self.batch_size,
                               self.master_host, self.master_port, self.communication_window)
 
@@ -969,7 +981,7 @@ class Experimental(AsynchronousDistributedTrainer):
 
     def allocate_worker(self):
         """Allocate experimental worker."""
-        worker = ExperimentalWorker(self.worker_optimizer, self.loss,
+        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss,
                                     self.features_column, self.label_column, self.batch_size,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
