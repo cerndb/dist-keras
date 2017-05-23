@@ -82,7 +82,7 @@ class Trainer(object):
         self.preplaced_model = True
         # Write the serialized Keras model to a local file.
         serialized = pickle_object(self.master_model)
-        with open(local_path, "w") as file:
+        with open(local_path, "wb") as file:
             file.write(serialized)
         # Send the serialized file to the remote hosts in parallel.
         pool = multiprocessing.Pool(parallel_workers)
