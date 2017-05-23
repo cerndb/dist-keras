@@ -6,19 +6,21 @@ from keras import backend as K
 
 from keras.models import model_from_json
 
-from keras import backend as K
-
 from pyspark.mllib.linalg import DenseVector
+
 from pyspark.sql import Row
+
 from pyspark.sql.functions import rand
 
-import pickle
+import subprocess
 
 import json
 
 import numpy as np
 
 import os
+
+import pickle
 
 import pwd
 
@@ -184,3 +186,22 @@ def precache(dataset, num_workers):
     dataset.count()
 
     return dataset
+
+
+def get_tmp_directory():
+    """Returns the path of our /tmp directory."""
+
+    return '/tmp/' + get_os_username() + '/dist-keras/'
+
+
+def send_file(address, local_file_path, remote_file_path):
+     """Copies the specified local file to the remote file path."""
+    # Create the remote directory on the host.
+    subprocess.call("ssh", address, "'mkdir -rp " + remote_file_path + "'")
+    # Copy the file to the remote host.
+    subprocess.call("scp", local_file_path, address + ':' + remote_file_path)
+
+
+def delete_remote_file(address, path):
+    """Removes the specified path at the remote file system."""
+    subprocess.call("ssh", address, "'rm -r " + path + "'")

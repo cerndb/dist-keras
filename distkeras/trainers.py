@@ -3,23 +3,18 @@ Keras model in a distributed manner (with exception of the SingleTrainer)."""
 
 ## BEGIN Imports. ##############################################################
 
-import numpy as np
-
-import threading
-
-import time
-
-import socket
-
 from distkeras.parameter_servers import ADAGParameterServer
 from distkeras.parameter_servers import DeltaParameterServer
 from distkeras.parameter_servers import DynSGDParameterServer
 from distkeras.parameter_servers import ExperimentalParameterServer
 
+from distkeras.utils import delete_remote_file
 from distkeras.utils import deserialize_keras_model
+from distkeras.utils import get_tmp_directory
 from distkeras.utils import history_executor
 from distkeras.utils import history_executors_average
 from distkeras.utils import pickle_object
+from distkeras.utils import send_file
 from distkeras.utils import serialize_keras_model
 from distkeras.utils import set_keras_base_directory
 from distkeras.utils import unpickle_object
@@ -31,11 +26,21 @@ from distkeras.workers import ADAGWorker
 from distkeras.workers import AEASGDWorker
 from distkeras.workers import DOWNPOURWorker
 from distkeras.workers import DynSGDWorker
-from distkeras.workers import ExperimentalWorker
 from distkeras.workers import EAMSGDWorker
+from distkeras.workers import ExperimentalWorker
 from distkeras.workers import SequentialWorker
 
 from keras import backend as K
+
+import multiprocessing
+
+import numpy as np
+
+import socket
+
+import threading
+
+import time
 
 ## END Imports. ################################################################
 
@@ -61,10 +66,46 @@ class Trainer(object):
         self.training_time_end = 0
         self.training_time = 0
         self.max_mini_batches_prefetch = 100
+        self.preplace_model = False
+        self.preplaced_model_hosts = None
+        self.preplaced_model_path = None
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum amount of mini-batches that can be prefetched by a worker."""
         self.max_mini_batches_prefetch = max_mini_batches
+
+    def preplace_model(self, hosts, destination_path, local_file=get_tmp_directory() + 'model', parallel_workers=5):
+        """Preplaces the serialized model at the specified destination using
+        the specified hosts.
+        """
+        # Indicate that we will be preplacing the serialized Keras model.
+        self.preplace_model = True
+        # Write the serialized Keras model to a local file.
+        serialized = pickle_object(self.master_model)
+        with open(local_file, "w") as file:
+            file.write(serialized)
+        # Send the serialized file to the remote hosts in parallel.
+        pool = multiprocessing.Pool(parallel_workers)
+        for host in hosts:
+            pool.apply_async(send_file, (host, local_file, destination_path, ))
+        pool.close()
+        pool.join()
+        # Set the used hosts, and the destination path.
+        self.preplaced_model_path = destination_path
+        self.preplaced_model_hosts = hosts
+        # Delete the local file.
+        os.remove(local_file)
+
+    def delete_preplaced_models(self, parallel_workers=5):
+        """Removes the preplaced models from the remote hosts."""
+        # Check if a model has been preplaced.
+        if self.preplace_model:
+            # Delete the models from the hosts in a parallel manner.
+            pool = multiprocessing.Pool(parallel_workers)
+            for host in self.preplaced_model_hosts:
+                pool.apply_async(delete_remote_file, (host, self.preplaced_model_path, ))
+            pool.close()
+            pool.join()
 
     def set_model(self, model):
         """Sets the master model to be used by the trainer."""
