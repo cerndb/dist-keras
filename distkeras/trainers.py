@@ -731,13 +731,20 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = train(dataset, worker)
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
         self.stop_service()
 
         return self.parameter_server.get_model()
+
+
+def train(dataset, worker):
+    print("Start training procedure")
+    history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+
+    return history
 
 
 class AEASGD(AsynchronousDistributedTrainer):
