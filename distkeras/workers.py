@@ -95,7 +95,7 @@ class Worker(object):
         """Checks if a preplaced model has been deployed, if so
         load the model from local disk.
         """
-        if self.model is not None and self.preplaced_model_path is not None:
+        if self.model is None and self.preplaced_model_path is not None:
             print("Preloading model")
             self.load_preplaced_model()
         else:
