@@ -196,12 +196,13 @@ def get_tmp_directory():
 
 def send_file(address, local_file_path, remote_file_path):
     """Copies the specified local file to the remote file path."""
+    remote_path, remote_file_name = os.path.split(remote_file_path)
     # Create the remote directory on the host.
-    subprocess.call(["ssh", address, "'mkdir -rp " + remote_file_path + "'"])
+    os.system("ssh " + address + " 'mkdir -p " + remote_path + "'")
     # Copy the file to the remote host.
-    subprocess.call(["scp", local_file_path, address + ':' + remote_file_path])
+    os.system("scp " + local_file_path + " " + address + ":" + remote_file_path)
 
 
 def delete_remote_file(address, path):
     """Removes the specified path at the remote file system."""
-    subprocess.call(["ssh", address, "'rm -r " + path + "'"])
+    os.system("ssh " + address + " 'rm -r " + path + "'")
