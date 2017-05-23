@@ -96,7 +96,7 @@ class Trainer(object):
         self.preplaced_model_path = destination_path
         self.preplaced_model_hosts = hosts
         # Delete the local file.
-        os.remove(local_file)
+        os.remove(local_path)
 
     def delete_preplaced_models(self, parallel_workers=5):
         """Removes the preplaced models from the remote hosts."""
