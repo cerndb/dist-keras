@@ -85,7 +85,6 @@ class Worker(object):
         # Deserialize the file.
         serialized = unpickle_object(serialized)
         self.model = serialized
-        print(dir(self.model))
 
     def get_learning_rate(self):
         """Returns the learning rate of the worker."""
@@ -96,10 +95,7 @@ class Worker(object):
         load the model from local disk.
         """
         if self.model is None and self.preplaced_model_path is not None:
-            print("Preloading model")
             self.load_preplaced_model()
-        else:
-            print("Not preloading model")
 
     def set_worker_id(self, worker_id):
         """Sets the worker id.
