@@ -46,8 +46,8 @@ class Trainer(object):
               See: https://keras.io/objectives/
         worker_optimizer: string. String representing worker optimizer.
                           See https://keras.io/optimizers/
-        metrics: list of strings representing model evaluation metrics.
-                 See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
     """
 
     def __init__(self, keras_model, loss, worker_optimizer, metrics=["accuracy"]):
@@ -127,6 +127,8 @@ class SingleTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -198,6 +200,8 @@ class AveragingTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -287,6 +291,8 @@ class EnsembleTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         batch_size: int. Mini-batch size.
@@ -354,6 +360,8 @@ class DistributedTrainer(Trainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -540,6 +548,8 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -634,6 +644,8 @@ class AEASGD(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -682,6 +694,8 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -722,6 +736,8 @@ class EAMSGD(AsynchronousDistributedTrainer):
                           See https://keras.io/optimizers/
         loss: string. String representing the loss.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         label_col: string. Name of the label column.
         num_epoch: int. Number of epochs.
@@ -771,6 +787,8 @@ class ADAG(AsynchronousDistributedTrainer):
                           See: https://keras.io/optimizers/
         loss: string. String representing the loss function.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
@@ -817,6 +835,8 @@ class DynSGD(AsynchronousDistributedTrainer):
                           See: https://keras.io/optimizers/
         loss: string. String representing the loss function.
               See: https://keras.io/objectives/
+        metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
+                 See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
