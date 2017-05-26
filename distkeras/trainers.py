@@ -149,7 +149,7 @@ class SingleTrainer(Trainer):
         Only for internal use.
         """
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
 
         return worker
@@ -242,7 +242,7 @@ class AveragingTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the AveragingWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
 
         return worker
@@ -312,7 +312,7 @@ class EnsembleTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the EnsembleWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics=self.metrics)
 
         return worker
@@ -617,25 +617,20 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Assign the dataset.
-        dataset = dataframe
-        # Build the dataset with the number of epochs.
-        for i in range(1, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataset = shuffle(dataset)
+            dataframe = shuffle(dataframe)
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
-        if num_partitions > parallelism:
-            dataset = dataset.coalesce(parallelism)
+        if num_partitions >= parallelism:
+            dataframe = dataframe.coalesce(parallelism)
         else:
-            dataset = dataset.repartition(parallelism)
+            dataframe = dataframe.repartition(parallelism)
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -685,7 +680,7 @@ class AEASGD(AsynchronousDistributedTrainer):
         """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
         worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.communication_window)
 
@@ -728,7 +723,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
         worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                self.features_column, self.label_column, self.batch_size,
+                                self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                 self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -779,7 +774,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
         worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
 
@@ -820,7 +815,7 @@ class ADAG(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate an Adag worker."""
         worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                            self.features_column, self.label_column, self.batch_size,
+                            self.features_column, self.label_column, self.batch_size, self.num_epoch,
                             self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -868,7 +863,7 @@ class DynSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
         worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -896,7 +891,7 @@ class Experimental(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate experimental worker."""
         worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                    self.features_column, self.label_column, self.batch_size,
+                                    self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
 
