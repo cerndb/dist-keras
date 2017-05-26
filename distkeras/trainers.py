@@ -106,10 +106,10 @@ class Trainer(object):
         """Trains the specified model using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         raise NotImplementedError
@@ -158,18 +158,18 @@ class SingleTrainer(Trainer):
         """See distkeras.trainers.Trainer.train
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if the data needs to be shuffled.
         if shuffle:
             dataframe = shuffle(dataframe)
-        # Collect the dataset on a single worker node.
+        # Collect the dataframe on a single worker node.
         dataframe = dataframe.coalesce(1)
-        # Cache the dataset.
+        # Cache the dataframe.
         dataframe.cache()
         # Allocate a worker.
         worker = self.allocate_worker()
@@ -247,18 +247,18 @@ class AveragingTrainer(Trainer):
         number of Spark executors.
 
         # Arguments
-            dataframe: dataframe: A Spark Dataframe containing the dataset.
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe: A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Repartition the data in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled.
+        # Check if the dataframe needs to be shuffled.
         if shuffle:
             dataframe = shuffle(dataframe)
-        # Check if we need to repartition the dataset.
+        # Check if we need to repartition the dataframe.
         if num_partitions >= self.num_workers:
             dataframe = dataframe.coalesce(self.num_workers)
         else:
@@ -316,10 +316,10 @@ class EnsembleTrainer(Trainer):
         """Trains the specified number of ensemble models using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe. A Spark Dataframe containing the dataset.
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Allocate a worker.
@@ -328,10 +328,10 @@ class EnsembleTrainer(Trainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled before training.
+        # Check if the dataframe needs to be shuffled before training.
         if shuffle:
             dataframe = shuffle(dataframe)
-        # Check if we need to repartition the dataset.
+        # Check if we need to repartition the dataframe.
         if num_partitions >= self.num_workers:
             dataframe = dataframe.coalesce(self.num_workers)
         else:
@@ -481,10 +481,10 @@ class DistributedTrainer(Trainer):
         """Training procedure of a distributed optimization process.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -502,15 +502,15 @@ class DistributedTrainer(Trainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled before training.
+        # Check if the dataframe needs to be shuffled before training.
         if shuffle:
             dataframe = shuffle(dataframe)
-        # Check if we need to repartition the dataset.
+        # Check if we need to repartition the dataframe.
         if num_partitions >= self.num_workers:
             dataframe = dataframe.coalesce(self.num_workers)
         else:
             dataframe = dataframe.repartition(self.num_workers)
-        # Cache the dataset.
+        # Cache the dataframe.
         dataframe.cache()
         # Start the training procedure.
         self.record_training_start()
@@ -533,8 +533,8 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
     are performing worse compared to others. It will cause the complete learning procedure to be
     stuck on this one particular machine since every machine will be assigned a single partition.
     In order to resolve this, we added a parallelization factor. This factor indicates the ratio
-    of the number of jobs per machine (executor). For small datasets, we recommend that this factor
-    is set to 1. However, this effect really is prominent when the dataset is large. In this case
+    of the number of jobs per machine (executor). For small dataframes, we recommend that this factor
+    is set to 1. However, this effect really is prominent when the dataframe is large. In this case
     we recommend that the ratio is 2 or 3.
 
     # Arguments
@@ -586,10 +586,10 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         """Training procedure of an asynchronous distributed optimization process.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
-            shuffle: boolean. Tells to shuffle the dataset before training.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
+            shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -607,12 +607,12 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled before training.
+        # Check if the dataframe needs to be shuffled before training.
         if shuffle:
             dataframe = shuffle(dataframe)
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
-        # Check if we need to repartition the dataset.
+        # Check if we need to repartition the dataframe.
         if num_partitions >= parallelism:
             dataframe = dataframe.coalesce(parallelism)
         else:
