@@ -109,7 +109,7 @@ class Trainer(object):
             dataframe: dataframe. Spark Dataframe
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         raise NotImplementedError
@@ -149,7 +149,7 @@ class SingleTrainer(Trainer):
         Only for internal use.
         """
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
 
         return worker
@@ -161,21 +161,16 @@ class SingleTrainer(Trainer):
             dataframe: dataframe. Spark Dataframe
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
-        # Assign the dataset.
-        dataset = dataframe
-        # Build the dataset with the number of epochs.
-        for i in range(0, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the data needs to be shuffled.
         if shuffle:
-            dataset = shuffle(dataset)
-        # Collect the dataset on a single worker node.
-        dataset = dataset.coalesce(1)
-        # Cache the dataset.
-        dataset.cache()
+            dataframe = shuffle(dataframe)
+        # Collect the dataframe on a single worker node.
+        dataframe = dataframe.coalesce(1)
+        # Cache the dataframe.
+        dataframe.cache()
         # Allocate a worker.
         worker = self.allocate_worker()
         # Set the maximum number of mini-batches.
@@ -183,7 +178,7 @@ class SingleTrainer(Trainer):
         # Start recording training time.
         self.record_training_start()
         # Fetch the trained model.
-        self.master_model = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
+        self.master_model = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
         # Stop recording of training time.
         self.record_training_end()
 
@@ -242,7 +237,7 @@ class AveragingTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the AveragingWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = 1,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
 
         return worker
@@ -252,15 +247,15 @@ class AveragingTrainer(Trainer):
         number of Spark executors.
 
         # Arguments
-            dataframe: dataframe: A Spark Dataframe containing the dataset.
+            dataframe: dataframe: A Spark Dataframe containing the dataframe.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Repartition the data in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled.
+        # Check if the dataframe needs to be shuffled.
         if shuffle:
             dataframe = shuffle(dataframe)
         # Check if we need to repartition the dataframe.
@@ -312,7 +307,7 @@ class EnsembleTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the EnsembleWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
                                   optimizer=self.worker_optimizer, loss=self.loss, metrics=self.metrics)
 
         return worker
@@ -321,10 +316,10 @@ class EnsembleTrainer(Trainer):
         """Trains the specified number of ensemble models using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe. A Spark Dataframe containing the dataset.
+            dataframe: dataframe. A Spark Dataframe containing the dataframe.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Allocate a worker.
@@ -489,7 +484,7 @@ class DistributedTrainer(Trainer):
             dataframe: dataframe. Spark Dataframe
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -507,25 +502,20 @@ class DistributedTrainer(Trainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Assign the dataset.
-        dataset = dataframe
-        # Build a dataset which fits the number of epochs.
-        for i in range(1, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataset = shuffle(dataset)
+            dataframe = shuffle(dataframe)
         # Check if we need to repartition the dataframe.
         if num_partitions > self.num_workers:
-            dataset = dataset.coalesce(self.num_workers)
+            dataframe = dataframe.coalesce(self.num_workers)
         else:
-            dataset = dataset.repartition(self.num_workers)
-        # Cache the dataset.
-        dataset.cache()
+            dataframe = dataframe.repartition(self.num_workers)
+        # Cache the dataframe.
+        dataframe.cache()
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -543,8 +533,8 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
     are performing worse compared to others. It will cause the complete learning procedure to be
     stuck on this one particular machine since every machine will be assigned a single partition.
     In order to resolve this, we added a parallelization factor. This factor indicates the ratio
-    of the number of jobs per machine (executor). For small datasets, we recommend that this factor
-    is set to 1. However, this effect really is prominent when the dataset is large. In this case
+    of the number of jobs per machine (executor). For small dataframes, we recommend that this factor
+    is set to 1. However, this effect really is prominent when the dataframe is large. In this case
     we recommend that the ratio is 2 or 3.
 
     # Arguments
@@ -599,7 +589,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
             dataframe: dataframe. Spark Dataframe
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -617,25 +607,20 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Assign the dataset.
-        dataset = dataframe
-        # Build the dataset with the number of epochs.
-        for i in range(1, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataset = shuffle(dataset)
+            dataframe = shuffle(dataframe)
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
-        if num_partitions > parallelism:
-            dataset = dataset.coalesce(parallelism)
+        if num_partitions >= parallelism:
+            dataframe = dataframe.coalesce(parallelism)
         else:
-            dataset = dataset.repartition(parallelism)
+            dataframe = dataframe.repartition(parallelism)
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -685,7 +670,7 @@ class AEASGD(AsynchronousDistributedTrainer):
         """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
         worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.communication_window)
 
@@ -728,7 +713,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
         worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                self.features_column, self.label_column, self.batch_size,
+                                self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                 self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -779,7 +764,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
         worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
 
@@ -820,7 +805,7 @@ class ADAG(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate an Adag worker."""
         worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                            self.features_column, self.label_column, self.batch_size,
+                            self.features_column, self.label_column, self.batch_size, self.num_epoch,
                             self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -868,7 +853,7 @@ class DynSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
         worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -896,7 +881,7 @@ class Experimental(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocate experimental worker."""
         worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                    self.features_column, self.label_column, self.batch_size,
+                                    self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
 
