@@ -111,16 +111,16 @@ class Worker(object):
         self.prefetching_thread.start()
 
     def prefetching(self):
-        iterators_per_epoch = tee(self.iterator, self.num_epoch)
-        for iterator in iterators_per_epoch:
+        partition_iterators_all_epochs = tee(self.iterator, self.num_epoch)
+        for iter_one_epoch in partition_iterators_all_epochs:
             self.is_prefetching = True
             try:
                 while self.is_prefetching:
                     if self.mini_batches.qsize() < self.max_mini_batches:
-                        batch = [next(iterator) for _ in range(self.batch_size)]
-                        iterator_copies = tee(batch, self.num_inputs + 1)
-                        feature_iterators = iterator_copies[:-1]
-                        label_iterator = iterator_copies[-1]
+                        batch = [next(iter_one_epoch) for _ in range(self.batch_size)]
+                        batch_iterator_copies = tee(batch, self.num_inputs + 1)
+                        feature_iterators = batch_iterator_copies[:-1]
+                        label_iterator = batch_iterator_copies[-1]
                         X = [np.asarray([x[self.features_column[i]] for x in iterator]) 
                             for i, iterator in enumerate(feature_iterators)]
                         Y = np.asarray([x[self.label_column] for x in label_iterator])
