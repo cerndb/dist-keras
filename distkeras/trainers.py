@@ -130,7 +130,7 @@ class SingleTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
     """
@@ -198,7 +198,7 @@ class AveragingTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of model replicas to train in parallel.
@@ -289,7 +289,7 @@ class EnsembleTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         batch_size: int. Mini-batch size.
         num_ensembles: int. Number of ensembles to train.
     # Note
@@ -358,7 +358,7 @@ class DistributedTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -546,7 +546,7 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -642,7 +642,7 @@ class AEASGD(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -692,7 +692,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -734,7 +734,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.

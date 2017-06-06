@@ -50,12 +50,13 @@ class Worker(object):
     def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, num_epoch=1, learning_rate=1.0):
         assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
+        assert isinstance(label_col, (str, list)), "'label_col' must be a string or a list of strings"
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
         self.metrics= metrics
         self.features_column = [features_col] if isinstance(features_col, str) else features_col
-        self.label_column = label_col
+        self.label_column = [label_col] if isinstance(label_col, str) else label_col
         self.batch_size = batch_size
         self.num_epoch = num_epoch
         self.max_mini_batches = 100
@@ -65,6 +66,7 @@ class Worker(object):
         self.worker_id = -1
         self.learning_rate = learning_rate
         self.num_inputs = len(self.features_column)
+        self.num_outputs = len(self.label_column)
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum number of mini-batches that can be prefetched."""
@@ -118,12 +120,13 @@ class Worker(object):
                 while self.is_prefetching:
                     if self.mini_batches.qsize() < self.max_mini_batches:
                         batch = [next(iter_one_epoch) for _ in range(self.batch_size)]
-                        batch_iterator_copies = tee(batch, self.num_inputs + 1)
-                        feature_iterators = batch_iterator_copies[:-1]
-                        label_iterator = batch_iterator_copies[-1]
+                        batch_iterator_copies = tee(batch, self.num_inputs + self.num_outputs)
+                        feature_iterators = batch_iterator_copies[:self.num_inputs]
+                        label_iterators = batch_iterator_copies[self.num_inputs:]
                         X = [np.asarray([x[self.features_column[i]] for x in iterator]) 
                             for i, iterator in enumerate(feature_iterators)]
-                        Y = np.asarray([x[self.label_column] for x in label_iterator])
+                        Y = [np.asarray([x[self.label_column[i]] for x in iterator])
+                            for i, iterator in enumerate(label_iterators)]
                         self.mini_batches.put([X, Y])
             except Exception as e:
                 print(e)
