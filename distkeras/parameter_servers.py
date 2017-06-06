@@ -326,16 +326,16 @@ class DynSGDParameterServer(SocketParameterServer):
             conn: socket. The opened connection.
             addr: addr. Address of the remote host.
         """
+        # Allocate a new dictionary.
+        data = {}
         # Fetch the raw center variables.
         with self.mutex:
             center_variable = self.model.get_weights()
             cv = copy.deepcopy(center_variable)
-        # Allocate a new dictionary.
-        data = {}
+            # Store the number of updates (u) the PS executed.
+            data['update'] = self.num_updates
         # Store the model (m).
         data['model'] = cv
-        # Store the number of updates (u) the PS executed.
-        data['update'] = self.num_updates
         # Send the data over the socket.
         send_data(conn, data)
 
