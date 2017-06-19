@@ -16,6 +16,8 @@ from distkeras.utils import set_keras_base_directory
 from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
 
+from keras.optimizers import Optimizer, serialize, deserialize
+
 from itertools import tee
 
 from multiprocessing import Pool
@@ -49,10 +51,11 @@ class Worker(object):
 
     def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
                  batch_size=32, num_epoch=1, learning_rate=1.0):
+        assert isinstance(optimizer, (str, Optimizer)), "'optimizer' must be a string or a Keras Optimizer instance"
         assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
         assert isinstance(label_col, (str, list)), "'label_col' must be a string or a list of strings"
         self.model = model
-        self.optimizer = optimizer
+        self.optimizer = {'class_name': optimizer, 'config': {}} if isinstance(optimizer, str) else serialize(optimizer)
         self.loss = loss
         self.loss_weights = loss_weights
         self.metrics= metrics
@@ -99,6 +102,7 @@ class Worker(object):
         set_keras_base_directory()
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
+        self.optimizer = deserialize(self.optimizer)
         # Compile the model with the specified loss and optimizer.
         self.model.compile(loss=self.loss, loss_weights = self.loss_weights, 
             optimizer=self.optimizer, metrics=self.metrics)
