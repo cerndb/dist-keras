@@ -48,12 +48,14 @@ class Trainer(object):
                           See https://keras.io/optimizers/
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
-    def __init__(self, keras_model, loss, worker_optimizer, metrics=["accuracy"]):
+    def __init__(self, keras_model, loss, worker_optimizer, metrics=["accuracy"], loss_weights=None):
         set_keras_base_directory()
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
+        self.loss_weights = loss_weights
         self.worker_optimizer = worker_optimizer
         self.metrics = metrics
         self.history = []
@@ -133,11 +135,12 @@ class SingleTrainer(Trainer):
         label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", num_epoch=1, batch_size=32):
-        super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", num_epoch=1, batch_size=32, loss_weights=None):
+        super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.num_epoch = num_epoch
@@ -150,7 +153,8 @@ class SingleTrainer(Trainer):
         """
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
                                   label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, 
+                                  metrics = self.metrics)
 
         return worker
 
@@ -202,11 +206,12 @@ class AveragingTrainer(Trainer):
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of model replicas to train in parallel.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", num_epoch=1, batch_size=32, num_workers=2):
-        super(AveragingTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", num_epoch=1, batch_size=32, num_workers=2, loss_weights=None):
+        super(AveragingTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.num_epoch = num_epoch
@@ -238,7 +243,7 @@ class AveragingTrainer(Trainer):
         """Allocates the AveragingWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
                                   label_col=self.label_column, batch_size=self.batch_size, num_epoch = 1,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, metrics = self.metrics)
 
         return worker
 
@@ -292,13 +297,14 @@ class EnsembleTrainer(Trainer):
         label_col: string or list of strings. Name(s) of the label column(s).
         batch_size: int. Mini-batch size.
         num_ensembles: int. Number of ensembles to train.
+        loss_weights: optional list or dict specifying weights for different losses.
     # Note
         This will note employ a data-parallell approach for the ensembles.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", batch_size=32, num_ensembles=2):
-        super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", batch_size=32, num_ensembles=2, loss_weights=None):
+        super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.batch_size = batch_size
@@ -308,7 +314,7 @@ class EnsembleTrainer(Trainer):
         """Allocates the EnsembleWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
                                   label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics=self.metrics)
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, metrics=self.metrics)
 
         return worker
 
@@ -363,11 +369,12 @@ class DistributedTrainer(Trainer):
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, master_port=5000):
-        super(DistributedTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 features_col="features", label_col="label", num_epoch=1, master_port=5000, loss_weights=None):
+        super(DistributedTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.features_column = features_col
@@ -552,16 +559,17 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
 
     # Note
         By default, the parallelization factor is set to 1.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, master_port=5000):
+                 features_col="features", label_col="label", num_epoch=1, master_port=5000, loss_weights=None):
         super(AsynchronousDistributedTrainer, self).__init__(keras_model, worker_optimizer, loss, metrics, 
                                                              num_workers, batch_size, features_col,
-                                                             label_col, num_epoch, master_port)
+                                                             label_col, num_epoch, master_port, loss_weights)
         # Initialize asynchronous methods variables.
         self.parallelism_factor = 1
 
@@ -658,13 +666,14 @@ class AEASGD(AsynchronousDistributedTrainer):
                     Smaller values are correlated with less exploration. We use the value
                     recommend by the authors.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
-                 rho=5.0, learning_rate=0.1, master_port=5000):
+                 rho=5.0, learning_rate=0.1, master_port=5000, loss_weights=None):
         super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch, master_port)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
@@ -672,7 +681,7 @@ class AEASGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
-        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                               self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.communication_window)
@@ -705,18 +714,19 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                               recommend small communication windows.
         learning_rate: float. Learning rate.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000, loss_weights=None):
         super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                       batch_size, features_col, label_col, num_epoch, master_port)
+                                       batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
-        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                                 self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                 self.master_host, self.master_port, self.communication_window)
 
@@ -753,13 +763,14 @@ class EAMSGD(AsynchronousDistributedTrainer):
                     recommend by the authors.
         momentum: float. Momentum term.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
-                 rho=5.0, learning_rate=0.1, momentum=0.9, master_port=5000):
+                 rho=5.0, learning_rate=0.1, momentum=0.9, master_port=5000, loss_weights=None):
         super(EAMSGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch, master_port)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
@@ -768,7 +779,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
-        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                               self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
@@ -798,19 +809,20 @@ class ADAG(AsynchronousDistributedTrainer):
                               computed before updating the center variable. For DOWNPOUR based
                               algorithms we recommend large communication windows.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=12, master_port=5000):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=12, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(ADAG, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                   batch_size, features_col, label_col, num_epoch, master_port)
+                                   batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set algorithm parameters.
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocate an Adag worker."""
-        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                             self.features_column, self.label_column, self.batch_size, self.num_epoch,
                             self.master_host, self.master_port, self.communication_window)
 
@@ -847,19 +859,20 @@ class DynSGD(AsynchronousDistributedTrainer):
                               computed before updating the center variable. For DOWNPOUR based
                               algorithms we recommend large communication windows.
         master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(DynSGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch, master_port)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set algorithm parameters.
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
-        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                               self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.communication_window)
 
@@ -877,17 +890,17 @@ class Experimental(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=5,
-                 learning_rate=1.0, master_port=5000):
+                 learning_rate=1.0, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(Experimental, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                           batch_size, features_col, label_col, num_epoch, master_port)
+                                           batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set the algorithm parameters.
         self.communication_window = communication_window
         self.learning_rate = learning_rate
 
     def allocate_worker(self):
         """Allocate experimental worker."""
-        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
+        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
                                     self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
