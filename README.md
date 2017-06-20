@@ -9,9 +9,7 @@ Distributed Keras is a distributed deep learning framework built op top of Apach
 
 Most of the distributed optimizers we provide, are based on data parallel methods. A data parallel method, as described in [[1]](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf), is a learning paradigm where multiple replicas of a single model are used to optimize a single objective. Using this approach, we are able to dignificantly reduce the training time of a model. Depending on the parametrization, we also observed that it is possible to achieve better statistical model performance compared to a more traditional approach (e.g., like the [SingleTrainer](#single-trainer) implementation), and yet, spending less wallclock time on the training of the model. However, this is subject to further research.
 
-**Attention**: We recommend reading the [workflow](https://github.com/JoeriHermans/dist-keras/blob/master/examples/workflow.ipynb) Jupyter notebook. This includes a complete description of the problem, how to use it, preprocess your data with Apache Spark, and a performance evaluation of all included distributed optimizers.
-
-**Attention**: A rather complete introduction to the problem of Distributed Deep Learning is given here: [http://joerihermans.com/ramblings/distributed-deep-learning-part-1-an-introduction/](http://joerihermans.com/ramblings/distributed-deep-learning-part-1-an-introduction/). However, we also add all blog posts to this GitHub repository for future consistency. They can all be found in the resources folder.
+**Attention**: A rather complete introduction to the problem of Distributed Deep Learning is presented in my Master Thesis [http://github.com/JoeriHermans/master-thesis](http://github.com/JoeriHermans/master-thesis). Furthermore, the thesis describes includes several *novel* insights, such as a redefinition of parameter staleness, and several new distributed optimizers such as AGN and ADAG.
 
 
 ## Installation
