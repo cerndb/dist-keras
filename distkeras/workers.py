@@ -17,6 +17,7 @@ from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
 
 from keras.optimizers import Optimizer, serialize, deserialize
+import keras.backend as K
 
 from itertools import tee
 
@@ -100,6 +101,13 @@ class Worker(object):
         """Prepares the model for training."""
         # Set the Keras directory.
         set_keras_base_directory()
+        if K.backend() == 'tensorflow':
+            # set GPU option allow_growth to False for GPU-enabled tensorflow
+            config = tf.ConfigProto()
+            config.gpu_options.allow_growth = False
+            sess = tf.Session(config=config)
+            K.set_session(sess)
+
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
         self.optimizer = deserialize(self.optimizer)
