@@ -226,7 +226,7 @@ If you use this framework in any academic work, please use the following BibTex 
 
 ```latex
 @misc{dist_keras_joerihermans,
-  author = {Joeri Hermans and CERN IT-DB},
+  author = {Joeri R. Hermans, CERN IT-DB},
   title = {Distributed Keras: Distributed Deep Learning with Apache Spark and Keras},
   year = {2016},
   publisher = {GitHub},
