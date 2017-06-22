@@ -285,13 +285,19 @@ class NetworkWorker(Worker):
         self.pull()
         self.model.set_weights(self.center_variable)
         try:
+            sys.stderr.write("Debug: starting optimize...\n")
             self.optimize()
+            sys.stderr.write("Debug: optimize done\n")
         except Exception as e:
             # Stop the prefetching process.
             self.is_prefetching = False
             print(e)
+        sys.stderr.write("Debug: closing socket...\n")
         self.socket.close()
+        sys.stderr.write("Debug: socket closed\n")
+        sys.stderr.write("Debug: joining thread...\n")
         self.prefetching_thread.join()
+        sys.stderr.write("Debug: thread joined\n")
 
         return iter(self.training_history)
 
