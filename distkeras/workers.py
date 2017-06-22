@@ -296,7 +296,7 @@ class NetworkWorker(Worker):
         self.socket.close()
         sys.stderr.write("Debug: socket closed\n")
         sys.stderr.write("Debug: joining thread...\n")
-        self.prefetching_thread.join()
+        self.prefetching_thread.join(timeout=1)
         sys.stderr.write("Debug: thread joined\n")
 
         return iter(self.training_history)
