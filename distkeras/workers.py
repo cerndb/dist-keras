@@ -27,6 +27,8 @@ import numpy as np
 
 import threading
 
+import tensorflow as tf
+
 import sys
 
 # "queue" module in python 3 is named "Queue" in python 2
