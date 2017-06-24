@@ -336,6 +336,7 @@ class ADAGWorker(NetworkWorker):
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
             sys.stderr.write("Iteration: "+ str(self.iteration) +"  loss:"+str(h)+"\n")
+            sys.stderr.flush()
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
