@@ -119,7 +119,7 @@ class Worker(object):
 
     def get_next_minibatch(self):
         """Returns the next mini-batch."""
-        return self.mini_batches.get(timeout=1)
+        return self.mini_batches.get(timeout=10)
 
     def start_prefetching_thread(self, iterator):
         """Starts the data prefetching thread."""
