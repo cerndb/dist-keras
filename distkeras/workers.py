@@ -74,6 +74,7 @@ class Worker(object):
         self.learning_rate = learning_rate
         self.num_inputs = len(self.features_column)
         self.num_outputs = len(self.label_column)
+        self.current_epoch = 0
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum number of mini-batches that can be prefetched."""
@@ -131,6 +132,7 @@ class Worker(object):
     def prefetching(self):
         partition_iterators_all_epochs = tee(self.iterator, self.num_epoch)
         for iter_one_epoch in partition_iterators_all_epochs:
+            self.current_epoch += 1
             self.is_prefetching = True
             try:
                 while self.is_prefetching:
@@ -335,7 +337,7 @@ class ADAGWorker(NetworkWorker):
             X, Y = self.get_next_minibatch()
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
-            sys.stderr.write("Iteration: "+ str(self.iteration) +"  loss:"+str(h)+"\n")
+            sys.stderr.write("Epoch: " + str(self.current_epoch) + "  Iteration: " + str(self.iteration) + "  loss:" + str(h) + "\n")
             sys.stderr.flush()
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
