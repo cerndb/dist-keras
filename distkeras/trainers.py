@@ -48,12 +48,14 @@ class Trainer(object):
                           See https://keras.io/optimizers/
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
-    def __init__(self, keras_model, loss, worker_optimizer, metrics=["accuracy"]):
+    def __init__(self, keras_model, loss, worker_optimizer, metrics=["accuracy"], loss_weights=None):
         set_keras_base_directory()
         self.master_model = serialize_keras_model(keras_model)
         self.loss = loss
+        self.loss_weights = loss_weights
         self.worker_optimizer = worker_optimizer
         self.metrics = metrics
         self.history = []
@@ -106,10 +108,10 @@ class Trainer(object):
         """Trains the specified model using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
+            dataframe: dataframe. A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         raise NotImplementedError
@@ -130,14 +132,15 @@ class SingleTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", num_epoch=1, batch_size=32):
-        super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", num_epoch=1, batch_size=32, loss_weights=None):
+        super(SingleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.num_epoch = num_epoch
@@ -149,8 +152,9 @@ class SingleTrainer(Trainer):
         Only for internal use.
         """
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, 
+                                  metrics = self.metrics)
 
         return worker
 
@@ -158,24 +162,19 @@ class SingleTrainer(Trainer):
         """See distkeras.trainers.Trainer.train
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
+            dataframe: dataframe. A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
-        # Assign the dataset.
-        dataset = dataframe
-        # Build the dataset with the number of epochs.
-        for i in range(0, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the data needs to be shuffled.
         if shuffle:
-            dataset = shuffle(dataset)
-        # Collect the dataset on a single worker node.
-        dataset = dataset.coalesce(1)
-        # Cache the dataset.
-        dataset.cache()
+            dataframe = shuffle(dataframe)
+        # Collect the dataframe on a single worker node.
+        dataframe = dataframe.coalesce(1)
+        # Cache the dataframe.
+        dataframe.cache()
         # Allocate a worker.
         worker = self.allocate_worker()
         # Set the maximum number of mini-batches.
@@ -183,7 +182,7 @@ class SingleTrainer(Trainer):
         # Start recording training time.
         self.record_training_start()
         # Fetch the trained model.
-        self.master_model = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
+        self.master_model = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()[0]
         # Stop recording of training time.
         self.record_training_end()
 
@@ -203,15 +202,16 @@ class AveragingTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of model replicas to train in parallel.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", num_epoch=1, batch_size=32, num_workers=2):
-        super(AveragingTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", num_epoch=1, batch_size=32, num_workers=2, loss_weights=None):
+        super(AveragingTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.num_epoch = num_epoch
@@ -242,8 +242,8 @@ class AveragingTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the AveragingWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics = self.metrics)
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = 1,
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, metrics = self.metrics)
 
         return worker
 
@@ -252,19 +252,19 @@ class AveragingTrainer(Trainer):
         number of Spark executors.
 
         # Arguments
-            dataframe: dataframe: A Spark Dataframe containing the dataset.
+            dataframe: dataframe: A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Repartition the data in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Check if the dataset needs to be shuffled.
+        # Check if the dataframe needs to be shuffled.
         if shuffle:
             dataframe = shuffle(dataframe)
         # Check if we need to repartition the dataframe.
-        if num_partitions > self.num_workers:
+        if num_partitions >= self.num_workers:
             dataframe = dataframe.coalesce(self.num_workers)
         else:
             dataframe = dataframe.repartition(self.num_workers)
@@ -294,16 +294,17 @@ class EnsembleTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         batch_size: int. Mini-batch size.
         num_ensembles: int. Number of ensembles to train.
+        loss_weights: optional list or dict specifying weights for different losses.
     # Note
         This will note employ a data-parallell approach for the ensembles.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], features_col="features",
-                 label_col="label", batch_size=32, num_ensembles=2):
-        super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 label_col="label", batch_size=32, num_ensembles=2, loss_weights=None):
+        super(EnsembleTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.features_column = features_col
         self.label_column = label_col
         self.batch_size = batch_size
@@ -312,8 +313,8 @@ class EnsembleTrainer(Trainer):
     def allocate_worker(self):
         """Allocates the EnsembleWorker for internal use."""
         worker = SequentialWorker(model=self.master_model, features_col=self.features_column,
-                                  label_col=self.label_column, batch_size=self.batch_size,
-                                  optimizer=self.worker_optimizer, loss=self.loss, metrics=self.metrics)
+                                  label_col=self.label_column, batch_size=self.batch_size, num_epoch = self.num_epoch,
+                                  optimizer=self.worker_optimizer, loss=self.loss, loss_weights=self.loss_weights, metrics=self.metrics)
 
         return worker
 
@@ -321,10 +322,10 @@ class EnsembleTrainer(Trainer):
         """Trains the specified number of ensemble models using the specified dataframe.
 
         # Arguments
-            dataframe: dataframe. A Spark Dataframe containing the dataset.
+            dataframe: dataframe. A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Allocate a worker.
@@ -337,7 +338,7 @@ class EnsembleTrainer(Trainer):
         if shuffle:
             dataframe = shuffle(dataframe)
         # Check if we need to repartition the dataframe.
-        if num_partitions > self.num_workers:
+        if num_partitions >= self.num_workers:
             dataframe = dataframe.coalesce(self.num_workers)
         else:
             dataframe = dataframe.repartition(self.num_workers)
@@ -363,15 +364,17 @@ class DistributedTrainer(Trainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1):
-        super(DistributedTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics)
+                 features_col="features", label_col="label", num_epoch=1, master_port=5000, loss_weights=None):
+        super(DistributedTrainer, self).__init__(keras_model, loss, worker_optimizer, metrics, loss_weights)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.features_column = features_col
@@ -380,7 +383,7 @@ class DistributedTrainer(Trainer):
         self.parameter_server = None
         self.parameter_server_thread = None
         self.master_host = determine_host_address()
-        self.master_port = 5000
+        self.master_port = master_port
         self.learning_rate = 1.0
 
     def set_minibatch_size(self, size):
@@ -486,10 +489,10 @@ class DistributedTrainer(Trainer):
         """Training procedure of a distributed optimization process.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
+            dataframe: dataframe. A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -507,25 +510,20 @@ class DistributedTrainer(Trainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Assign the dataset.
-        dataset = dataframe
-        # Build a dataset which fits the number of epochs.
-        for i in range(1, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataset = shuffle(dataset)
+            dataframe = shuffle(dataframe)
         # Check if we need to repartition the dataframe.
-        if num_partitions > self.num_workers:
-            dataset = dataset.coalesce(self.num_workers)
+        if num_partitions >= self.num_workers:
+            dataframe = dataframe.coalesce(self.num_workers)
         else:
-            dataset = dataset.repartition(self.num_workers)
-        # Cache the dataset.
-        dataset.cache()
+            dataframe = dataframe.repartition(self.num_workers)
+        # Cache the dataframe.
+        dataframe.cache()
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -543,8 +541,8 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
     are performing worse compared to others. It will cause the complete learning procedure to be
     stuck on this one particular machine since every machine will be assigned a single partition.
     In order to resolve this, we added a parallelization factor. This factor indicates the ratio
-    of the number of jobs per machine (executor). For small datasets, we recommend that this factor
-    is set to 1. However, this effect really is prominent when the dataset is large. In this case
+    of the number of jobs per machine (executor). For small dataframes, we recommend that this factor
+    is set to 1. However, this effect really is prominent when the dataframe is large. In this case
     we recommend that the ratio is 2 or 3.
 
     # Arguments
@@ -556,20 +554,22 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
 
     # Note
         By default, the parallelization factor is set to 1.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1):
+                 features_col="features", label_col="label", num_epoch=1, master_port=5000, loss_weights=None):
         super(AsynchronousDistributedTrainer, self).__init__(keras_model, worker_optimizer, loss, metrics, 
                                                              num_workers, batch_size, features_col,
-                                                             label_col, num_epoch)
+                                                             label_col, num_epoch, master_port, loss_weights)
         # Initialize asynchronous methods variables.
         self.parallelism_factor = 1
 
@@ -596,10 +596,10 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         """Training procedure of an asynchronous distributed optimization process.
 
         # Arguments
-            dataframe: dataframe. Spark Dataframe
+            dataframe: dataframe. A Spark Dataframe containing the training data.
             shuffle: boolean. Tells to shuffle the dataframe before training.
                      Warning: this will tell Spark to shuffle all partitions over
-                     the network. It is recommended to shuffle the dataset before
+                     the network. It is recommended to shuffle the dataframe before
                      training and store it.
         """
         # Check if a parameter server has been allocated.
@@ -617,25 +617,20 @@ class AsynchronousDistributedTrainer(DistributedTrainer):
         worker.set_max_prefetch(self.max_mini_batches_prefetch)
         # Repartition in order to fit the number of workers.
         num_partitions = dataframe.rdd.getNumPartitions()
-        # Assign the dataset.
-        dataset = dataframe
-        # Build the dataset with the number of epochs.
-        for i in range(1, self.num_epoch):
-            dataset = dataset.unionAll(dataframe)
         # Check if the dataframe needs to be shuffled before training.
         if shuffle:
-            dataset = shuffle(dataset)
+            dataframe = shuffle(dataframe)
         # Indicate the parallelism (number of worker times parallelism factor).
         parallelism = self.parallelism_factor * self.num_workers
         # Check if we need to repartition the dataframe.
-        if num_partitions > parallelism:
-            dataset = dataset.coalesce(parallelism)
+        if num_partitions >= parallelism:
+            dataframe = dataframe.coalesce(parallelism)
         else:
-            dataset = dataset.repartition(parallelism)
+            dataframe = dataframe.repartition(parallelism)
         # Start the training procedure.
         self.record_training_start()
         # Iterate through the epochs.
-        self.history = dataset.rdd.mapPartitionsWithIndex(worker.train).collect()
+        self.history = dataframe.rdd.mapPartitionsWithIndex(worker.train).collect()
         # End the training procedure.
         self.record_training_end()
         # Stop the communication service.
@@ -657,7 +652,7 @@ class AEASGD(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -670,13 +665,15 @@ class AEASGD(AsynchronousDistributedTrainer):
                     Higher values mean that the model is allowed to "explore" its surroundings.
                     Smaller values are correlated with less exploration. We use the value
                     recommend by the authors.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
-                 rho=5.0, learning_rate=0.1):
+                 rho=5.0, learning_rate=0.1, master_port=5000, loss_weights=None):
         super(AEASGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
@@ -684,8 +681,8 @@ class AEASGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EASGD worker."""
         # Allocate a AEASGD worker.
-        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+        worker = AEASGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.communication_window)
 
@@ -707,7 +704,7 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -716,19 +713,21 @@ class DOWNPOUR(AsynchronousDistributedTrainer):
                               computed before updating the center variable. For DOWNPOUR we
                               recommend small communication windows.
         learning_rate: float. Learning rate.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000, loss_weights=None):
         super(DOWNPOUR, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                       batch_size, features_col, label_col, num_epoch)
+                                       batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocates the DOWNPOUR worker."""
         # Allocate DOWNPOUR worker.
-        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                self.features_column, self.label_column, self.batch_size,
+        worker = DOWNPOURWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                                self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                 self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -749,7 +748,7 @@ class EAMSGD(AsynchronousDistributedTrainer):
         metrics: list of strings representing model evaluation metrics. Default is ["accuracy"].
                  See: https://keras.io/metrics/
         features_col: string or list of strings. Name(s) of the features column(s).
-        label_col: string. Name of the label column.
+        label_col: string or list of strings. Name(s) of the label column(s).
         num_epoch: int. Number of epochs.
         batch_size: int. Mini-batch size.
         num_workers: int. Number of distributed workers.
@@ -763,13 +762,15 @@ class EAMSGD(AsynchronousDistributedTrainer):
                     Smaller values are correlated with less exploration. We use the value
                     recommend by the authors.
         momentum: float. Momentum term.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=32,
-                 rho=5.0, learning_rate=0.1, momentum=0.9):
+                 rho=5.0, learning_rate=0.1, momentum=0.9, master_port=5000, loss_weights=None):
         super(EAMSGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         self.communication_window = communication_window
         self.rho = rho
         self.learning_rate = learning_rate
@@ -778,8 +779,8 @@ class EAMSGD(AsynchronousDistributedTrainer):
     def allocate_worker(self):
         """Allocates the asynchronous EAMSGD worker."""
         # Allocate a EAMSGD REST worker.
-        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+        worker = EAMSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.rho, self.learning_rate,
                               self.momentum, self.communication_window)
 
@@ -807,20 +808,22 @@ class ADAG(AsynchronousDistributedTrainer):
                               This parameter describes the number of mini-batches that will be
                               computed before updating the center variable. For DOWNPOUR based
                               algorithms we recommend large communication windows.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=12):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=12, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(ADAG, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                   batch_size, features_col, label_col, num_epoch)
+                                   batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set algorithm parameters.
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocate an Adag worker."""
-        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                            self.features_column, self.label_column, self.batch_size,
+        worker = ADAGWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                            self.features_column, self.label_column, self.batch_size, self.num_epoch,
                             self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -855,20 +858,22 @@ class DynSGD(AsynchronousDistributedTrainer):
                               This parameter describes the number of mini-batches that will be
                               computed before updating the center variable. For DOWNPOUR based
                               algorithms we recommend large communication windows.
+        master_port: int. port number for the parameter server.
+        loss_weights: optional list or dict specifying weights for different losses.
     """
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
-                 features_col="features", label_col="label", num_epoch=1, communication_window=5):
+                 features_col="features", label_col="label", num_epoch=1, communication_window=5, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(DynSGD, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                     batch_size, features_col, label_col, num_epoch)
+                                     batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set algorithm parameters.
         self.communication_window = communication_window
 
     def allocate_worker(self):
         """Allocate DYNSGD worker."""
-        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                              self.features_column, self.label_column, self.batch_size,
+        worker = DynSGDWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                              self.features_column, self.label_column, self.batch_size, self.num_epoch,
                               self.master_host, self.master_port, self.communication_window)
 
         return worker
@@ -885,18 +890,18 @@ class Experimental(AsynchronousDistributedTrainer):
 
     def __init__(self, keras_model, worker_optimizer, loss, metrics=["accuracy"], num_workers=2, batch_size=32,
                  features_col="features", label_col="label", num_epoch=1, communication_window=5,
-                 learning_rate=1.0):
+                 learning_rate=1.0, master_port=5000, loss_weights=None):
         # Initialize the parent object.
         super(Experimental, self).__init__(keras_model, worker_optimizer, loss, metrics, num_workers,
-                                           batch_size, features_col, label_col, num_epoch)
+                                           batch_size, features_col, label_col, num_epoch, master_port, loss_weights)
         # Set the algorithm parameters.
         self.communication_window = communication_window
         self.learning_rate = learning_rate
 
     def allocate_worker(self):
         """Allocate experimental worker."""
-        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.metrics,
-                                    self.features_column, self.label_column, self.batch_size,
+        worker = ExperimentalWorker(self.master_model, self.worker_optimizer, self.loss, self.loss_weights, self.metrics,
+                                    self.features_column, self.label_column, self.batch_size, self.num_epoch,
                                     self.master_host, self.master_port, self.communication_window,
                                     self.num_workers, self.learning_rate)
 

@@ -16,6 +16,9 @@ from distkeras.utils import set_keras_base_directory
 from distkeras.utils import shuffle
 from distkeras.utils import uniform_weights
 
+from keras.optimizers import Optimizer, serialize, deserialize
+import keras.backend as K
+
 from itertools import tee
 
 from multiprocessing import Pool
@@ -23,6 +26,8 @@ from multiprocessing import Pool
 import numpy as np
 
 import threading
+
+import tensorflow as tf
 
 import sys
 
@@ -47,16 +52,20 @@ class Worker(object):
     This class provides basic functionality and properties all workers share.
     """
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, learning_rate=1.0):
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, learning_rate=1.0):
+        assert isinstance(optimizer, (str, Optimizer)), "'optimizer' must be a string or a Keras Optimizer instance"
         assert isinstance(features_col, (str, list)), "'features_col' must be a string or a list of strings"
+        assert isinstance(label_col, (str, list)), "'label_col' must be a string or a list of strings"
         self.model = model
-        self.optimizer = optimizer
+        self.optimizer = {'class_name': optimizer, 'config': {}} if isinstance(optimizer, str) else serialize(optimizer)
         self.loss = loss
+        self.loss_weights = loss_weights
         self.metrics= metrics
         self.features_column = [features_col] if isinstance(features_col, str) else features_col
-        self.label_column = label_col
+        self.label_column = [label_col] if isinstance(label_col, str) else label_col
         self.batch_size = batch_size
+        self.num_epoch = num_epoch
         self.max_mini_batches = 100
         self.prefetching_thread = None
         self.mini_batches = None
@@ -64,6 +73,8 @@ class Worker(object):
         self.worker_id = -1
         self.learning_rate = learning_rate
         self.num_inputs = len(self.features_column)
+        self.num_outputs = len(self.label_column)
+        self.current_epoch = 0
 
     def set_max_prefetch(self, max_mini_batches):
         """Sets the maximum number of mini-batches that can be prefetched."""
@@ -93,14 +104,23 @@ class Worker(object):
         """Prepares the model for training."""
         # Set the Keras directory.
         set_keras_base_directory()
+        if K.backend() == 'tensorflow':
+            # set GPU option allow_growth to False for GPU-enabled tensorflow
+            config = tf.ConfigProto()
+            config.gpu_options.allow_growth = False
+            sess = tf.Session(config=config)
+            K.set_session(sess)
+
         # Deserialize the Keras model.
         self.model = deserialize_keras_model(self.model)
+        self.optimizer = deserialize(self.optimizer)
         # Compile the model with the specified loss and optimizer.
-        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        self.model.compile(loss=self.loss, loss_weights = self.loss_weights, 
+            optimizer=self.optimizer, metrics=self.metrics)
 
     def get_next_minibatch(self):
         """Returns the next mini-batch."""
-        return self.mini_batches.get(timeout=1)
+        return self.mini_batches.get(timeout=10)
 
     def start_prefetching_thread(self, iterator):
         """Starts the data prefetching thread."""
@@ -110,20 +130,25 @@ class Worker(object):
         self.prefetching_thread.start()
 
     def prefetching(self):
-        try:
-            while self.is_prefetching:
-                if self.mini_batches.qsize() < self.max_mini_batches:
-                    batch = [next(self.iterator) for _ in range(self.batch_size)]
-                    iterator_copies = tee(batch, self.num_inputs + 1)
-                    feature_iterators = iterator_copies[:-1]
-                    label_iterator = iterator_copies[-1]
-                    X = [np.asarray([x[self.features_column[i]] for x in iterator]) 
-                        for i, iterator in enumerate(feature_iterators)]
-                    Y = np.asarray([x[self.label_column] for x in label_iterator])
-                    self.mini_batches.put([X, Y])
-        except Exception as e:
-            print(e)
-            self.is_prefetching = False
+        partition_iterators_all_epochs = tee(self.iterator, self.num_epoch)
+        for iter_one_epoch in partition_iterators_all_epochs:
+            self.current_epoch += 1
+            self.is_prefetching = True
+            try:
+                while self.is_prefetching:
+                    if self.mini_batches.qsize() < self.max_mini_batches:
+                        batch = [next(iter_one_epoch) for _ in range(self.batch_size)]
+                        batch_iterator_copies = tee(batch, self.num_inputs + self.num_outputs)
+                        feature_iterators = batch_iterator_copies[:self.num_inputs]
+                        label_iterators = batch_iterator_copies[self.num_inputs:]
+                        X = [np.asarray([x[self.features_column[i]] for x in iterator]) 
+                            for i, iterator in enumerate(feature_iterators)]
+                        Y = [np.asarray([x[self.label_column[i]] for x in iterator])
+                            for i, iterator in enumerate(label_iterators)]
+                        self.mini_batches.put([X, Y])
+            except Exception as e:
+                print(e)
+                self.is_prefetching = False
 
     def optimize(self):
         """Optimization procedure of a worker."""
@@ -159,11 +184,11 @@ class SequentialWorker(Worker):
     Will train a model on a single worker node.
     """
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], 
-                 features_col="features", label_col="label", batch_size=32):
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], 
+                 features_col="features", label_col="label", batch_size=32, num_epoch=1):
         # Initialize the parent class.
-        super(SequentialWorker, self).__init__(model, optimizer, loss, metrics, features_col,
-                                               label_col, batch_size)
+        super(SequentialWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col,
+                                               label_col, batch_size, num_epoch)
 
     def optimize(self):
         """Training procedure with sequential gradient updates.
@@ -180,10 +205,10 @@ class SequentialWorker(Worker):
 class NetworkWorker(Worker):
     """Abstract class of a worker who shares the variables using the network."""
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, learning_rate=1.0):
-        super(NetworkWorker, self).__init__(model, optimizer, loss, metrics, features_col,
-                                            label_col, batch_size, learning_rate)
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, learning_rate=1.0):
+        super(NetworkWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col,
+                                            label_col, batch_size, num_epoch, learning_rate)
         self.master_host = master_host
         self.master_port = master_port
         self.socket = None
@@ -262,13 +287,19 @@ class NetworkWorker(Worker):
         self.pull()
         self.model.set_weights(self.center_variable)
         try:
+            #sys.stderr.write("Debug: starting optimize...\n")
             self.optimize()
+            #sys.stderr.write("Debug: optimize done\n")
         except Exception as e:
             # Stop the prefetching process.
             self.is_prefetching = False
             print(e)
+        #sys.stderr.write("Debug: closing socket...\n")
         self.socket.close()
-        self.prefetching_thread.join()
+        #sys.stderr.write("Debug: socket closed\n")
+        #sys.stderr.write("Debug: joining thread...\n")
+        self.prefetching_thread.join(timeout=1)
+        #sys.stderr.write("Debug: thread joined\n")
 
         return iter(self.training_history)
 
@@ -279,11 +310,11 @@ class ADAGWorker(NetworkWorker):
     Introduced by Hermans et al.
     """
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, communication_window=5):
         # Initialize the parent object.
-        super(ADAGWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                         batch_size, master_host, master_port)
+        super(ADAGWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                         batch_size, num_epoch, master_host, master_port)
         # Initialize ADAG parameters.
         self.communication_window = communication_window
         self.iteration = 1
@@ -306,6 +337,8 @@ class ADAGWorker(NetworkWorker):
             X, Y = self.get_next_minibatch()
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
+            sys.stderr.write("Epoch: " + str(self.current_epoch) + "  Iteration: " + str(self.iteration) + "  loss:" + str(h) + "\n")
+            sys.stderr.flush()
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
@@ -324,11 +357,11 @@ class DOWNPOURWorker(NetworkWorker):
     http://static.googleusercontent.com/media/research.google.com/en//archive/large_deep_networks_nips2012.pdf
     """
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=3):
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, communication_window=3):
         # Initialize the parent object.
-        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                             batch_size, master_host, master_port)
+        super(DOWNPOURWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                             batch_size, num_epoch, master_host, master_port)
         self.communication_window = communication_window
         self.iteration = 1
 
@@ -356,12 +389,12 @@ class AEASGDWorker(NetworkWorker):
     https://arxiv.org/pdf/1412.6651.pdf
     """
 
-    def __init__(self, model, optimizer, loss, metrics=['accuracy'], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=['accuracy'], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, rho=5.0,
                  learning_rate=0.01, communication_window=32):
         # Initialize the parent object.
-        super(AEASGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                           batch_size, master_host, master_port)
+        super(AEASGDWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                           batch_size, num_epoch, master_host, master_port)
         # Initialize AEASGD specific variables.
         self.rho = rho
         self.learning_rate = learning_rate
@@ -392,12 +425,12 @@ class EAMSGDWorker(NetworkWorker):
     https://arxiv.org/pdf/1412.6651.pdf
     """
 
-    def __init__(self, model, optimizer, loss, metrics=['accuracy'], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, rho=5.0,
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=['accuracy'], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, rho=5.0,
                  learning_rate=0.01, momentum=0.9, communication_window=32):
         # Initialize the parent object.
-        super(EAMSGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                           batch_size, master_host, master_port)
+        super(EAMSGDWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                           batch_size, num_epoch, master_host, master_port)
         # Initialize EAMSGD specific variables.
         self.rho = rho
         self.learning_rate = learning_rate
@@ -436,11 +469,11 @@ class EAMSGDWorker(NetworkWorker):
 class DynSGDWorker(NetworkWorker):
     """Implements the training procedure for DynSGD."""
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5):
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, communication_window=5):
         # Initialize the parent object.
-        super(DynSGDWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                           batch_size, master_host, master_port)
+        super(DynSGDWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                           batch_size, num_epoch, master_host, master_port)
         # Initialize DynSGD parameters.
         self.communication_window = communication_window
         self.iteration = 1
@@ -490,12 +523,12 @@ class ExperimentalWorker(NetworkWorker):
     Introduced by Hermans et al.
     """
 
-    def __init__(self, model, optimizer, loss, metrics=["accuracy"], features_col="features", label_col="label",
-                 batch_size=32, master_host="localhost", master_port=5000, communication_window=5,
+    def __init__(self, model, optimizer, loss, loss_weights, metrics=["accuracy"], features_col="features", label_col="label",
+                 batch_size=32, num_epoch=1, master_host="localhost", master_port=5000, communication_window=5,
                  num_workers=2, learning_rate=1.0):
         # Initialize the parent object.
-        super(ExperimentalWorker, self).__init__(model, optimizer, loss, metrics, features_col, label_col,
-                                                 batch_size, master_host, master_port, learning_rate)
+        super(ExperimentalWorker, self).__init__(model, optimizer, loss, loss_weights, metrics, features_col, label_col,
+                                                 batch_size, num_epoch, master_host, master_port, learning_rate)
         # Initialize ADAG parameters.
         self.communication_window = communication_window
         self.num_workers = num_workers
