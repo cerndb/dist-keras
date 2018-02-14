@@ -287,19 +287,13 @@ class NetworkWorker(Worker):
         self.pull()
         self.model.set_weights(self.center_variable)
         try:
-            #sys.stderr.write("Debug: starting optimize...\n")
             self.optimize()
-            #sys.stderr.write("Debug: optimize done\n")
         except Exception as e:
             # Stop the prefetching process.
             self.is_prefetching = False
             print(e)
-        #sys.stderr.write("Debug: closing socket...\n")
         self.socket.close()
-        #sys.stderr.write("Debug: socket closed\n")
-        #sys.stderr.write("Debug: joining thread...\n")
         self.prefetching_thread.join(timeout=1)
-        #sys.stderr.write("Debug: thread joined\n")
 
         return iter(self.training_history)
 
@@ -337,8 +331,6 @@ class ADAGWorker(NetworkWorker):
             X, Y = self.get_next_minibatch()
             h = self.model.train_on_batch(X, Y)
             self.add_history(h)
-            sys.stderr.write("Epoch: " + str(self.current_epoch) + "  Iteration: " + str(self.iteration) + "  loss:" + str(h) + "\n")
-            sys.stderr.flush()
             if self.iteration % self.communication_window == 0:
                 W2 = np.asarray(self.model.get_weights())
                 delta = W2 - W1
